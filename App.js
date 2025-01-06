@@ -1,63 +1,20 @@
-import { useState } from 'react'
-import { StyleSheet, Text, View, Button, Alert } from 'react-native';
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import Login from "./src/components/Login";
+import Root from "./src/components/Root_Home";
+import SignUp from "./src/components/SignUp";
+
+const Stack = createStackNavigator();
 
 export default function App() {
-
-  const [] = useState('');
-  
-  function buttonClicked(){
-    console.log("Button has been clicked");
-    Alert.alert('Button has been clicked');
-  }
-
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <View
-          style={{
-            flex: 1
-          }}>
-        </View>
-        <View style={styles.titleContainer}>
-          <Text style={styles.text}>ReadPanda</Text>
-        </View>
-        <View style={styles.searchButton}>
-          <Button title="Search" color="#FFFF00" onPress={buttonClicked} />
-        </View>
-      </View>
-
-      <View>
-        <Text style={{ color: '#e74c3c' }}>Sample texrt</Text>
-      </View>
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen name="Login" component={Login} options={{headerShown: false}}/>
+        <Stack.Screen name="Root" component={Root} options={{headerShown: false}}/>
+        <Stack.Screen name="SignUp" component={SignUp} options={{headerShown: false}}/>
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#000000',
-    flex: 1,
-    flexDirection: 'column',
-  },
-  headerContainer:{
-    flex: 1,
-    paddingTop: 50,
-    paddingHorizontal: 0,
-    flexDirection: 'row',
-    maxHeight: 90,
-  },
-  titleContainer:{
-    flex: 3,
-    alignItems: 'center',
-    borderColor: "#ffffff",
-    borderWidth: 1,
-  },
-  searchButton: {
-    flex: 1,
-    
-  },
-  text: {
-    color: '#e74c3c',
-    fontSize: "26px",
-  },
-});
