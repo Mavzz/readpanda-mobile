@@ -1,58 +1,23 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import encryptedPassword from "../utils/Helper";
-import { API_URL} from "@env";
+import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { loginUser } from "../api/api";
+import { storeToken } from "../utils/storage";
 
 const Login = ({ navigation }) => {
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
-  const storeData = async (value, username) => {
-    try {
-      const jsonValue = JSON.stringify(value);
-      await AsyncStorage.setItem(`token_${username}`, jsonValue);
-    } catch (e) {
-      // Error occurred while saving data to AsyncStorage
-      Alert.alert("Login failed", "Invalid username or password");
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    // Attempt to log in with the provided username and password
+    setLoading(true);
     try {
-
-      if (!API_URL) {
-        Alert.alert("Login failed", "API URL is not defined. Please try again later.");
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password: encryptedPassword(password) }),
-      });
-
-      console.log(`Login response status: ${response.status}`);
-      if (response.status === 200) {
-
-        const data = await response.json();
-        await storeData(data.token, username);
-        
-        navigation.popTo("Root", { username });
-
-      } else if (response.status === 401) {
-        console.log(
-          `Login failed for user: ${username} due to invalid credentials`
-        );
-        Alert.alert("Login failed", "Invalid username or password");
-      }
+      const data = await loginUser(username, password);
+      await storeToken(data.token, username);
+      navigation.navigate("Root", { username });
     } catch (error) {
-      Alert.alert("Login failed", "An error occurred. Please try again.");
-      console.log(`Login error for user ${username}:`, error.message);
+      Alert.alert("Login failed", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,10 +37,14 @@ const Login = ({ navigation }) => {
         onChangeText={setPassword}
         secureTextEntry={true}
       />
-      <View style={styles.buttonContainer}>
-        <Button title="Login" onPress={handleLogin} />
-        <Button title="SignUp" onPress={() => navigation.navigate("SignUp")} />
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <View style={styles.buttonContainer}>
+          <Button title="Login" onPress={handleLogin} />
+          <Button title="SignUp" onPress={() => navigation.navigate("SignUp")} />
+        </View>
+      )}
     </View>
   );
 };
