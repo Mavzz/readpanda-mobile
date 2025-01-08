@@ -3,9 +3,9 @@ import { View, Text, Button, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const Profile = () => {
+const Profile = ({route}) => {
     const navigation = useNavigation();
-    const route = useRoute();
+    
     const { username } = route.params;
 
     const handleSignOut = async () => {
