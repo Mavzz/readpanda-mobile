@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import { loginUser } from "../api/api";
+import { loginUser, getUserPreferences } from "../api/api";
 import { storeToken } from "../utils/storage";
 
 const Login = ({ navigation }) => {
@@ -11,9 +11,13 @@ const Login = ({ navigation }) => {
   const handleLogin = async () => {
     setLoading(true);
     try {
+
       const data = await loginUser(username, password);
+      console.log(`Root username: ${data.token}`);
+      const preferences = await getUserPreferences(data.token, username);
+
       await storeToken(data.token, username);
-      navigation.navigate("Root", { username });
+      navigation.popTo("InterestScreen", { username ,preferences});
     } catch (error) {
       Alert.alert("Login failed", error.message);
     } finally {

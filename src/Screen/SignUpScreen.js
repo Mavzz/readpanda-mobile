@@ -20,7 +20,7 @@ const SignUp = ({ navigation }) => {
       Alert.alert("Sign Up failed", "Passwords do not match");
       return;
     }
-
+    console.log("`${API_URL}/signup`");
     const response = await fetch(`${API_URL}/signup`, {
       method: "POST",
       headers: {

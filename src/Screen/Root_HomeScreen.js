@@ -12,7 +12,7 @@ const Root = ({route}) => {
     const { username } = route.params;
     console.log(`Root username: ${username}`);
     return (
-      <Tab.Navigator>
+      <Tab.Navigator screenOptions={{ presentation: 'screen' }}>
         <Tab.Screen 
         name="ReadPanda" 
         component={Home} 
