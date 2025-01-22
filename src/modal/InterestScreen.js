@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { updateUserPreferences } from "../api/api";
-import { View, Text, StyleSheet, FlatList, Button } from "react-native";
+import { View, StyleSheet, FlatList, Button } from "react-native";
 import { CheckBox } from "react-native-elements";
 import { useNavigation } from "@react-navigation/native";
 
@@ -9,8 +9,8 @@ const InterestScreen = ({route}) => {
   const navigation = useNavigation();
   const username  = route.params.username;
   const preferencess = route.params.preferences;
-  console.log(`InterestScreen preferencess: ${username}`);
   const [Interests, setInterests] = useState(preferencess);
+  const [isUpdated, setIsUpdated] = useState(false);
 
   const togglePreference = (id) => {
     setInterests((prevPreferences) =>
@@ -18,6 +18,7 @@ const InterestScreen = ({route}) => {
         pref.preference_id === id ? { ...pref, preference_value: !pref.preference_value } : pref
       )
     );
+    setIsUpdated(true);
   };
 
   const renderItem = ({ item }) => (
@@ -32,10 +33,10 @@ const InterestScreen = ({route}) => {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Button title="Save" onPress={() => updateUserPreferences(username, Interests)} />
+        <Button title="Save" onPress={() => updateUserPreferences(username, Interests, isUpdated, navigation)} />
       ),
     });
-  }, [navigation, username]);
+  }, [navigation, username, Interests]);
 
   return (
     <View style={styles.container}>

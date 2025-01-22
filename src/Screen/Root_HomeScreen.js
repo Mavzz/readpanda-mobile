@@ -1,6 +1,7 @@
 import React from "react";
 import Home from "./HomeScreen";
 import Profile from "./ProfileScreen";
+import Favorite from "./FavoritesScreen";
 import { Button} from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -22,6 +23,15 @@ const Root = ({route}) => {
             <Icon name="home" color={color} size={size} />
           ),
         }}  />
+        <Tab.Screen
+        name = "Favorites"
+        component={Favorite}
+        initialParams={{ username: username }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="heart" color={color} size={size} />
+          ),
+        }} />
         <Tab.Screen
           name="Profile"
           component={Profile}

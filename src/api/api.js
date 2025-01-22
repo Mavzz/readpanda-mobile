@@ -34,42 +34,47 @@ export const getUserPreferences = async (token, username) => {
 
 };
 
-export const updateUserPreferences = async ( username, preferences) => {
-
-  const isTokenExists = await AsyncStorage.getItem(`token_${username}`);
-  if (isTokenExists) {
-
-    try{
-      console.log(`updateUserPreferences token: ${isTokenExists}`);
-      console.log(`updateUserPreferences username:`, JSON.stringify({ username, preferences }));
-      const response = await fetch(`${API_URL}/user/preferences?username=${username}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${isTokenExists}`,
-        },
-        body: JSON.stringify({ username, preferences }),
-      }); 
+export const updateUserPreferences = async ( username, preferences, isUpdated, navigation) => {
   
-      if (response.status === 200) {
-  
-        console.log("Preferences updated successfully");
-        navigation.popTo("Root", { username });
+  if (!isUpdated) {
+    navigation.popTo("Root", { username });
+  }else{
     
-      } else if (response.status === 400) {
-        throw new Error("Bad Request: Please check the data sent to the server.");
-      } else if (response.status === 401) {
-        throw new Error("Unauthorized: Please check your authentication token.");
-      } else if (response.status === 500) {
-        throw new Error("Internal Server Error: Please try again later.");
-      } else {
-        throw new Error(`Unexpected error: ${response.statusText}`);
+    const isTokenExists = await AsyncStorage.getItem(`token_${username}`);
+    
+    if (isTokenExists) {
+      try{
+        console.log(`updateUserPreferences token: ${isTokenExists}`);
+        console.log(`updateUserPreferences username: ${API_URL}/user/preferences?username=${username}`);
+        const response = await fetch(`${API_URL}/user/preferences?username=${username}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${isTokenExists}`,
+          },
+          body: JSON.stringify({ username, preferences }),
+        }); 
+    
+        if (response.status === 200) {
+    
+          console.log("Preferences updated successfully");
+          navigation.popTo("Root", { username });
+        
+        } else if (response.status === 400) {
+          throw new Error("Bad Request: Please check the data sent to the server.");
+        } else if (response.status === 401) {
+          throw new Error("Unauthorized: Please check your authentication token.");
+        } else if (response.status === 500) {
+          throw new Error("Internal Server Error: Please try again later.");
+        } else {
+          throw new Error(`Unexpected error: ${response.statusText}`);
+        }
+      } catch (error) {
+        Alert.alert("Preferences Update failed", error.message);
       }
-    } catch (error) {
-      Alert.alert("Preferences Update failed", error.message);
+    } 
+    else {
+      throw new Error(`Token does not exist`);
     }
-  } 
-  else {
-    throw new Error(`Token does not exist`);
   }
 };
