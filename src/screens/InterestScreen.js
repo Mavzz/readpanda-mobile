@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { updateUserPreferences } from "../api/api";
+import { updateUserPreferences } from "../services/api";
 import { View, StyleSheet, FlatList, Button } from "react-native";
 import { CheckBox } from "react-native-elements";
 import { useNavigation } from "@react-navigation/native";
+import Background from "../components/Background";
 
-const InterestScreen = ({route}) => {
-
+const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
-  const username  = route.params.username;
+  const username = route.params.username;
   const preferencess = route.params.preferences;
   const [Interests, setInterests] = useState(preferencess);
   const [isUpdated, setIsUpdated] = useState(false);
@@ -15,7 +15,9 @@ const InterestScreen = ({route}) => {
   const togglePreference = (id) => {
     setInterests((prevPreferences) =>
       prevPreferences.map((pref) =>
-        pref.preference_id === id ? { ...pref, preference_value: !pref.preference_value } : pref
+        pref.preference_id === id
+          ? { ...pref, preference_value: !pref.preference_value }
+          : pref
       )
     );
     setIsUpdated(true);
@@ -33,21 +35,28 @@ const InterestScreen = ({route}) => {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Button title="Save" onPress={() => updateUserPreferences(username, Interests, isUpdated, navigation)} />
+        <Button
+          title="Save"
+          onPress={() =>
+            updateUserPreferences(username, Interests, isUpdated, navigation)
+          }
+        />
       ),
     });
   }, [navigation, username, Interests]);
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={Interests}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.preference_id.toString()}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-      />
-    </View>
+    <Background>
+      <View style={styles.container}>
+        <FlatList
+          data={Interests}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.preference_id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+        />
+      </View>
+    </Background>
   );
 };
 
@@ -59,8 +68,8 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 10,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
   },
 });
 

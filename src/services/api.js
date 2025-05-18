@@ -3,6 +3,7 @@ import encryptedPassword from "../utils/Helper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const loginUser = async (username, password) => {
+  console.log('API_URL: ', API_URL);
   console.log(`${API_URL}/auth/login`);
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
