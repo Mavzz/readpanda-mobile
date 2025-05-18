@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { updateUserPreferences } from "../api/api";
+import { updateUserPreferences } from "../services/api";
 import { View, StyleSheet, FlatList, Button } from "react-native";
 import { CheckBox } from "react-native-elements";
 import { useNavigation } from "@react-navigation/native";
