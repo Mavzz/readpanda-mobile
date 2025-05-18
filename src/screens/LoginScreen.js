@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, TextInput, Alert, ActivityIndicator, Pressable } from "react-native";
 import { loginUser, getUserPreferences } from "../services/api";
 import { storeToken } from "../utils/storage";
 import Background from "../components/Background";
+import {loginStyles} from "../styles/global";
 
 const Login = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -18,7 +19,7 @@ const Login = ({ navigation }) => {
       const preferences = await getUserPreferences(data.token, username);
 
       await storeToken(data.token, username);
-      navigation.popTo("InterestScreen", { username ,preferences});
+      navigation.popTo("InterestScreen", { username, preferences });
     } catch (error) {
       Alert.alert("Login failed", error.message);
     } finally {
@@ -28,26 +29,26 @@ const Login = ({ navigation }) => {
 
   return (
     <Background>
-      <View style ={styles.container}>
+      <View style ={loginStyles.container}>
         <View > 
-          <Text style={styles.logintext}>Login</Text>
+          <Text style={loginStyles.mainTitletext}>Login</Text>
           <View style={{ flexDirection: "row", alignItems: "center",  paddingBottom: 10 }}>
-            <Text style={styles.title}>Don't have an account?</Text>
-            <Pressable onPress={() => navigation.navigate("SignUp")}>
-              <Text style={styles.signUpText}> sign up!</Text>
+            <Text style={loginStyles.title}>Don't have an account?</Text>
+            <Pressable onPress={() => navigation.replace("SignUp")}>
+              <Text style={loginStyles.signUpText}> sign up!</Text>
             </Pressable>
           </View>
         </View>
         <View >
           <TextInput
-            style={styles.input}
+            style={loginStyles.input}
             placeholder="username"
             placeholderTextColor="#548C2F"
             value={username}
             onChangeText={setUsername}
           />
           <TextInput
-            style={styles.input}
+            style={loginStyles.input}
             placeholder="Password"
             placeholderTextColor="#548C2F"
             value={password}
@@ -59,8 +60,8 @@ const Login = ({ navigation }) => {
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
           <View>
-            <Pressable onPress={handleLogin} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>login</Text>
+            <Pressable onPress={handleLogin} style={loginStyles.loginButton}>
+              <Text style={loginStyles.loginButtonText}>login</Text>
             </Pressable>
           </View>
         )}
@@ -72,56 +73,6 @@ const Login = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 50,
-  },
-  logintext: {
-    fontSize: 24,
-    //marginBottom: 20,
-    color: "#E34A6F",
-    fontWeight: "400",
-  },
-  signUpText: {
-    fontSize: 16,
-    color: "#548C2F",
-    fontStyle: 'italic',
-  },
-  title: {
-    fontSize: 14,
-    //marginBottom: 20,
-    textAlign: "center",
-    color: "#0A210F",
-  },
-  input: {
-    height: 40,
-    width: "100%",
-    backgroundColor: "#DBD9D8",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    color: "#548C2F", // green text
-    fontSize: 18,
-    // Remove border
-    borderWidth: 0,
-  },
-  loginButton: {
-    backgroundColor: "#3B120B",
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 36,
-    alignSelf: "flex-end",
-    marginTop: 10,
-  },
-  loginButtonText: {
-    color: "#f15c8e",
-    fontSize: 16,
-    fontWeight: "bold",
-    fontStyle: "italic",
-    textAlign: "center",
-  },
-});
+
 
 export default Login;
