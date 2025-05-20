@@ -1,8 +1,10 @@
-import { API_URL } from "@env";
-import encryptedPassword from "../utils/Helper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { encryptedPassword, fetchapiURL} from "../utils/Helper";
+
+const API_URL = fetchapiURL();
 
 export const loginUser = async (username, password) => {
+
   console.log('API_URL: ', API_URL);
   console.log(`${API_URL}/auth/login`);
   const response = await fetch(`${API_URL}/auth/login`, {

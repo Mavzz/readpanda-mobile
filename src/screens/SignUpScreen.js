@@ -1,9 +1,10 @@
 import { useState } from "react";
-import encryptedPassword from "../utils/Helper";
-import { View, Text, TextInput, Button, Pressable, Alert,ActivityIndicator } from "react-native";
-import { API_URL } from "@env";
+import { encryptedPassword, fetchapiURL} from "../utils/Helper";
+import { View, Text, TextInput, Pressable, Alert,ActivityIndicator } from "react-native";
 import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
+
+const API_URL = fetchapiURL();
 
 const SignUp = ({ navigation }) => {
   const [username, setUsername] = useState("");
