@@ -1,75 +1,147 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { updateUserPreferences } from "../services/api";
-import { View, StyleSheet, FlatList, Button } from "react-native";
-import { CheckBox } from "react-native-elements";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  SafeAreaView,
+  Pressable,
+  Text,
+} from "react-native";
+
 import { useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
+import { loginStyles } from "../styles/global";
 
 const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
   const username = route.params.username;
-  const preferencess = route.params.preferences;
-  const [Interests, setInterests] = useState(preferencess);
+  const Interests = route.params.preferences;
+  const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
 
-  const togglePreference = (id) => {
-    setInterests((prevPreferences) =>
-      prevPreferences.map((pref) =>
-        pref.preference_id === id
-          ? { ...pref, preference_value: !pref.preference_value }
-          : pref
-      )
-    );
+  const toggleSelection = (category, preference_id) => {
     setIsUpdated(true);
+    setInterests((prev) => ({
+      ...prev,
+      [category]: prev[category].map((item) =>
+        item.preference_id === preference_id
+          ? { ...item, preference_value: !item.preference_value }
+          : item
+      ),
+    }));
   };
 
-  const renderItem = ({ item }) => (
-    <CheckBox
+  const renderTag = ({ item }, category) => (
+    <Pressable
       key={item.preference_id}
-      title={item.preference_type}
-      checked={item.preference_value}
-      onPress={() => togglePreference(item.preference_id)}
-    />
+      onPress={() => toggleSelection(category, item.preference_id)}
+      style={[styles.tag, item.preference_value && styles.tagSelected]}
+    >
+      <Text
+        style={[
+          styles.tagText,
+          item.preference_value && styles.tagTextSelected,
+        ]}
+      >
+        {item.preference_subgenre}
+      </Text>
+    </Pressable>
   );
 
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Button
-          title="Save"
-          onPress={() =>
-            updateUserPreferences(username, Interests, isUpdated, navigation)
-          }
+  const renderCategory = ({ item: category }) => (
+    <View style={styles.category} key={category}>
+      <Text style={styles.categoryTitle}>{category}</Text>
+      <View style={styles.tagContainer}>
+        <FlatList
+          data={interests[category]}
+          renderItem={(item) => renderTag(item, category)}
+          keyExtractor={(item) => item.preference_id.toString()}
+          numColumns={2}
         />
-      ),
-    });
-  }, [navigation, username, Interests]);
+      </View>
+    </View>
+  );
 
   return (
     <Background>
-      <View style={styles.container}>
+      <SafeAreaView style={loginStyles.container}>
+        <Text style={styles.header}>Select Your Interests</Text>
         <FlatList
-          data={Interests}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.preference_id.toString()}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
+          data={Object.keys(interests)}
+          renderItem={renderCategory}
+          keyExtractor={(item) => item}
+          contentContainerStyle={styles.flatListContent}
+          ListFooterComponent={
+            <Pressable
+              style={loginStyles.loginButton}
+              onPress={() => updateUserPreferences(username, interests, isUpdated, navigation)}
+            >
+              <Text style={loginStyles.loginButtonText}>Save</Text>
+            </Pressable>
+          }
         />
-      </View>
+      </SafeAreaView>
     </Background>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "flex-start",
+  flatListContent: {
+    paddingBottom: 40,
   },
-  buttonContainer: {
-    marginTop: 10,
-    width: "100%",
+  header: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginVertical: 20,
+    textAlign: "center",
+  },
+  category: {
+    marginBottom: 30,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  tagContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  tag: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    borderColor: "#D0D0D0",
+    borderWidth: 1,
+    marginRight: 8,
+    marginBottom: 10,
+  },
+  tagSelected: {
+    backgroundColor: "#DDE8FF",
+    borderColor: "#3366FF",
+  },
+  tagText: {
+    color: "#333",
+    fontSize: 14,
+  },
+  tagTextSelected: {
+    color: "#3366FF",
+    fontWeight: "600",
+  },
+  saveButton: {
+    backgroundColor: "#3366FF",
+    paddingVertical: 14,
+    borderRadius: 30,
     alignItems: "center",
+    marginTop: 10,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 

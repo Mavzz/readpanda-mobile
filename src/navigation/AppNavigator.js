@@ -16,7 +16,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={Login} options={{headerShown: false}}/>
         <Stack.Screen name="Root" component={Root} options={{headerShown: false}}/>
         <Stack.Screen name="SignUp" component={SignUp} options={{headerShown: false}}/>
-        <Stack.Screen name="InterestScreen" component={Interest} options={{headerShown: true, title: 'Select your Interests'}}/>
+        <Stack.Screen name="InterestScreen" component={Interest} options={{headerShown: false}}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
