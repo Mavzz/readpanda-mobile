@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
+import { loginStyles } from "../styles/global";
+
 
 const Home = () => {
   const route = useRoute();
@@ -26,7 +28,7 @@ const Home = () => {
 
   return (
     <Background>
-      <View style={styles.container}>
+      <View style={loginStyles.container}>
         <Text style={styles.welcome}>
           Welcome to the Home Screen, {username}!
         </Text>
@@ -38,6 +40,7 @@ const Home = () => {
               <Text style={styles.bookItem}>{item.title}</Text>
             </TouchableOpacity>
           )}
+          numColumns={3}
         />
       </View>
     </Background>
@@ -45,12 +48,6 @@ const Home = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-  },
   welcome: {
     fontSize: 24,
     fontWeight: "bold",

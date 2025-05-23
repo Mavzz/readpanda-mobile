@@ -1,44 +1,43 @@
 import React from "react";
-import { View, Text, Button, StyleSheet } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { View, Text, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { loginStyles } from "../styles/global";
+import Background from "../components/Background";
+import {SignOutButton} from "../components/Button";
 
-const Profile = ({route}) => {
-    const navigation = useNavigation();
-    
-    const { username } = route.params;
+const Profile = ({ route }) => {
+  const navigation = useNavigation();
 
-    const handleSignOut = async () => {
-      const isTokenExists = await AsyncStorage.getItem(`token_${username}`);
-      if (isTokenExists) {
-        await AsyncStorage.removeItem(username);
-      }
-      navigation.popTo("Login");
-    };
-    React.useLayoutEffect(() => {
-      navigation.setOptions({
-        headerRight: () => (
-          <Button onPress={handleSignOut} title="Sign Out" color="#000" />
-        ),
-      });
-    }, [navigation]);
+  const { username } = route.params;
+
+  const handleSignOut = async () => {
+    const isTokenExists = await AsyncStorage.getItem(`token_${username}`);
+    if (isTokenExists) {
+      await AsyncStorage.removeItem(username);
+    }
+    navigation.popTo("Login");
+  };
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <SignOutButton onPress = {handleSignOut}/>
+      ),
+    });
+  }, [navigation]);
 
   return (
-      <View style={styles.container}>
+    <Background>
+      <View style={loginStyles.container}>
         <Text style={styles.welcome}>
           Welcome to the Profile Screen, {username}!
         </Text>
       </View>
-    );
+    </Background>
+  );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-  },
   welcome: {
     fontSize: 24,
     fontWeight: "bold",

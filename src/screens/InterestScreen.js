@@ -12,6 +12,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
+import { primaryButton as PrimaryButton } from "../components/Button";
 
 const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -57,7 +58,7 @@ const InterestScreen = ({ route }) => {
           data={interests[category]}
           renderItem={(item) => renderTag(item, category)}
           keyExtractor={(item) => item.preference_id.toString()}
-          numColumns={2}
+          numColumns={3}
         />
       </View>
     </View>
@@ -65,28 +66,53 @@ const InterestScreen = ({ route }) => {
 
   return (
     <Background>
-      <SafeAreaView style={loginStyles.container}>
-        <Text style={styles.header}>Select Your Interests</Text>
-        <FlatList
-          data={Object.keys(interests)}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item}
-          contentContainerStyle={styles.flatListContent}
-          ListFooterComponent={
-            <Pressable
-              style={loginStyles.loginButton}
-              onPress={() => updateUserPreferences(username, interests, isUpdated, navigation)}
+      <View style={styles.container}>
+        <SafeAreaView>
+          <View style={{ flexDirection: "row" , alignItems: "center", paddingBottom: 10 }}>
+            <Text
+              style={{
+                fontSize: 24,
+                //marginBottom: 20,
+                textAlign: "center",
+                color: "#0A210F",
+              }}
             >
-              <Text style={loginStyles.loginButtonText}>Save</Text>
-            </Pressable>
-          }
-        />
-      </SafeAreaView>
+              What's your
+            </Text>
+            <Text
+              style={{
+                fontSize: 24,
+                //marginBottom: 20,
+                color: "#E34A6F",
+                fontWeight: "400",
+                paddingLeft: 5,
+              }}
+            >
+              flavour?
+            </Text>
+          </View>
+          <FlatList
+            data={Object.keys(interests)}
+            renderItem={renderCategory}
+            keyExtractor={(item) => item}
+            contentContainerStyle={styles.flatListContent}
+            ListFooterComponent={
+              <PrimaryButton onPress = { () => updateUserPreferences(username, interests, isUpdated, navigation
+                  )} title = "Done!" />
+            }
+          />
+        </SafeAreaView>
+      </View>
     </Background>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 80,
+  },
   flatListContent: {
     paddingBottom: 40,
   },

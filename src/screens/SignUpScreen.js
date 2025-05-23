@@ -2,6 +2,7 @@ import { useState } from "react";
 import { encryptedPassword, fetchapiURL} from "../utils/Helper";
 import { View, Text, TextInput, Pressable, Alert,ActivityIndicator } from "react-native";
 import Background from "../components/Background";
+import { primaryButton as PrimaryButton } from "../components/Button";
 import { loginStyles } from "../styles/global";
 
 const API_URL = fetchapiURL();
@@ -68,7 +69,7 @@ const SignUp = ({ navigation }) => {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            paddingBottom: 10,
+            marginBottom: 15,
           }}
         >
           <Text style={loginStyles.title}>Already have an account?</Text>
@@ -81,7 +82,7 @@ const SignUp = ({ navigation }) => {
           placeholder="Username"
           value={username}
           onChangeText={setUsername}
-          placeholderTextColor="#548C2F"
+          placeholderTextColor="#6c757d"
         />
         <TextInput
           style={loginStyles.input}
@@ -89,14 +90,14 @@ const SignUp = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
-          placeholderTextColor="#548C2F"
+          placeholderTextColor="#6c757d"
         />
         <TextInput
           style={loginStyles.input}
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
-          placeholderTextColor="#548C2F"
+          placeholderTextColor="#6c757d"
           secureTextEntry
         />
         <TextInput
@@ -104,17 +105,13 @@ const SignUp = ({ navigation }) => {
           placeholder="Confirm Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          placeholderTextColor="#548C2F"
+          placeholderTextColor="#6c757d"
           secureTextEntry
         />
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
-          <View>
-            <Pressable onPress={handleSignUp} style={loginStyles.loginButton}>
-              <Text style={loginStyles.loginButtonText}>Sign Up</Text>
-            </Pressable>
-          </View>
+          <PrimaryButton onPress={handleSignUp} title="Sign Up" />
         )}
       </View>
     </Background>

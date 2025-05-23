@@ -78,6 +78,81 @@ const loginStyles = StyleSheet.create({
     padding: 50,
   },
   mainTitletext: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#8B0000',
+    marginBottom: 10,
+  },
+  signUpText: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#2e7d32',
+    //marginTop: 10,
+  },
+  title: {
+    fontSize: 16,
+    color: '#333',
+    //marginBottom: 20,
+  },
+  input: {
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  loginButton: {
+    backgroundColor: '#6a1b1a',
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginBottom: 30,
+    width: '40%',
+    alignSelf: 'flex-end',
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+    dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+    divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ccc',
+  },
+    orText: {
+    marginHorizontal: 10,
+    color: '#555',
+  },
+    ssoButton: {
+    backgroundColor: '#fff',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+    ssoButtonText: {
+    fontSize: 16,
+    color: '#111',
+  },
+});
+
+const loginStylesOld = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 50,
+  },
+  mainTitletext: {
     fontSize: 24,
     //marginBottom: 20,
     color: "#E34A6F",
@@ -101,7 +176,7 @@ const loginStyles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     marginBottom: 12,
-    color: "#548C2F", // green text
+    color: "#E34A6F", // green text
     fontSize: 18,
     // Remove border
     borderWidth: 0,
