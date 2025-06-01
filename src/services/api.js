@@ -1,5 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { encryptedPassword, fetchapiURL} from "../utils/Helper";
+// import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// import axios from 'axios';
+
+// // Initialize Google Sign-In
 
 const API_URL = fetchapiURL();
 
@@ -81,3 +85,45 @@ export const updateUserPreferences = async ( username, preferences, isUpdated, n
     }
   }
 };
+
+// async function signInAndGetDriveToken() {
+//   await GoogleSignin.hasPlayServices();
+//   const userInfo = await GoogleSignin.signIn();
+//   const tokens = await GoogleSignin.getTokens();
+//   return tokens.accessToken;
+// }
+
+// // Consider renaming to getBookItem for clarity
+// export const getBookItem = async (fileId = '1z8b2k3d4e5f6g7h8i9j0k1l2m3n4o5p6') => {
+//   try {
+//     // Configure before sign-in
+//     GoogleSignin.configure({
+//       scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+//       webClientId: '703301065299-nd3d9ljsaiv71rlek1i24bv7qeahrjcd.apps.googleusercontent.com',
+//       offlineAccess: true,
+//     });
+
+//     const accessToken = await signInAndGetDriveToken();
+
+//     const response = await axios.get(
+//       `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${accessToken}`,
+//         },
+//         responseType: 'arraybuffer', // Use arraybuffer for React Native
+//       }
+//     );
+
+//     // You may need to convert arraybuffer to base64 or another format for use in React Native
+//     // Example: const base64Data = Buffer.from(response.data, 'binary').toString('base64');
+//     // return base64Data;
+
+//     console.log("Book item fetched successfully");
+//     // Return the raw data or process it as needed
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error fetching book item:", error);
+//     throw error;
+//   }
+// };

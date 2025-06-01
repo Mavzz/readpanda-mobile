@@ -110,8 +110,6 @@ const loginStyles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     marginBottom: 30,
-    width: '40%',
-    alignSelf: 'flex-end',
   },
   loginButtonText: {
     color: '#fff',
