@@ -11,6 +11,14 @@ const primaryButton = (props) => (
   </View>
 );
 
+const ssoButton = (props) => (
+  <View>
+    <Pressable style={loginStyles.ssoButton} onPress={props.onPress}>
+      <Text style={loginStyles.ssoButtonText}>{props.title}</Text>
+    </Pressable>
+  </View>
+);
+
 const SignOutButton = (props) => (
   <View>
     <Pressable onPress={props.onPress}>
@@ -19,4 +27,4 @@ const SignOutButton = (props) => (
   </View>
 );
 
-export { primaryButton, SignOutButton };
+export { primaryButton, SignOutButton, ssoButton };

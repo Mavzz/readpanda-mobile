@@ -1,11 +1,25 @@
 import { useState } from "react";
-import { encryptedPassword, fetchapiURL} from "../utils/Helper";
-import { View, Text, TextInput, Pressable, Alert,ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import Background from "../components/Background";
-import { primaryButton as PrimaryButton } from "../components/Button";
+import {
+  primaryButton as PrimaryButton,
+  ssoButton as SSOButton,
+} from "../components/Button";
 import { loginStyles } from "../styles/global";
+import { NativeModules } from "react-native";
+import { usePost } from "../services/usePost";
+import { useGet } from "../services/useGet";
+import { encryptedPassword, getBackendUrl } from "../utils/Helper";
+import { storage } from "../utils/storage";
 
-const API_URL = fetchapiURL();
+const { GoogleSignInModule } = NativeModules;
 
 const SignUp = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -13,6 +27,8 @@ const SignUp = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  let status, response;
+
 
   const handleSignUp = async () => {
     try {
@@ -27,26 +43,53 @@ const SignUp = ({ navigation }) => {
         Alert.alert("Sign Up failed", "Passwords do not match");
         return;
       }
-      console.log("`${API_URL}/signup`");
-      const response = await fetch(`${API_URL}/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password: encryptedPassword(password),
-        }),
-      });
 
-      if (response.status === 201) {
+      try{
+          ({ status, response } = await usePost(await getBackendUrl("/signup"), {
+          username,
+          password: encryptedPassword(password),
+          email,
+        }));
+
+        // Store the token in MMKV storage
+        const userStorage = storage("user_storage");
+        userStorage.set("token", response.token);
+        userStorage.set("username", username);
+        
+        console.log("Signup Response:", response);
+        
+      }
+      catch (err) { 
+        console.log(err);
+      }
+
+      //const response = await signUpUser(username, password, email);
+      //console.log("Sign Up Response:", response);
+
+      if (status === 201) {
         setLoading(true);
-        Alert.alert(
-          "Sign Up Successful",
-          "You can now log in with your credentials."
-        );
-        navigation.replace("Login");
+
+        /*const preferences = await getUserPreferences(
+          response.token,
+          username);*/
+
+        try {
+          ({ status, response } = await useGet(
+            await getBackendUrl(`/user/preferences?username=${response.username}`),
+            {
+              Authorization: `Bearer ${response.token}`,
+            }
+          ));
+        } catch (err) {
+          console.log(err);
+        }
+
+        console.log("Preferences Response:", response);
+
+        navigation.replace("InterestScreen", {
+          username: username,
+          preferences: response,
+        });
       } else if (response.status === 409) {
         setLoading(false);
         Alert.alert("Sign Up Failed", "User already exists. Please try again.");
@@ -58,6 +101,72 @@ const SignUp = ({ navigation }) => {
       setLoading(false);
       Alert.alert("Sign Up Failed", "An error occurred. Please try again.");
       console.log(error);
+    }
+  };
+  const handleGoogleSignUp = async () => {
+    // Attempt to sign in with Google
+    try {
+      const token = await GoogleSignInModule.signIn();
+      console.log("Google ID Token:", token);
+
+      try {
+        ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
+          token,
+        }));
+
+        console.log("Signup Response:", response);
+      } catch (err) {
+        console.log(err);
+      }
+
+      if (status === 201) {
+
+        try {
+          ({ status, response } = await useGet(
+            await getBackendUrl(`/user/preferences?username=${response.username}`),
+            {
+              Authorization: `Bearer ${response.token}`,
+            }
+          ));
+        } catch (err) {
+          console.log(err);
+        }
+
+        console.log("Preferences Response:", response);
+
+        navigation.replace("InterestScreen", {
+          username: username,
+          preferences: response,
+        });
+      } else if (status === 403) {
+        Alert.alert(
+          "Sign Up Failed",
+          "Forbidden: You do not have permission to access this resource."
+        );
+      } else if (status === 500) {
+        Alert.alert(
+          "Sign Up Failed",
+          "Internal Server Error: Please try again later."
+        );
+      } else if (status === 401) {
+        Alert.alert(
+          "Sign Up Failed",
+          "Unauthorized: Please check your authentication token."
+        );
+      } else if (status === 400) {
+        Alert.alert(
+          "Sign Up Failed",
+          "Bad Request: Please check the data sent to the server."
+        );
+      } else if (status === 409) {
+        Alert.alert("Sign Up Failed", "User already exists. Please try again.");
+      } else {
+        Alert.alert("Sign Up Failed", "An error occurred. Please try again.");
+      }
+    } catch (error) {
+      console.error("Google Sign-In failed:", error);
+      Alert.alert("Google Sign-In Failed", "Please try again.");
+      return;
     }
   };
 
@@ -113,6 +222,7 @@ const SignUp = ({ navigation }) => {
         ) : (
           <PrimaryButton onPress={handleSignUp} title="Sign Up" />
         )}
+        <SSOButton onPress={handleGoogleSignUp} title="Sign Up with Google" />
       </View>
     </Background>
   );

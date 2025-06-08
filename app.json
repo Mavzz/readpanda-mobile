@@ -11,7 +11,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "plugins":[ "@react-native-google-signin/google-signin"] ,
     "ios": {
       "supportsTablet": true
     },
@@ -20,8 +19,13 @@
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.ReadPanda"
+      "googleServicesFile": "./google-services.json",
+      "package": "com.readpanda.app"
     },
+    "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
+    ],
     "web": {
       "favicon": "./src/assets/favicon.png"
     },

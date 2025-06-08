@@ -13,6 +13,9 @@ import { useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
 import { primaryButton as PrimaryButton } from "../components/Button";
+import { usePost } from "../services/usePost";
+import { storage } from "../utils/storage";
+import { getBackendUrl } from "../utils/Helper";
 
 const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -63,6 +66,33 @@ const InterestScreen = ({ route }) => {
       </View>
     </View>
   );
+
+  const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
+    if (!isUpdated) {
+      navigation.popTo("Root", { username });
+    } else {
+      try {
+        const userStorage = storage("user_storage");
+        const userToken = userStorage.getString("token");
+        console.log('User Token:', userToken);
+        
+        ({ status, response } = await usePost(
+          await getBackendUrl("/user/preferences?username=${username}"),
+          {
+            username,
+            preferences: interests,
+          },
+          {
+            Authorization: `Bearer ${userToken}`,
+          }
+        ));
+        console.log("Preferences updated successfully");
+        navigation.popTo("Root", { username });
+      } catch (error) {
+        console.error("Preferences update failed:", error);
+      }
+    }
+  };
 
   return (
     <Background>
