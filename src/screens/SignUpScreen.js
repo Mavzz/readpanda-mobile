@@ -16,7 +16,7 @@ import { loginStyles } from "../styles/global";
 import { NativeModules } from "react-native";
 import { usePost } from "../services/usePost";
 import { useGet } from "../services/useGet";
-import { encryptedPassword, getBackendUrl } from "../utils/Helper";
+import { encryptedPassword, getBackendUrl, SignUpType } from "../utils/Helper";
 import { storage } from "../utils/storage";
 
 const { GoogleSignInModule } = NativeModules;
@@ -29,60 +29,38 @@ const SignUp = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   let status, response;
 
+  const handleSignUp = async (signUpType = "") => {
 
-  const handleSignUp = async () => {
+    setLoading(true);
     try {
-      if (!username || !password || !confirmPassword) {
-        setLoading(false);
-        Alert.alert("Sign Up failed", "Please fill in all fields");
-        return;
+      if (signUpType === SignUpType.Google) {
+        googleSignUp();
+      }
+      else if (signUpType === SignUpType.Email) {
+        emailSignUp();
       }
 
-      if (password !== confirmPassword) {
-        setLoading(false);
-        Alert.alert("Sign Up failed", "Passwords do not match");
-        return;
-      }
+      // Store the token in MMKV storage
+      const userStorage = storage("user_storage");
+      userStorage.set("token", response.token);
+      userStorage.set("username", username);
 
-      try{
-          ({ status, response } = await usePost(await getBackendUrl("/signup"), {
-          username,
-          password: encryptedPassword(password),
-          email,
-        }));
-
-        // Store the token in MMKV storage
-        const userStorage = storage("user_storage");
-        userStorage.set("token", response.token);
-        userStorage.set("username", username);
-        
-        console.log("Signup Response:", response);
-        
-      }
-      catch (err) { 
-        console.log(err);
-      }
-
-      //const response = await signUpUser(username, password, email);
-      //console.log("Sign Up Response:", response);
+      console.log("Signup Response:", response);
 
       if (status === 201) {
         setLoading(true);
 
         /*const preferences = await getUserPreferences(
-          response.token,
-          username);*/
+        response.token,
+        username);*/
 
-        try {
-          ({ status, response } = await useGet(
-            await getBackendUrl(`/user/preferences?username=${response.username}`),
-            {
-              Authorization: `Bearer ${response.token}`,
-            }
-          ));
-        } catch (err) {
-          console.log(err);
-        }
+
+        ({ status, response } = await useGet(
+          await getBackendUrl(`/user/preferences?username=${response.username}`),
+          {
+            Authorization: `Bearer ${response.token}`,
+          }
+        ));
 
         console.log("Preferences Response:", response);
 
@@ -90,7 +68,32 @@ const SignUp = ({ navigation }) => {
           username: username,
           preferences: response,
         });
-      } else if (response.status === 409) {
+
+      } else if (status === 403) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Forbidden: You do not have permission to access this resource."
+        );
+      } else if (status === 500) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Internal Server Error: Please try again later."
+        );
+      } else if (status === 401) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Unauthorized: Please check your authentication token."
+        );
+      } else if (status === 400) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Bad Request: Please check the data sent to the server."
+        );
+      } else if (status === 409) {
         setLoading(false);
         Alert.alert("Sign Up Failed", "User already exists. Please try again.");
       } else {
@@ -99,74 +102,53 @@ const SignUp = ({ navigation }) => {
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("Sign Up Failed", "An error occurred. Please try again.");
-      console.log(error);
+      Alert.alert("Login failed", "An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
+
   };
-  const handleGoogleSignUp = async () => {
-    // Attempt to sign in with Google
-    try {
-      const token = await GoogleSignInModule.signIn();
-      console.log("Google ID Token:", token);
 
-      try {
-        ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
-          token,
-        }));
+  const emailSignUp = async () => {
 
-        console.log("Signup Response:", response);
-      } catch (err) {
-        console.log(err);
-      }
-
-      if (status === 201) {
-
-        try {
-          ({ status, response } = await useGet(
-            await getBackendUrl(`/user/preferences?username=${response.username}`),
-            {
-              Authorization: `Bearer ${response.token}`,
-            }
-          ));
-        } catch (err) {
-          console.log(err);
-        }
-
-        console.log("Preferences Response:", response);
-
-        navigation.replace("InterestScreen", {
-          username: username,
-          preferences: response,
-        });
-      } else if (status === 403) {
-        Alert.alert(
-          "Sign Up Failed",
-          "Forbidden: You do not have permission to access this resource."
-        );
-      } else if (status === 500) {
-        Alert.alert(
-          "Sign Up Failed",
-          "Internal Server Error: Please try again later."
-        );
-      } else if (status === 401) {
-        Alert.alert(
-          "Sign Up Failed",
-          "Unauthorized: Please check your authentication token."
-        );
-      } else if (status === 400) {
-        Alert.alert(
-          "Sign Up Failed",
-          "Bad Request: Please check the data sent to the server."
-        );
-      } else if (status === 409) {
-        Alert.alert("Sign Up Failed", "User already exists. Please try again.");
-      } else {
-        Alert.alert("Sign Up Failed", "An error occurred. Please try again.");
-      }
-    } catch (error) {
-      console.error("Google Sign-In failed:", error);
-      Alert.alert("Google Sign-In Failed", "Please try again.");
+    if (!username || !password || !confirmPassword) {
+      setLoading(false);
+      Alert.alert("Sign Up failed", "Please fill in all fields");
       return;
+    }
+
+    if (password !== confirmPassword) {
+      setLoading(false);
+      Alert.alert("Sign Up failed", "Passwords do not match");
+      return;
+    }
+
+    ({ status, response } = await usePost(await getBackendUrl("/signup"), {
+      username,
+      password: encryptedPassword(password),
+      email,
+    }));
+
+    //const response = await signUpUser(username, password, email);
+    //console.log("Sign Up Response:", response);
+  };
+  const googleSignUp = async () => {
+    // Attempt to sign in with Google
+
+    const token = await GoogleSignInModule.signIn();
+    console.log("Google ID Token:", token);
+
+    if (token) {
+
+      ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
+        token,
+      }));
+
+      console.log("Signup Response:", response);
+    }
+    else {
+      setLoading(false);
+      Alert.alert("Login failed", "An error occurred. Please try again.");
     }
   };
 
@@ -220,9 +202,16 @@ const SignUp = ({ navigation }) => {
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
-          <PrimaryButton onPress={handleSignUp} title="Sign Up" />
+          <PrimaryButton onPress={handleSignUp("Email")} title="Sign Up" />
         )}
-        <SSOButton onPress={handleGoogleSignUp} title="Sign Up with Google" />
+        
+        <View style={loginStyles.dividerContainer}>
+          <View style={loginStyles.divider} />
+          <Text style={loginStyles.orText}>or</Text>
+          <View style={loginStyles.divider} />
+        </View>
+
+        <SSOButton onPress={handleSignUp("Google")} title="Sign Up with Google" />
       </View>
     </Background>
   );

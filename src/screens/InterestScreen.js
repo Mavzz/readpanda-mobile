@@ -69,7 +69,7 @@ const InterestScreen = ({ route }) => {
 
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
     if (!isUpdated) {
-      navigation.popTo("Root", { username });
+      navigation.replace("Root", { username });
     } else {
       try {
         const userStorage = storage("user_storage");
@@ -87,7 +87,7 @@ const InterestScreen = ({ route }) => {
           }
         ));
         console.log("Preferences updated successfully");
-        navigation.popTo("Root", { username });
+        navigation.replace("Root", { username });
       } catch (error) {
         console.error("Preferences update failed:", error);
       }

@@ -5,6 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
 import {SignOutButton} from "../components/Button";
+import { usePost } from "../services/usePost";
+import {  getBackendUrl } from "../utils/Helper";
 
 const Profile = ({ route }) => {
   const navigation = useNavigation();

@@ -28,4 +28,11 @@ const getBackendUrl = async(path = "") => {
   }
 };
 
-export { encryptedPassword, getBackendUrl };
+const SignUpType = {
+  Email : "Email",
+  Google : "Google",
+  Facebook : "Facebook",
+  Other : "Other"
+}
+
+export { encryptedPassword, getBackendUrl, SignUpType };
