@@ -26,21 +26,21 @@ const Login = ({ navigation }) => {
 
   const handleLogin = async (signUpType = "") => {
 
-    setLoading(true);
     try {
 
+      setLoading(true);
       if (signUpType === SignUpType.Email) {
-        emailLogin();
+        await emailLogin();
       }
       else if (signUpType === SignUpType.Google) {
-        googleLogin();
+        await googleLogin();
       }
 
       if (response.token) {
         // Store the token in MMKV storage
         const userStorage = storage("user_storage");
         userStorage.set("token", response.token);
-        userStorage.set("username", username);
+        userStorage.set("username", response.username);
 
         console.log("Login Response:", response);
 
@@ -55,7 +55,7 @@ const Login = ({ navigation }) => {
 
           console.log("Preferences Response:", response);
 
-          navigation.replace("InterestScreen", {
+          navigation.popTo("InterestScreen", {
             username: username,
             preferences: response,
           });
@@ -151,7 +151,7 @@ const Login = ({ navigation }) => {
             }}
           >
             <Text style={loginStyles.title}>Don't have an account?</Text>
-            <Pressable onPress={() => navigation.replace("SignUp")}>
+            <Pressable onPress={() => navigation.popTo("SignUp")}>
               <Text style={loginStyles.signUpText}> sign up!</Text>
             </Pressable>
           </View>
@@ -176,16 +176,19 @@ const Login = ({ navigation }) => {
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
-          <PrimaryButton title="Login" onPress={handleLogin("Email")} />
+          <>
+            <PrimaryButton title="Login" onPress={() => handleLogin("Email")} />
+
+            <View style={loginStyles.dividerContainer}>
+              <View style={loginStyles.divider} />
+              <Text style={loginStyles.orText}>or</Text>
+              <View style={loginStyles.divider} />
+            </View>
+
+            <SSOButton onPress={() => handleLogin("Google")} title="Sign In with Google" />
+          </>
         )}
 
-        <View style={loginStyles.dividerContainer}>
-          <View style={loginStyles.divider} />
-          <Text style={loginStyles.orText}>or</Text>
-          <View style={loginStyles.divider} />
-        </View>
-
-        <SSOButton onPress={handleLogin("Google")} title="Sign In with Google" />
       </View>
     </Background>
   );

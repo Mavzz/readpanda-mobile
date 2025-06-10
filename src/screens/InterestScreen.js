@@ -23,6 +23,8 @@ const InterestScreen = ({ route }) => {
   const Interests = route.params.preferences;
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
+  let status, response;
+
 
   const toggleSelection = (category, preference_id) => {
     setIsUpdated(true);
@@ -69,15 +71,16 @@ const InterestScreen = ({ route }) => {
 
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
     if (!isUpdated) {
-      navigation.replace("Root", { username });
+      navigation.popTo("Root", { username });
     } else {
       try {
         const userStorage = storage("user_storage");
         const userToken = userStorage.getString("token");
+        username = userStorage.getString("username");
         console.log('User Token:', userToken);
         
         ({ status, response } = await usePost(
-          await getBackendUrl("/user/preferences?username=${username}"),
+          await getBackendUrl(`/user/preferences?username=${username}`),
           {
             username,
             preferences: interests,
@@ -87,7 +90,7 @@ const InterestScreen = ({ route }) => {
           }
         ));
         console.log("Preferences updated successfully");
-        navigation.replace("Root", { username });
+        navigation.popTo("Root", { username });
       } catch (error) {
         console.error("Preferences update failed:", error);
       }

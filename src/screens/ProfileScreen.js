@@ -1,12 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
-import {SignOutButton} from "../components/Button";
-import { usePost } from "../services/usePost";
-import {  getBackendUrl } from "../utils/Helper";
+import { SignOutButton } from "../components/Button";
+import { storage } from "../utils/storage";
 
 const Profile = ({ route }) => {
   const navigation = useNavigation();
@@ -14,17 +12,21 @@ const Profile = ({ route }) => {
   const { username } = route.params;
 
   const handleSignOut = async () => {
-    const isTokenExists = await AsyncStorage.getItem(`token_${username}`);
-    if (isTokenExists) {
-      await AsyncStorage.removeItem(username);
-    }
-    navigation.popTo("Login");
+    console.log("Signing out...");
+    // Clear the token from storage
+    const userStorage = storage("user_storage");
+    userStorage.clear();
+
+    // Navigate to the login screen
+    navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    }));
   };
   React.useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <SignOutButton onPress = {handleSignOut}/>
-      ),
+      headerRight: () => <SignOutButton onPress={handleSignOut} />,
     });
   }, [navigation]);
 

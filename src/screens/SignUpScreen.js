@@ -30,33 +30,30 @@ const SignUp = ({ navigation }) => {
   let status, response;
 
   const handleSignUp = async (signUpType = "") => {
-
-    setLoading(true);
     try {
+      setLoading(true);
       if (signUpType === SignUpType.Google) {
-        googleSignUp();
-      }
-      else if (signUpType === SignUpType.Email) {
-        emailSignUp();
+        await googleSignUp();
+      } else if (signUpType === SignUpType.Email) {
+        await emailSignUp();
       }
 
       // Store the token in MMKV storage
       const userStorage = storage("user_storage");
       userStorage.set("token", response.token);
-      userStorage.set("username", username);
+      userStorage.set("username", response.username);
 
       console.log("Signup Response:", response);
 
       if (status === 201) {
-        setLoading(true);
-
         /*const preferences = await getUserPreferences(
         response.token,
         username);*/
 
-
         ({ status, response } = await useGet(
-          await getBackendUrl(`/user/preferences?username=${response.username}`),
+          await getBackendUrl(
+            `/user/preferences?username=${response.username}`
+          ),
           {
             Authorization: `Bearer ${response.token}`,
           }
@@ -64,11 +61,10 @@ const SignUp = ({ navigation }) => {
 
         console.log("Preferences Response:", response);
 
-        navigation.replace("InterestScreen", {
+        navigation.popTo("InterestScreen", {
           username: username,
           preferences: response,
         });
-
       } else if (status === 403) {
         setLoading(false);
         Alert.alert(
@@ -106,11 +102,9 @@ const SignUp = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-
   };
 
   const emailSignUp = async () => {
-
     if (!username || !password || !confirmPassword) {
       setLoading(false);
       Alert.alert("Sign Up failed", "Please fill in all fields");
@@ -134,19 +128,19 @@ const SignUp = ({ navigation }) => {
   };
   const googleSignUp = async () => {
     // Attempt to sign in with Google
-
     const token = await GoogleSignInModule.signIn();
     console.log("Google ID Token:", token);
 
     if (token) {
-
-      ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
-        token,
-      }));
+      ({ status, response } = await usePost(
+        await getBackendUrl("/auth/google"),
+        {
+          token,
+        }
+      ));
 
       console.log("Signup Response:", response);
-    }
-    else {
+    } else {
       setLoading(false);
       Alert.alert("Login failed", "An error occurred. Please try again.");
     }
@@ -164,7 +158,7 @@ const SignUp = ({ navigation }) => {
           }}
         >
           <Text style={loginStyles.title}>Already have an account?</Text>
-          <Pressable onPress={() => navigation.replace("Login")}>
+          <Pressable onPress={() => navigation.popTo("Login")}>
             <Text style={loginStyles.signUpText}> Login!</Text>
           </Pressable>
         </View>
@@ -202,16 +196,23 @@ const SignUp = ({ navigation }) => {
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
-          <PrimaryButton onPress={handleSignUp("Email")} title="Sign Up" />
-        )}
-        
-        <View style={loginStyles.dividerContainer}>
-          <View style={loginStyles.divider} />
-          <Text style={loginStyles.orText}>or</Text>
-          <View style={loginStyles.divider} />
-        </View>
+          <>
+            <PrimaryButton
+              onPress={() => handleSignUp("Email")}
+              title="Sign Up"
+            />
+            <View style={loginStyles.dividerContainer}>
+              <View style={loginStyles.divider} />
+              <Text style={loginStyles.orText}>or</Text>
+              <View style={loginStyles.divider} />
+            </View>
 
-        <SSOButton onPress={handleSignUp("Google")} title="Sign Up with Google" />
+            <SSOButton
+              onPress={() => handleSignUp("Google")}
+              title="Sign Up with Google"
+            />
+          </>
+        )}
       </View>
     </Background>
   );
