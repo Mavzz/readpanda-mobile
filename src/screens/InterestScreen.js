@@ -70,14 +70,17 @@ const InterestScreen = ({ route }) => {
   );
 
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
+    
+    const userStorage = storage("user_storage");
+    const userToken = userStorage.getString("token");
+    username = userStorage.getString("username");
+    console.log("User Token:", userToken);
+    console.log("Username:", username);
+    
     if (!isUpdated) {
       navigation.popTo("Root", { username });
     } else {
       try {
-        const userStorage = storage("user_storage");
-        const userToken = userStorage.getString("token");
-        username = userStorage.getString("username");
-        console.log('User Token:', userToken);
         
         ({ status, response } = await usePost(
           await getBackendUrl(`/user/preferences?username=${username}`),
