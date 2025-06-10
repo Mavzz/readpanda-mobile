@@ -19,13 +19,13 @@ const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 0.8,
     width: width * 0.5, // Set width to 50% of the screen width
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
-    height: 10,
+    height: 40,
     marginRight: 15, // Add some margin to the right
   },
   icon: {
