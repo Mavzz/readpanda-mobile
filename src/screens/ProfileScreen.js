@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions  } from "@react-navigation/native";
 import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
 import { SignOutButton } from "../components/Button";
@@ -15,7 +15,7 @@ const Profile = ({ route }) => {
     console.log("Signing out...");
     // Clear the token from storage
     const userStorage = storage("user_storage");
-    userStorage.clear();
+    userStorage.clearAll();
 
     // Navigate to the login screen
     navigation.dispatch(

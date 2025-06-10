@@ -2,7 +2,10 @@ import CryptoJS from "react-native-crypto-js";
 import { SECRET_KEY } from "@env";
 import Constants from 'expo-constants';
 import * as Network from 'expo-network';
+import { NativeModules } from "react-native";
+import { usePost } from "../services/usePost";
 
+const { GoogleSignInModule } = NativeModules;
 
 // Encrypt the password
 const encryptedPassword = (password) => {
@@ -35,4 +38,24 @@ const SignUpType = {
   Other : "Other"
 }
 
-export { encryptedPassword, getBackendUrl, SignUpType };
+const googleSignUpLogin = async () => {
+  let status;
+  let response;
+  // Attempt to sign in with Google
+  const token = await GoogleSignInModule.signIn();
+  console.log("Google ID Token:", token);
+
+  if (token) {
+    ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
+      token,
+    }));
+
+    console.log("Signup Response:", response);
+  } else {
+    setLoading(false);
+    Alert.alert("Login failed", "An error occurred. Please try again.");
+  }
+  return { status, response };
+};
+
+export { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin };

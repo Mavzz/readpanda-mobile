@@ -13,10 +13,7 @@ import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../comp
 import { storage } from "../utils/storage";
 import { usePost } from "../services/usePost";
 import { useGet } from "../services/useGet";
-import { encryptedPassword, getBackendUrl, SignUpType } from "../utils/Helper";
-import { NativeModules } from "react-native";
-
-const { GoogleSignInModule } = NativeModules;
+import { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin } from "../utils/Helper";
 
 const Login = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -33,7 +30,7 @@ const Login = ({ navigation }) => {
         await emailLogin();
       }
       else if (signUpType === SignUpType.Google) {
-        await googleLogin();
+        ({ status, response } = await googleSignUpLogin());
       }
 
       if (response.token) {
@@ -47,7 +44,7 @@ const Login = ({ navigation }) => {
         if (status = 200) {
 
           ({ status, response } = await useGet(
-            await getBackendUrl("/user/preferences?username=${username}"),
+            await getBackendUrl(`/user/preferences?username=${response.username}`),
             {
               Authorization: `Bearer ${response.token}`,
             }
@@ -56,7 +53,7 @@ const Login = ({ navigation }) => {
           console.log("Preferences Response:", response);
 
           navigation.popTo("InterestScreen", {
-            username: username,
+            username: response.username,
             preferences: response,
           });
 
@@ -116,26 +113,6 @@ const Login = ({ navigation }) => {
         password: encryptedPassword(password),
       }));
 
-  }
-
-  const googleLogin = async () => {
-
-    // Attempt to sign in with Google
-    const token = await GoogleSignInModule.signIn();
-    console.log("Google Token:", token);
-
-    if (token) {
-      ({ status, response } = await usePost(await getBackendUrl("/auth/google"),
-        {
-          token,
-        }));
-
-      console.log("Login Response:", response);
-    }
-    else {
-      setLoading(false);
-      Alert.alert("Login failed", "An error occurred. Please try again.");
-    }
   }
 
   return (

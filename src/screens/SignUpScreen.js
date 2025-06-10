@@ -13,13 +13,10 @@ import {
   ssoButton as SSOButton,
 } from "../components/Button";
 import { loginStyles } from "../styles/global";
-import { NativeModules } from "react-native";
 import { usePost } from "../services/usePost";
 import { useGet } from "../services/useGet";
-import { encryptedPassword, getBackendUrl, SignUpType } from "../utils/Helper";
+import { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin } from "../utils/Helper";
 import { storage } from "../utils/storage";
-
-const { GoogleSignInModule } = NativeModules;
 
 const SignUp = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -35,7 +32,7 @@ const SignUp = ({ navigation }) => {
       if (signUpType === SignUpType.Google) {
         await googleSignUp();
       } else if (signUpType === SignUpType.Email) {
-        await emailSignUp();
+        ({ status, response } = await googleSignUpLogin());
       }
 
       // Store the token in MMKV storage
@@ -125,25 +122,6 @@ const SignUp = ({ navigation }) => {
 
     //const response = await signUpUser(username, password, email);
     //console.log("Sign Up Response:", response);
-  };
-  const googleSignUp = async () => {
-    // Attempt to sign in with Google
-    const token = await GoogleSignInModule.signIn();
-    console.log("Google ID Token:", token);
-
-    if (token) {
-      ({ status, response } = await usePost(
-        await getBackendUrl("/auth/google"),
-        {
-          token,
-        }
-      ));
-
-      console.log("Signup Response:", response);
-    } else {
-      setLoading(false);
-      Alert.alert("Login failed", "An error occurred. Please try again.");
-    }
   };
 
   return (
