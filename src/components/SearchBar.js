@@ -1,11 +1,15 @@
 import React from 'react';
 import { TextInput, StyleSheet, View, Dimensions  } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { iconButton as IconButton} from "../components/Button";
+
+const searchBooks = () => {
+  console.log("Pressed the search icon to search Books")
+}
 
 const SearchBar = () => {
   return (
     <View style={styles.container}>
-      <Icon name="search" size={20} color="#666" style={styles.icon} />
+      <IconButton name="search" size={20} color="#666" style={styles.icon} onPress = {searchBooks} />
       <TextInput
         placeholder="Search books..."
         style={styles.input}

@@ -140,6 +140,7 @@ const Login = ({ navigation }) => {
             placeholderTextColor="#6c757d"
             value={username}
             onChangeText={setUsername}
+            autoCapitalize="none"
           />
           <TextInput
             style={loginStyles.input}
@@ -147,6 +148,7 @@ const Login = ({ navigation }) => {
             placeholderTextColor="#6c757d"
             value={password}
             onChangeText={setPassword}
+            autoCapitalize="none"
             secureTextEntry={true}
           />
         </View>

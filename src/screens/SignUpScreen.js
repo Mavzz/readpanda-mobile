@@ -146,6 +146,7 @@ const SignUp = ({ navigation }) => {
           value={username}
           onChangeText={setUsername}
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
         />
         <TextInput
           style={loginStyles.input}
@@ -154,6 +155,7 @@ const SignUp = ({ navigation }) => {
           onChangeText={setEmail}
           keyboardType="email-address"
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
         />
         <TextInput
           style={loginStyles.input}
@@ -161,6 +163,7 @@ const SignUp = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
           secureTextEntry
         />
         <TextInput
@@ -169,6 +172,7 @@ const SignUp = ({ navigation }) => {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
           secureTextEntry
         />
         {loading ? (

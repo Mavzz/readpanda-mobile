@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useNavigation, CommonActions  } from "@react-navigation/native";
 import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
-import { SignOutButton } from "../components/Button";
+import { signOutButton as SignOutButton } from "../components/Button";
 import { storage } from "../utils/storage";
 
 const Profile = ({ route }) => {
