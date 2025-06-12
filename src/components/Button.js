@@ -28,11 +28,13 @@ const signOutButton = (props) => (
 );
 
 const iconButton = (props) => {
+return (
   <View>
-    <Pressable onPress={props.onPress}>
-      <Icon name= { props.name } size= { props.size } color= { props.color } style={ props.style } />
+    <Pressable onPress={ props.onPress } style={ loginStyles.iconButton }>
+      <Icon name={ props.name } size={ props.size } color={ props.color } />
     </Pressable>
   </View>
+);
 
 }
 

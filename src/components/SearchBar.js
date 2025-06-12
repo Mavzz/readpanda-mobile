@@ -1,4 +1,3 @@
-import React from 'react';
 import { TextInput, StyleSheet, View, Dimensions  } from 'react-native';
 import { iconButton as IconButton} from "../components/Button";
 
