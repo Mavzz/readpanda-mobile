@@ -1,11 +1,22 @@
 import { useState } from "react";
-import { encryptedPassword, fetchapiURL} from "../utils/Helper";
-import { View, Text, TextInput, Pressable, Alert,ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import Background from "../components/Background";
-import { primaryButton as PrimaryButton } from "../components/Button";
+import {
+  primaryButton as PrimaryButton,
+  ssoButton as SSOButton,
+} from "../components/Button";
 import { loginStyles } from "../styles/global";
-
-const API_URL = fetchapiURL();
+import { usePost } from "../services/usePost";
+import { useGet } from "../services/useGet";
+import { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin } from "../utils/Helper";
+import { storage } from "../utils/storage";
 
 const SignUp = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -13,41 +24,69 @@ const SignUp = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  let status, response;
 
-  const handleSignUp = async () => {
+  const handleSignUp = async (signUpType = "") => {
     try {
-      if (!username || !password || !confirmPassword) {
-        setLoading(false);
-        Alert.alert("Sign Up failed", "Please fill in all fields");
-        return;
+      setLoading(true);
+      if (signUpType === SignUpType.Google) {
+        await googleSignUp();
+      } else if (signUpType === SignUpType.Email) {
+        ({ status, response } = await googleSignUpLogin());
       }
 
-      if (password !== confirmPassword) {
-        setLoading(false);
-        Alert.alert("Sign Up failed", "Passwords do not match");
-        return;
-      }
-      console.log("`${API_URL}/signup`");
-      const response = await fetch(`${API_URL}/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password: encryptedPassword(password),
-        }),
-      });
+      // Store the token in MMKV storage
+      const userStorage = storage("user_storage");
+      userStorage.set("token", response.token);
+      userStorage.set("username", response.username);
 
-      if (response.status === 201) {
-        setLoading(true);
+      console.log("Signup Response:", response);
+
+      if (status === 201) {
+        /*const preferences = await getUserPreferences(
+        response.token,
+        username);*/
+
+        ({ status, response } = await useGet(
+          await getBackendUrl(
+            `/user/preferences?username=${response.username}`
+          ),
+          {
+            Authorization: `Bearer ${response.token}`,
+          }
+        ));
+
+        console.log("Preferences Response:", response);
+
+        navigation.popTo("InterestScreen", {
+          username: username,
+          preferences: response,
+        });
+      } else if (status === 403) {
+        setLoading(false);
         Alert.alert(
-          "Sign Up Successful",
-          "You can now log in with your credentials."
+          "Sign Up Failed",
+          "Forbidden: You do not have permission to access this resource."
         );
-        navigation.replace("Login");
-      } else if (response.status === 409) {
+      } else if (status === 500) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Internal Server Error: Please try again later."
+        );
+      } else if (status === 401) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Unauthorized: Please check your authentication token."
+        );
+      } else if (status === 400) {
+        setLoading(false);
+        Alert.alert(
+          "Sign Up Failed",
+          "Bad Request: Please check the data sent to the server."
+        );
+      } else if (status === 409) {
         setLoading(false);
         Alert.alert("Sign Up Failed", "User already exists. Please try again.");
       } else {
@@ -56,9 +95,33 @@ const SignUp = ({ navigation }) => {
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("Sign Up Failed", "An error occurred. Please try again.");
-      console.log(error);
+      Alert.alert("Login failed", "An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const emailSignUp = async () => {
+    if (!username || !password || !confirmPassword) {
+      setLoading(false);
+      Alert.alert("Sign Up failed", "Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setLoading(false);
+      Alert.alert("Sign Up failed", "Passwords do not match");
+      return;
+    }
+
+    ({ status, response } = await usePost(await getBackendUrl("/signup"), {
+      username,
+      password: encryptedPassword(password),
+      email,
+    }));
+
+    //const response = await signUpUser(username, password, email);
+    //console.log("Sign Up Response:", response);
   };
 
   return (
@@ -73,7 +136,7 @@ const SignUp = ({ navigation }) => {
           }}
         >
           <Text style={loginStyles.title}>Already have an account?</Text>
-          <Pressable onPress={() => navigation.replace("Login")}>
+          <Pressable onPress={() => navigation.popTo("Login")}>
             <Text style={loginStyles.signUpText}> Login!</Text>
           </Pressable>
         </View>
@@ -83,6 +146,7 @@ const SignUp = ({ navigation }) => {
           value={username}
           onChangeText={setUsername}
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
         />
         <TextInput
           style={loginStyles.input}
@@ -91,6 +155,7 @@ const SignUp = ({ navigation }) => {
           onChangeText={setEmail}
           keyboardType="email-address"
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
         />
         <TextInput
           style={loginStyles.input}
@@ -98,6 +163,7 @@ const SignUp = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
           secureTextEntry
         />
         <TextInput
@@ -106,12 +172,28 @@ const SignUp = ({ navigation }) => {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           placeholderTextColor="#6c757d"
+          autoCapitalize="none"
           secureTextEntry
         />
         {loading ? (
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
-          <PrimaryButton onPress={handleSignUp} title="Sign Up" />
+          <>
+            <PrimaryButton
+              onPress={() => handleSignUp("Email")}
+              title="Sign Up"
+            />
+            <View style={loginStyles.dividerContainer}>
+              <View style={loginStyles.divider} />
+              <Text style={loginStyles.orText}>or</Text>
+              <View style={loginStyles.divider} />
+            </View>
+
+            <SSOButton
+              onPress={() => handleSignUp("Google")}
+              title="Sign Up with Google"
+            />
+          </>
         )}
       </View>
     </Background>

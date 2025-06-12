@@ -11,7 +11,15 @@ const primaryButton = (props) => (
   </View>
 );
 
-const SignOutButton = (props) => (
+const ssoButton = (props) => (
+  <View>
+    <Pressable style={loginStyles.ssoButton} onPress={props.onPress}>
+      <Text style={loginStyles.ssoButtonText}>{props.title}</Text>
+    </Pressable>
+  </View>
+);
+
+const signOutButton = (props) => (
   <View>
     <Pressable onPress={props.onPress}>
       <Icon name="sign-out-alt" size={24} color="#000000" />
@@ -19,4 +27,15 @@ const SignOutButton = (props) => (
   </View>
 );
 
-export { primaryButton, SignOutButton };
+const iconButton = (props) => {
+return (
+  <View>
+    <Pressable onPress={ props.onPress } style={ loginStyles.iconButton }>
+      <Icon name={ props.name } size={ props.size } color={ props.color } />
+    </Pressable>
+  </View>
+);
+
+}
+
+export { primaryButton, signOutButton, ssoButton, iconButton };
