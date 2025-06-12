@@ -43,7 +43,7 @@ const googleSignUpLogin = async () => {
   let response;
   // Attempt to sign in with Google
   const token = await GoogleSignInModule.signIn();
-  console.log("Google ID Token:", token);
+  console.log("Google ID Token genrated:", token);
 
   if (token) {
     ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
