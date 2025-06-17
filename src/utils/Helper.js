@@ -1,7 +1,6 @@
 import CryptoJS from "react-native-crypto-js";
 import { SECRET_KEY } from "@env";
 import Constants from 'expo-constants';
-import * as Network from 'expo-network';
 import { NativeModules } from "react-native";
 import { usePost } from "../services/usePost";
 
