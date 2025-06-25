@@ -1,10 +1,9 @@
 import CryptoJS from "react-native-crypto-js";
-import { SECRET_KEY } from "@env";
+import { SECRET_KEY, Local_IP } from "@env";
 import Constants from 'expo-constants';
 import { NativeModules } from "react-native";
 import { usePost } from "../services/usePost";
-import dotenv from 'dotenv';
-dotenv.config();
+
 
 const { GoogleSignInModule } = NativeModules;
 
@@ -19,8 +18,8 @@ const getBackendUrl = async(path = "") => {
 
   let backendUrl;
     try {
-      
-      const ip = process.env.Local_IP //"192.168.0.104" //await Network.getIpAddressAsync();
+
+      const ip = Local_IP //"192.168.0.104" //await Network.getIpAddressAsync();
       const port = 3000; // your backend port
       backendUrl = `http://${ip}:${port}${path}`;
 
