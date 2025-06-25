@@ -1,4 +1,3 @@
-import React from "react";
 import {
   View,
   Text,
@@ -8,23 +7,65 @@ import {
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
+import { bookCard as BookCard } from '../components/Card';
 import { loginStyles } from "../styles/global";
-
+import { storage } from "../utils/storage";
+import { useGet } from "../services/useGet";
+import { getBackendUrl } from "../utils/Helper";
+import { useState, useEffect } from "react";
+import ManuscriptScreen from "./ManuscriptScreen";
 
 const Home = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { username } = route.params;
 
-  const books = [
-    { id: "1", title: "Book One" },
-    { id: "2", title: "Book Two" },
-    { id: "3", title: "Book Three" },
-  ];
+  const [books, setBooks] = useState([]);
 
   const openBook = (book) => {
-    //navigation.navigate('BookScreen', { book });
+    navigation.navigate('ManuscriptScreen', { book });
   };
+
+  const renderCategory = ({ item }) => (
+    <BookCard book={item} onPress={() => openBook(item)} />
+  );
+
+
+  const fetchBooks = async () => {
+      
+    const userStorage = storage("user_storage");
+    const userToken = userStorage.getString("token");
+
+    if (!userToken) {
+      console.error("No user token found. Please log in.");
+      return;
+    }
+
+    try {
+      const { status, response } = await useGet(
+        await getBackendUrl("/allbooks"),
+        {
+          Authorization: `Bearer ${userToken}`,
+        }
+      );
+
+      if (status === 200) {
+        console.log("Books fetched successfully:", response);
+        // Assuming response is an array of books
+        setBooks(response.books);
+      } else {
+        console.error("Failed to fetch books:", response);
+      }
+    } catch (error) {
+      console.error("Error fetching books:", error);
+    }
+    
+  };
+
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
 
   return (
     <Background>
@@ -34,12 +75,8 @@ const Home = () => {
         </Text>
         <FlatList
           data={books}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => openBook(item)}>
-              <Text style={styles.bookItem}>{item.title}</Text>
-            </TouchableOpacity>
-          )}
+          keyExtractor={(item) => item.book_id}
+          renderItem={renderCategory}
           numColumns={3}
         />
       </View>

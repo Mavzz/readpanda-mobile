@@ -5,6 +5,7 @@ import Login from "../screens/LoginScreen";
 import Root from "../screens/Root_HomeScreen";
 import SignUp from "../screens/SignUpScreen";
 import Interest from "../screens/InterestScreen";
+import ManuscriptScreen from "../screens/ManuscriptScreen";
 import {MyTheme} from "../styles/global";
 
 const Stack = createStackNavigator();
@@ -17,6 +18,14 @@ const AppNavigator = () => {
         <Stack.Screen name="Root" component={Root} options={{headerShown: false}}/>
         <Stack.Screen name="SignUp" component={SignUp} options={{headerShown: false}}/>
         <Stack.Screen name="InterestScreen" component={Interest} options={{headerShown: false}}/>
+        <Stack.Screen 
+          name="ManuscriptScreen" 
+          component={ManuscriptScreen} 
+          options={({ route }) => ({ 
+            title: route.params.book.title, // Set the header title to the book's title
+            headerBackTitle: 'Back',
+          })} 
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

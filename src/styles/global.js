@@ -144,6 +144,24 @@ const loginStyles = StyleSheet.create({
   },
 });
 
+const cardStyles = StyleSheet.create({
+    container: {
+    marginRight: 15,
+    width: 120,
+  },
+  coverImage: {
+    width: 120,
+    height: 180,
+    borderRadius: 8,
+  },
+  title: {
+    marginTop: 5,
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
+
 const loginStylesOld = StyleSheet.create({
   container: {
     flex: 1,
@@ -196,4 +214,4 @@ const loginStylesOld = StyleSheet.create({
   },
 });
 
-export { MyTheme, loginStyles };
+export { MyTheme, loginStyles, cardStyles };
