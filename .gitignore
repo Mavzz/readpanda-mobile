@@ -3,6 +3,7 @@
 # GOOGLE SERVICES FILES
 # Android
 google-services.json
+GoogleService-Info.plist
 
 # dependencies
 node_modules/
