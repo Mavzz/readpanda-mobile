@@ -12,7 +12,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.readpanda.app",
+      "buildNumber": "1.0.0",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,8 +26,6 @@
       "package": "com.readpanda.app"
     },
     "plugins": [
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
     ],
     "web": {
       "favicon": "./src/assets/favicon.png"
