@@ -1,25 +1,32 @@
 {
   "name": "readpanda",
   "version": "1.0.0",
-  "main": "expo/AppEntry.js",
+  "main": "index.js",
+  "description": "A React Native app for ReadPanda",
+  "author": "Venkataramanaaditya Nimmagadda",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mavzz/readpanda-mobile",
+    "directory": "readpanda-mobile"
+  },
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
+    "start": "npm react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "web": "react-native run-web"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-community/cli": "^19.1.1",
     "@react-native-firebase/app": "^22.2.0",
     "@react-native-firebase/auth": "^22.2.0",
+    "@react-native/metro-config": "^0.80.2",
     "@react-navigation/bottom-tabs": "7.2.0",
     "@react-navigation/native": "7.0.14",
     "@react-navigation/stack": "7.1.1",
     "axios": "^1.9.0",
     "crypto-js": "4.2.0",
-    "eas-cli": "^16.6.2",
-    "expo": "53.0.20",
-    "expo-status-bar": "2.0.0",
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-blob-util": "^0.19.11",
