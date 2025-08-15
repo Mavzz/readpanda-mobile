@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0AC6C7092E38005A001F25B5 /* RNPdfViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC6C7082E38005A001F25B5 /* RNPdfViewer.swift */; };
+		0AC6C70C2E380087001F25B5 /* RNPdfViewerManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 0AC6C70B2E380087001F25B5 /* RNPdfViewerManager.m */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		17CA1E4B216C31F652BCABC7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E6C73A707F82571F93405FD /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
@@ -19,6 +21,9 @@
 
 /* Begin PBXFileReference section */
 		02EBBA03F4B6522A6A8DC4AF /* Pods_ReadPanda.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ReadPanda.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		0AC6C7082E38005A001F25B5 /* RNPdfViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNPdfViewer.swift; sourceTree = "<group>"; };
+		0AC6C70A2E380087001F25B5 /* RNPdfViewerManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNPdfViewerManager.h; sourceTree = "<group>"; };
+		0AC6C70B2E380087001F25B5 /* RNPdfViewerManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RNPdfViewerManager.m; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* ReadPanda.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadPanda.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ReadPanda/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ReadPanda/Info.plist; sourceTree = "<group>"; };
@@ -31,7 +36,7 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ReadPanda/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* ReadPanda-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "ReadPanda-Bridging-Header.h"; path = "ReadPanda/ReadPanda-Bridging-Header.h"; sourceTree = "<group>"; };
-		FD3B9FBB43A9EEA757D37FDB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = ReadPanda/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FD3B9FBB43A9EEA757D37FDB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = ReadPanda/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +62,9 @@
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				4FB3E033F88746C3B5E98F33 /* GoogleService-Info.plist */,
 				FD3B9FBB43A9EEA757D37FDB /* PrivacyInfo.xcprivacy */,
+				0AC6C7082E38005A001F25B5 /* RNPdfViewer.swift */,
+				0AC6C70A2E380087001F25B5 /* RNPdfViewerManager.h */,
+				0AC6C70B2E380087001F25B5 /* RNPdfViewerManager.m */,
 			);
 			name = ReadPanda;
 			sourceTree = "<group>";
@@ -75,7 +83,6 @@
 				75F760369A759A39BB276896 /* Pods-ReadPanda.debug.xcconfig */,
 				25C2976EDBFF823A591C9781 /* Pods-ReadPanda.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -391,6 +398,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				0AC6C7092E38005A001F25B5 /* RNPdfViewer.swift in Sources */,
+				0AC6C70C2E380087001F25B5 /* RNPdfViewerManager.m in Sources */,
 				17CA1E4B216C31F652BCABC7 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

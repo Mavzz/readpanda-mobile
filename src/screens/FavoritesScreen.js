@@ -3,10 +3,12 @@ import { View, Text, StyleSheet } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
+import log from "../utils/logger";
 
 const Favorite = () => {
   const route = useRoute();
   const { username } = route.params;
+  log.info(`Favorites screen loaded for user: ${username}`);
 
   return (
     <Background>

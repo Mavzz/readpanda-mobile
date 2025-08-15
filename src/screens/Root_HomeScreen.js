@@ -8,13 +8,14 @@ import SearchBar from "../components/SearchBar";
 import { Button} from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import log from "../utils/logger";
 
 const Tab = createBottomTabNavigator();
 
 const Root = ({route}) => {
     //const route = useRoute();
     const { username } = route.params;
-    console.log(`Root username: ${username}`);
+    log.info(`Root screen loaded for user: ${username}`);
     return (
       <Tab.Navigator screenOptions={{ presentation: 'screen' }}>
         <Tab.Screen 

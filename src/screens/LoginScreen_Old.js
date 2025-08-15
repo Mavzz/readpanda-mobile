@@ -36,35 +36,75 @@ const Login = ({ navigation }) => {
         } else {
           ({ status, response } = await emailLogin(username, password));
         }
-      } else if (signUpType === SignUpType.Google) {
+      }
+      else if (signUpType === SignUpType.Google) {
         ({ status, response } = await googleSignUpLogin());
       }
 
-      if (response.token && (status === 200 || status === 201)) {
+      if (response.token) {
         // Store the token in MMKV storage
         const userStorage = storage("user_storage");
         userStorage.set("token", response.token);
         userStorage.set("username", response.username);
 
-        ({ status, response } = await useGet(
-          await getBackendUrl(`/user/preferences?username=${response.username}`),
-          {
-            Authorization: `Bearer ${response.token}`,
-          }
-        ));
+        log.info("Login Response:", response);
 
-        log.info("Preferences Response:", response);
+        if (status === 200) {
 
-        navigation.navigate("InterestScreen", {
-          username: response.username,
-          preferences: response,
-        });
+          ({ status, response } = await useGet(
+            await getBackendUrl(`/user/preferences?username=${response.username}`),
+            {
+              Authorization: `Bearer ${response.token}`,
+            }
+          ));
 
+          log.info("Preferences Response:", response);
+
+          navigation.navigate("InterestScreen", {
+            username: response.username,
+            preferences: response,
+          });
+
+        } else if (status === 403) {
+          setLoading(false);
+          log.error('Login failed with status 403');
+          Alert.alert(
+            "Login Failed",
+            "Forbidden: You do not have permission to access this resource."
+          );
+        } else if (status === 500) {
+          setLoading(false);
+          log.error('Login failed with status 500');
+          Alert.alert(
+            "Login Failed",
+            "Internal Server Error: Please try again later."
+          );
+        } else if (status === 401) {
+          setLoading(false);
+          log.error('Login failed with status 401');
+          Alert.alert(
+            "Login Failed",
+            "Unauthorized: Please check your authentication token."
+          );
+        } else if (status === 400) {
+          setLoading(false);
+          log.error('Login failed with status 400');
+          Alert.alert(
+            "Login Failed",
+            "Bad Request: Please check the data sent to the server."
+          );
+        } else {
+          setLoading(false);
+          log.error(`Login failed with status ${status}`);
+          Alert.alert("Login Failed", "An error occurred. Please try again.");
+        }
       } else {
         setLoading(false);
+        log.error('Login failed, no token in response');
         Alert.alert("Login failed", "An error occurred. Please try again.");
-        return;
       }
+
+
     } catch (error) {
       setLoading(false);
       log.error('Login failed with error:', error);

@@ -14,15 +14,18 @@ import { useGet } from "../services/useGet";
 import { getBackendUrl } from "../utils/Helper";
 import { useState, useEffect } from "react";
 import ManuscriptScreen from "./ManuscriptScreen";
+import log from "../utils/logger";
 
 const Home = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { username } = route.params;
+  log.info(`Home screen loaded for user: ${username}`);
 
   const [books, setBooks] = useState([]);
 
   const openBook = (book) => {
+    log.info(`Opening book: ${book.title}`);
     navigation.navigate('ManuscriptScreen', { book });
   };
 
@@ -32,12 +35,12 @@ const Home = () => {
 
 
   const fetchBooks = async () => {
-      
+    log.info("Fetching books");
     const userStorage = storage("user_storage");
     const userToken = userStorage.getString("token");
 
     if (!userToken) {
-      console.error("No user token found. Please log in.");
+      log.error("No user token found. Please log in.");
       return;
     }
 
@@ -50,14 +53,14 @@ const Home = () => {
       );
 
       if (status === 200) {
-        console.log("Books fetched successfully:", response);
+        log.info("Books fetched successfully:", response);
         // Assuming response is an array of books
         setBooks(response.books);
       } else {
-        console.error("Failed to fetch books:", response);
+        log.error("Failed to fetch books:", response);
       }
     } catch (error) {
-      console.error("Error fetching books:", error);
+      log.error("Error fetching books:", error);
     }
     
   };

@@ -16,11 +16,13 @@ import { primaryButton as PrimaryButton } from "../components/Button";
 import { usePost } from "../services/usePost";
 import { storage } from "../utils/storage";
 import { getBackendUrl } from "../utils/Helper";
+import log from "../utils/logger";
 
 const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
   const username = route.params.username;
   const Interests = route.params.preferences;
+  log.info(`InterestScreen loaded for user: ${username}`);
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
   let status, response;
@@ -28,6 +30,7 @@ const InterestScreen = ({ route }) => {
 
   const toggleSelection = (category, preference_id) => {
     setIsUpdated(true);
+    log.info(`Toggling preference for category: ${category} and preference_id: ${preference_id}`);
     setInterests((prev) => ({
       ...prev,
       [category]: prev[category].map((item) =>
@@ -70,14 +73,15 @@ const InterestScreen = ({ route }) => {
   );
 
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
-    
+    log.info("Updating user preferences");
     const userStorage = storage("user_storage");
     const userToken = userStorage.getString("token");
     username = userStorage.getString("username");
-    console.log("User Token:", userToken);
-    console.log("Username:", username);
+    log.info("User Token:", userToken);
+    log.info("Username:", username);
     
     if (!isUpdated) {
+      log.info("No changes in preferences, navigating back");
       navigation.popTo("Root", { username });
     } else {
       try {
@@ -92,10 +96,10 @@ const InterestScreen = ({ route }) => {
             Authorization: `Bearer ${userToken}`,
           }
         ));
-        console.log("Preferences updated successfully");
+        log.info("Preferences updated successfully");
         navigation.popTo("Root", { username });
       } catch (error) {
-        console.error("Preferences update failed:", error);
+        log.error("Preferences update failed:", error);
       }
     }
   };

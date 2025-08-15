@@ -4,15 +4,18 @@ import { View, StyleSheet, FlatList, Button } from "react-native";
 import { CheckBox } from "react-native-elements";
 import { useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
+import log from "../utils/logger";
 
 const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
   const username = route.params.username;
   const preferencess = route.params.preferences;
+  log.info(`InterestScreen_Old loaded for user: ${username}`);
   const [Interests, setInterests] = useState(preferencess);
   const [isUpdated, setIsUpdated] = useState(false);
 
   const togglePreference = (id) => {
+    log.info(`Toggling preference with id: ${id}`);
     setInterests((prevPreferences) =>
       prevPreferences.map((pref) =>
         pref.preference_id === id

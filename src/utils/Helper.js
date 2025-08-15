@@ -1,11 +1,7 @@
 import CryptoJS from "react-native-crypto-js";
 import { SECRET_KEY, Local_IP } from "@env";
 import Constants from 'expo-constants';
-import { NativeModules } from "react-native";
 import { usePost } from "../services/usePost";
-
-
-const { GoogleSignInModule } = NativeModules;
 
 // Encrypt the password
 const encryptedPassword = (password) => {
@@ -19,7 +15,7 @@ const getBackendUrl = async(path = "") => {
   let backendUrl;
     try {
 
-      const ip = Local_IP //"192.168.0.104" //await Network.getIpAddressAsync();
+      const ip = "192.168.0.107" //"192.168.0.104" //await Network.getIpAddressAsync();
       const port = 3000; // your backend port
       backendUrl = `http://${ip}:${port}${path}`;
 
@@ -38,24 +34,4 @@ const SignUpType = {
   Other : "Other"
 }
 
-const googleSignUpLogin = async () => {
-  let status;
-  let response;
-  // Attempt to sign in with Google
-  const token = await GoogleSignInModule.signIn();
-  console.log("Google ID Token:", token);
-
-  if (token) {
-    ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
-      token,
-    }));
-
-    console.log("Signup Response:", response);
-  } else {
-    setLoading(false);
-    Alert.alert("Login failed", "An error occurred. Please try again.");
-  }
-  return { status, response };
-};
-
-export { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin };
+export { encryptedPassword, getBackendUrl, SignUpType };

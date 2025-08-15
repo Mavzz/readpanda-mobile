@@ -5,14 +5,16 @@ import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
 import { signOutButton as SignOutButton } from "../components/Button";
 import { storage } from "../utils/storage";
+import log from "../utils/logger";
 
 const Profile = ({ route }) => {
   const navigation = useNavigation();
 
   const { username } = route.params;
+  log.info(`Profile screen loaded for user: ${username}`);
 
   const handleSignOut = async () => {
-    console.log("Signing out...");
+    log.info("Signing out...");
     // Clear the token from storage
     const userStorage = storage("user_storage");
     userStorage.clearAll();

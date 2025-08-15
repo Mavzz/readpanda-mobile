@@ -1,7 +1,9 @@
 import AppNavigator from "./src/navigation/AppNavigator";
 
-export default function App() {
+const App = () => {
   return (
     <AppNavigator />
   );
 }
+
+export default App;

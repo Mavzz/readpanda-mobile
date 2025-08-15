@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This document provides a comprehensive technical overview of the ReadPanda mobile application. ReadPanda is a mobile app built with React Native and Expo, designed to help users track their reading, discover new books, and engage with a community of readers.
+This document provides a comprehensive technical overview of the ReadPanda mobile application. ReadPanda is a mobile app built with React Native, designed to help users track their reading, discover new books, and engage with a community of readers.
 
 ## 2. Getting Started
 
@@ -10,7 +10,6 @@ This document provides a comprehensive technical overview of the ReadPanda mobil
 
 - Node.js (LTS version)
 - npm or yarn
-- Expo CLI (`npm install -g expo-cli`)
 - Git
 
 ### Installation
@@ -38,18 +37,7 @@ The application requires a backend API to function. The API endpoint is configur
 
 ### Running the Application
 
--   **Start the Metro bundler:**
-    ```bash
-    npm start
-    ```
--   **Run on Android:**
-    ```bash
-    npm run android
-    ```
--   **Run on iOS:**
-    ```bash
-    npm run ios
-    ```
+For detailed instructions on how to run the application, please see the `RUN.md` file.
 
 ## 3. Project Structure
 
@@ -73,7 +61,7 @@ readpanda-mobile/
 
 ### Framework and UI
 
--   **React Native & Expo**: The application is built using React Native and managed with the Expo framework, allowing for a streamlined development and build process.
+-   **React Native **: The application is built using React Native, allowing for a streamlined development and build process.
 -   **UI Components**: The UI is constructed from core React Native components and a set of custom, reusable components found in `src/components`.
 
 ### Navigation
@@ -113,7 +101,6 @@ readpanda-mobile/
 -   `react-navigation`: For routing and navigation.
 -   `axios`: For making HTTP requests to the backend.
 -   `@react-native-async-storage/async-storage`: For persisting data locally (e.g., user tokens).
--   `expo-font`: For loading and using custom fonts.
 -   `react-native-dotenv`: For managing environment variables.
 
 ## 7. Screens (`src/screens`)
@@ -138,3 +125,28 @@ readpanda-mobile/
 ## 9. Styling
 
 -   **Global Styles**: A global stylesheet is defined in `src/styles/global.js` to ensure a consistent look and feel across the application. Components primarily use this stylesheet for their styling needs.
+
+## 10. Logging
+
+The application uses `react-native-logs` for logging. This provides a more robust and configurable logging solution than `console.log`.
+
+### Configuration
+
+The logger is configured in `src/utils/logger.js`. This file sets up the default log level, transport (to the console), and formatting.
+
+### Usage
+
+To use the logger in any component or file, import it from the `logger.js` utility:
+
+```javascript
+import log from "../utils/logger";
+```
+
+Then, you can use the following methods to log messages at different levels:
+
+-   `log.debug("This is a debug message")`: For detailed, verbose information useful for debugging.
+-   `log.info("This is an info message")`: For general, informational messages about the application's state.
+-   `log.warn("This is a warning message")`: For potential issues that don't cause the application to fail.
+-   `log.error("This is an error message")`: For errors and exceptions.
+
+All logs are displayed in the Metro bundler console during development.

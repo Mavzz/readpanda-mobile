@@ -1,4 +1,3 @@
-import Expo
 import React
 import ReactAppDependencyProvider
 

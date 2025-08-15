@@ -2,10 +2,12 @@ import { View, Text, StyleSheet } from "react-native";
 import { useNavigation  } from "@react-navigation/native";
 import { loginStyles } from "../styles/global";
 import Background from "../components/Background";
+import log from "../utils/logger";
 
 const MyRooms = ({ route }) => {
 
   const { username } = route.params;
+  log.info(`MyRooms screen loaded for user: ${username}`);
 
   return (
     <Background>
