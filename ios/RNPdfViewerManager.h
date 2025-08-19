@@ -2,7 +2,7 @@
 //  RNPdfViewerManager.h
 //  ReadPanda
 //
-//  Created by Venkataramaaditya Nimmagadda on 29/07/25.
+//  Created by Venkataramaaditya Nimmagadda on 18/08/25.
 //
 
 #import <React/RCTViewManager.h>

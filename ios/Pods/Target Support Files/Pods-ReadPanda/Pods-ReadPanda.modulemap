@@ -1,0 +1,6 @@
+framework module Pods_ReadPanda {
+  umbrella header "Pods-ReadPanda-umbrella.h"
+
+  export *
+  module * { export * }
+}

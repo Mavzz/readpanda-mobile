@@ -1,7 +1,5 @@
 import CryptoJS from "react-native-crypto-js";
 import { SECRET_KEY, Local_IP } from "@env";
-import Constants from 'expo-constants';
-import { usePost } from "../services/usePost";
 
 // Encrypt the password
 const encryptedPassword = (password) => {

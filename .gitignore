@@ -9,8 +9,8 @@ GoogleService-Info.plist
 node_modules/
 
 
-# Expo
-.expo/
+# build outputs
+build/
 dist/
 web-build/
 

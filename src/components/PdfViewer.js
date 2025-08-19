@@ -3,9 +3,7 @@ import { requireNativeComponent, Platform, ActivityIndicator, View, StyleSheet }
 
 const LINKING_ERROR = 
   `The native module for PDF Viewer is not available. Make sure: \n\n` +
-  Platform.select({ ios: "- You have run 'pod install' in the 'ios' directory and restarted your project.\n", default: '' }) +
-  '- You rebuilt the app after installing/changing native code\n' +
-  '- You are not using Expo Go -- you must use a development build (npx expo run:ios) or a prebuilt app to use native modules\n';
+  Platform.select({ ios: "- You have run 'pod install' in the 'ios' directory and restarted your project.\n", default: '' }) ;
 
 // The name 'RNPdfViewer' must exactly match the RCT_EXPORT_MODULE name from RNPdfViewerManager.m
 const RNPdfViewerComponent = Platform.select({

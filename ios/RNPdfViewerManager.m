@@ -2,16 +2,14 @@
 //  RNPdfViewerManager.m
 //  ReadPanda
 //
-//  Created by Venkataramaaditya Nimmagadda on 29/07/25.
+//  Created by Venkataramaaditya Nimmagadda on 18/08/25.
 //
 
 #import "RNPdfViewerManager.h"
 #import "ReadPanda-Swift.h"
 
 @implementation RNPdfViewerManager
-
-// Expose the view to React Native
-RCT_EXPORT_MODULE(RNPdfViewer) // This name will be used in JavaScript
+RCT_EXPORT_MODULE(RNPdfViewer)
 
 - (UIView *)view
 {
