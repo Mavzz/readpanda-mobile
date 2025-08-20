@@ -14,9 +14,6 @@ class RNPdfViewer: UIView {
   private var pdfView: PDFView!
   private var url: URL?
 
-  @objc var onPdfLoadStart: RCTBubblingEventBlock?
-  @objc var onPdfLoadComplete: RCTBubblingEventBlock?
-
   override init(frame: CGRect) {
       super.init(frame: frame)
       setupPdfView()
@@ -44,7 +41,7 @@ class RNPdfViewer: UIView {
       pdfView.displaysPageBreaks = true
   }
 
-  // This method will be called from React Native to set the PDF URL
+  // This method will be called from React Native to set the PDF URLß
   @objc func setPdfUrl(_ urlString: String) {
       guard let newURL = URL(string: urlString) else {
           print("Invalid URL string: \(urlString)")
@@ -53,8 +50,6 @@ class RNPdfViewer: UIView {
       
       self.url = newURL
       
-      // Trigger the load start event
-      onPdfLoadStart?([:])
 
       DispatchQueue.global(qos: .userInitiated).async {
           let success = PDFDocument(url: newURL) != nil
@@ -66,8 +61,6 @@ class RNPdfViewer: UIView {
               } else {
                   print("Failed to load PDF from URL: \(newURL.absoluteString)")
               }
-              // Trigger the load complete event
-              self.onPdfLoadComplete?(["success": success])
           }
       }
   }
