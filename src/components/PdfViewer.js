@@ -16,16 +16,7 @@ const RNPdfViewerComponent = Platform.select({
   },
 });
 
-const PdfViewer = ({ pdfUrl, style }) => {
-  const [loading, setLoading] = useState(false);
-
-  const onLoadStart = () => {
-    setLoading(true);
-  };
-
-  const onLoadComplete = () => {
-    setLoading(false);
-  };
+const PdfViewer = ({ pdfUrl, pdfTitle, style }) => {
 
   if (Platform.OS !== 'ios') {
     return <RNPdfViewerComponent />;
@@ -39,15 +30,8 @@ const PdfViewer = ({ pdfUrl, style }) => {
     <View style={style}>
       <RNPdfViewerComponent 
         style={StyleSheet.absoluteFill}
-        pdfUrl={pdfUrl} 
-        onPdfLoadStart={onLoadStart}
-        onPdfLoadComplete={onLoadComplete}
+        pdfDetails={{ url: pdfUrl, title: pdfTitle }} 
       />
-      {loading && (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" />
-        </View>
-      )}
     </View>
   );
 };

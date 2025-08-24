@@ -5,6 +5,7 @@ import Login from "../screens/LoginScreen";
 import Root from "../screens/Root_HomeScreen";
 import SignUp from "../screens/SignUpScreen";
 import Interest from "../screens/InterestScreen";
+import Profile from "../screens/ProfileScreen";
 import ManuscriptScreen from "../screens/ManuscriptScreen";
 import {MyTheme} from "../styles/global";
 
@@ -23,8 +24,17 @@ const AppNavigator = () => {
           component={ManuscriptScreen} 
           options={({ route }) => ({ 
             title: route.params.book.title, // Set the header title to the book's title
-            headerBackTitle: 'Back',
+            headerBackTitle: '',
           })} 
+        />
+        <Stack.Screen 
+          name="Profile" 
+          component={Profile} 
+          options={{ 
+            headerTitle: '',
+            headerBackTitle: '',
+            headerTransparent: true,
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

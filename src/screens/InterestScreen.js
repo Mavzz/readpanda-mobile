@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { updateUserPreferences } from "../services/api";
 import {
   View,
   StyleSheet,
@@ -11,7 +10,6 @@ import {
 
 import { useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
-import { loginStyles } from "../styles/global";
 import { primaryButton as PrimaryButton } from "../components/Button";
 import { usePost } from "../services/usePost";
 import { storage } from "../utils/storage";
@@ -77,8 +75,11 @@ const InterestScreen = ({ route }) => {
     const userStorage = storage("user_storage");
     const userToken = userStorage.getString("token");
     username = userStorage.getString("username");
+
     log.info("User Token:", userToken);
     log.info("Username:", username);
+
+    userStorage.set("preferences", interests);
     
     if (!isUpdated) {
       log.info("No changes in preferences, navigating back");

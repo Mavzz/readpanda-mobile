@@ -13,7 +13,7 @@ const getBackendUrl = async(path = "") => {
   let backendUrl;
     try {
 
-      const ip = "192.168.0.107" //"192.168.0.104" //await Network.getIpAddressAsync();
+      const ip = "192.168.0.118" //"192.168.0.104" //await Network.getIpAddressAsync();
       const port = 3000; // your backend port
       backendUrl = `http://${ip}:${port}${path}`;
 

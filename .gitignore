@@ -8,6 +8,10 @@ GoogleService-Info.plist
 # dependencies
 node_modules/
 
+#ios build
+ios/Pods/
+ios/build/
+
 
 # build outputs
 build/

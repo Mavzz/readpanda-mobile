@@ -1,5 +1,5 @@
 import { View, Text, Pressable } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome5";
+import Icon from "react-native-vector-icons/Ionicons";
 
 import { loginStyles } from "../styles/global";
 
