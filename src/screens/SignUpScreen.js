@@ -13,12 +13,14 @@ import {
   ssoButton as SSOButton,
 } from "../components/Button";
 import { loginStyles } from "../styles/global";
-import { usePost } from "../services/usePost";
-import { useGet } from "../services/useGet";
-import { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin } from "../utils/Helper";
-import { storage } from "../utils/storage";
+import { SignUpType } from "../utils/Helper";
+import log from "../utils/logger";
+import { googleSignUpLogin, emailSignUp } from "../services/auth";
+import { useAuth } from '../contexts/AuthContext';
+import { PreferenceService } from "../services/user_PreferencesService";
 
 const SignUp = ({ navigation }) => {
+  const { signIn, updateUser } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -27,101 +29,65 @@ const SignUp = ({ navigation }) => {
   let status, response;
 
   const handleSignUp = async (signUpType = "") => {
+
+    log.info(`Sign up attempt with type: ${signUpType}`);
+
     try {
       setLoading(true);
       if (signUpType === SignUpType.Google) {
-        await googleSignUp();
-      } else if (signUpType === SignUpType.Email) {
+
         ({ status, response } = await googleSignUpLogin());
+
+      } else if (signUpType === SignUpType.Email) {
+
+        if (!username || !email || !password || !confirmPassword) {
+          setLoading(false);
+          Alert.alert("Sign Up failed", "Please fill in all fields");
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setLoading(false);
+          Alert.alert("Sign Up failed", "Passwords do not match");
+          return;
+        }
+
+        ({ status, response } = await emailSignUp(username, password, email));
       }
 
-      // Store the token in MMKV storage
-      const userStorage = storage("user_storage");
-      userStorage.set("token", response.token);
-      userStorage.set("username", response.username);
-
-      console.log("Signup Response:", response);
-
-      if (status === 201) {
-        /*const preferences = await getUserPreferences(
-        response.token,
-        username);*/
-
-        ({ status, response } = await useGet(
-          await getBackendUrl(
-            `/user/preferences?username=${response.username}`
-          ),
-          {
-            Authorization: `Bearer ${response.token}`,
+      if (response.accessToken && (status === 200 || status === 201)) {
+        // Store the token in MMKV storage
+        const userData = {
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
+          userDetails: {
+            username: response.username,
+            email: email,
+            isNewUser: true,
+            preferences: response.preferences || {},
           }
-        ));
+        };
 
-        console.log("Preferences Response:", response);
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));
+        
+        userData.preferences = response || {};
+        signIn(userData);
 
-        navigation.popTo("InterestScreen", {
-          username: username,
-          preferences: response,
-        });
-      } else if (status === 403) {
-        setLoading(false);
-        Alert.alert(
-          "Sign Up Failed",
-          "Forbidden: You do not have permission to access this resource."
-        );
-      } else if (status === 500) {
-        setLoading(false);
-        Alert.alert(
-          "Sign Up Failed",
-          "Internal Server Error: Please try again later."
-        );
-      } else if (status === 401) {
-        setLoading(false);
-        Alert.alert(
-          "Sign Up Failed",
-          "Unauthorized: Please check your authentication token."
-        );
-      } else if (status === 400) {
-        setLoading(false);
-        Alert.alert(
-          "Sign Up Failed",
-          "Bad Request: Please check the data sent to the server."
-        );
-      } else if (status === 409) {
-        setLoading(false);
-        Alert.alert("Sign Up Failed", "User already exists. Please try again.");
+        log.info("Preferences Response:", response);
+
       } else {
         setLoading(false);
-        Alert.alert("Sign Up Failed", "An error occurred. Please try again.");
+        log.error("Sign Up failed with status:", status);
+        Alert.alert("Sign Up failed", "An error occurred. Please try again.");
+        return;
       }
     } catch (error) {
       setLoading(false);
       Alert.alert("Login failed", "An error occurred. Please try again.");
+      log.error('Sign Up failed with error:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const emailSignUp = async () => {
-    if (!username || !password || !confirmPassword) {
-      setLoading(false);
-      Alert.alert("Sign Up failed", "Please fill in all fields");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setLoading(false);
-      Alert.alert("Sign Up failed", "Passwords do not match");
-      return;
-    }
-
-    ({ status, response } = await usePost(await getBackendUrl("/signup"), {
-      username,
-      password: encryptedPassword(password),
-      email,
-    }));
-
-    //const response = await signUpUser(username, password, email);
-    //console.log("Sign Up Response:", response);
   };
 
   return (

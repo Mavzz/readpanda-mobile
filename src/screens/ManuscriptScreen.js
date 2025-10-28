@@ -1,35 +1,30 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Pdf from 'react-native-pdf';
+// src/screens/ManuscriptScreen.js
+import React from 'react';
+import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import Background from '../components/Background';
+import PdfViewer from '../components/PdfViewer';
+import log from "../utils/logger";
 
 const ManuscriptScreen = ({ route }) => {
   const { book } = route.params;
-  const source = { uri: book.manuscript_url, cache: true };
+  const pdfUrl = book.manuscript_url;
+  log.info(`ManuscriptScreen loaded for book: ${book.title}`);
+  log.info(`pdfDetails:`,{url:pdfUrl,
+          title: book.title});
 
   return (
-    <Background>
-      <View style={styles.container}>
-        {/* The PDF viewer will take up the whole screen */}
-        <Pdf
-          trustAllCerts={false}
-          source={source}
-          onLoadComplete={(numberOfPages, filePath) => {
-            console.log(`Number of pages: ${numberOfPages}`);
-          }}
-          onPageChanged={(page, numberOfPages) => {
-            console.log(`Current page: ${page}`);
-          }}
-          onError={(error) => {
-            console.log(error);
-          }}
-          onPressLink={(uri) => {
-            console.log(`Link pressed: ${uri}`);
-          }}
+    <View style={styles.container}>
+      {Platform.OS === 'ios' ? (
+        <PdfViewer
+          pdfUrl={ pdfUrl }
+          pdfTitle = { book.title }
           style={styles.pdf}
         />
-      </View>
-    </Background>
+      ) : (
+        // Fallback for Android or other platforms if you don't implement native Android module
+        <Text style={styles.platformMessage}>PDF viewing is currently only supported on iOS.</Text>
+      )}
+    </View>
   );
 };
 
@@ -44,16 +39,11 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
-  progressContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  progressText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
+  platformMessage: {
+    fontSize: 18,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 50,
   },
 });
 

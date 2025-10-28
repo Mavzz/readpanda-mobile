@@ -8,9 +8,13 @@ GoogleService-Info.plist
 # dependencies
 node_modules/
 
+#ios build
+ios/Pods/
+ios/build/
+yarn-error.log
 
-# Expo
-.expo/
+# build outputs
+build/
 dist/
 web-build/
 

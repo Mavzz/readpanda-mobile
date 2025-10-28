@@ -10,110 +10,72 @@ import {
 import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
 import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../components/Button";
-import { storage } from "../utils/storage";
-import { usePost } from "../services/usePost";
-import { useGet } from "../services/useGet";
-import { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin } from "../utils/Helper";
+import {  SignUpType } from "../utils/Helper";
+import { googleSignUpLogin, emailLogin } from "../services/auth";
+import log from '../utils/logger';
+import { useAuth } from '../contexts/AuthContext';
+import { PreferenceService } from "../services/user_PreferencesService";
 
 const Login = ({ navigation }) => {
+  const { signIn, user, updateUser } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   let status, response;
 
   const handleLogin = async (signUpType = "") => {
-
+    log.info('Login attempt with type:', signUpType);
     try {
 
       setLoading(true);
       if (signUpType === SignUpType.Email) {
-        await emailLogin();
-      }
-      else if (signUpType === SignUpType.Google) {
+
+        if (!username || !password) {
+          setLoading(false);
+          Alert.alert("Login In failed", "Please fill in all fields");
+          return;
+        } else {
+          ({ status, response } = await emailLogin(username, password));
+        }
+      } else if (signUpType === SignUpType.Google) {
         ({ status, response } = await googleSignUpLogin());
       }
 
-      if (response.token) {
+      if (response.accessToken && (status === 200 || status === 201)) {
         // Store the token in MMKV storage
-        const userStorage = storage("user_storage");
-        userStorage.set("token", response.token);
-        userStorage.set("username", response.username);
 
-        console.log("Login Response:", response);
-
-        if (status = 200) {
-
-          ({ status, response } = await useGet(
-            await getBackendUrl(`/user/preferences?username=${response.username}`),
-            {
-              Authorization: `Bearer ${response.token}`,
-            }
-          ));
-
-          console.log("Preferences Response:", response);
-
-          navigation.popTo("InterestScreen", {
+        const userData = {
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
+          userDetails: {
             username: response.username,
-            preferences: response,
-          });
+            email: response.email,
+            isNewUser: false,
+            preferences: {},
+          },
+        };
+        
+        // Fetch user preferences after login
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username, userData.token));
 
-        } else if (status === 403) {
-          setLoading(false);
-          Alert.alert(
-            "Login Failed",
-            "Forbidden: You do not have permission to access this resource."
-          );
-        } else if (status === 500) {
-          setLoading(false);
-          Alert.alert(
-            "Login Failed",
-            "Internal Server Error: Please try again later."
-          );
-        } else if (status === 401) {
-          setLoading(false);
-          Alert.alert(
-            "Login Failed",
-            "Unauthorized: Please check your authentication token."
-          );
-        } else if (status === 400) {
-          setLoading(false);
-          Alert.alert(
-            "Login Failed",
-            "Bad Request: Please check the data sent to the server."
-          );
-        } else {
-          setLoading(false);
-          Alert.alert("Login Failed", "An error occurred. Please try again.");
-        }
+        userData.userDetails.preferences = response || {};
+
+        log.info('Login successful userData:', userData);
+        signIn(userData);
+
       } else {
         setLoading(false);
         Alert.alert("Login failed", "An error occurred. Please try again.");
+        return;
       }
-
-
     } catch (error) {
       setLoading(false);
+      log.error('Login failed with error:', error);
       Alert.alert("Login failed", "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
-  const emailLogin = async () => {
-
-    if (!username || !password) {
-      setLoading(false);
-      Alert.alert("Login In failed", "Please fill in all fields");
-      return;
-    }
-
-    ({ status, response } = await usePost(await getBackendUrl("/auth/login"),
-      {
-        username,
-        password: encryptedPassword(password),
-      }));
-
-  }
 
   return (
     <Background>
@@ -128,7 +90,7 @@ const Login = ({ navigation }) => {
             }}
           >
             <Text style={loginStyles.title}>Don't have an account?</Text>
-            <Pressable onPress={() => navigation.popTo("SignUp")}>
+            <Pressable onPress={() => navigation.navigate("SignUp")}>
               <Text style={loginStyles.signUpText}> sign up!</Text>
             </Pressable>
           </View>

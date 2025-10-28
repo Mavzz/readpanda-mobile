@@ -1,27 +1,24 @@
 import CryptoJS from "react-native-crypto-js";
-import { SECRET_KEY, Local_IP } from "@env";
-import Constants from 'expo-constants';
-import { NativeModules } from "react-native";
-import { usePost } from "../services/usePost";
-
-
-const { GoogleSignInModule } = NativeModules;
+import { SECRET_KEY, Local_IP, API_VERSION } from "@env";
+import messaging from '@react-native-firebase/messaging';
+import log from "../utils/logger";
+import { saveNotification, NotificationType } from './notification';
 
 // Encrypt the password
 const encryptedPassword = (password) => {
   return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
 };
 
-const getBackendUrl = async(path = "") => {
+const getBackendUrl = async (path = "") => {
 
   //const apiUrl = `https://${Constants.expoConfig.hostUri.split(':')[0]}:3000`;
 
   let backendUrl;
-    try {
+  try {
 
-      const ip = Local_IP //"192.168.0.104" //await Network.getIpAddressAsync();
-      const port = 3000; // your backend port
-      backendUrl = `http://${ip}:${port}${path}`;
+    const ip = "192.168.1.144" //"192.168.0.104" //await Network.getIpAddressAsync();
+    const port = 3000; // your backend port
+    backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
 
     return backendUrl;
 
@@ -32,30 +29,35 @@ const getBackendUrl = async(path = "") => {
 };
 
 const SignUpType = {
-  Email : "Email",
-  Google : "Google",
-  Facebook : "Facebook",
-  Other : "Other"
+  Email: "Email",
+  Google: "Google",
+  Facebook: "Facebook",
+  Other: "Other"
 }
 
-const googleSignUpLogin = async () => {
-  let status;
-  let response;
-  // Attempt to sign in with Google
-  const token = await GoogleSignInModule.signIn();
-  console.log("Google ID Token:", token);
+const checkNotificationPermission = async () => {
+  const authStatus = await messaging().requestPermission();
+  const enabled =
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-  if (token) {
-    ({ status, response } = await usePost(await getBackendUrl("/auth/google"), {
-      token,
-    }));
+  if (enabled) {
+    log.info("Notification permission granted.");
+    log.info('Authorization status:', authStatus);
 
-    console.log("Signup Response:", response);
-  } else {
-    setLoading(false);
-    Alert.alert("Login failed", "An error occurred. Please try again.");
+    // Set up message handler
+    messaging().onMessage(async remoteMessage => {
+      if (remoteMessage.data?.type === NotificationType.NEW_BOOK) {
+        await saveNotification({
+          type: NotificationType.NEW_BOOK,
+          title: 'New Book Added',
+          message: remoteMessage.notification.body,
+          bookId: remoteMessage.data.bookId
+        });
+      }
+    });
   }
-  return { status, response };
+  return enabled;
 };
 
-export { encryptedPassword, getBackendUrl, SignUpType, googleSignUpLogin };
+export { encryptedPassword, getBackendUrl, SignUpType, checkNotificationPermission };
