@@ -1,10 +1,10 @@
-import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import Background from "../components/Background";
 import { primaryButton as PrimaryButton } from "../components/Button";
 import log from "../utils/logger";
-import { storage } from "../utils/storage";
+import { useScreenTracking } from "../utils/screenTracking";
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfileSection = ({ title, children }) => (
   <View style={styles.section}>
@@ -15,20 +15,18 @@ const ProfileSection = ({ title, children }) => (
   </View>
 );
 
-const Profile = ({ route }) => {
+const ProfileScreen = () => {
+  const { user, signOut } = useAuth();
+  const { username } = user.username;
   const navigation = useNavigation();
 
-  const { username } = route.params;
   log.info(`Profile screen loaded for user: ${username}`);
-
-  const userStorage = storage("user_storage");
-  const preferences = userStorage.getString("preferences");
 
   const handleSignOut = async () => {
     log.info("Signing out...");
     // Clear the token from storage
-    const userStorage = storage("user_storage");
-    userStorage.clearAll();
+    signOut();
+    log.info("User signed out successfully");
 
     // Navigate to the login screen
     navigation.dispatch(
@@ -176,4 +174,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Profile;
+export default ProfileScreen;

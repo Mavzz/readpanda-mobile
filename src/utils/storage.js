@@ -18,3 +18,22 @@ export const storage = (storage_name)=> {
   });
   return storage;
 }
+
+export const updateNotificationCount = async (count) => {
+    try {
+        const userStorage = storage("user_storage");
+        userStorage.setNumber('unreadNotifications', count);
+    } catch (error) {
+        log.error('Error updating notification count:', error);
+    }
+};
+
+export const getNotificationCount = () => {
+    try {
+        const userStorage = storage("user_storage");
+        return userStorage.getNumber('unreadNotifications') || 0;
+    } catch (error) {
+        log.error('Error getting notification count:', error);
+        return 0;
+    }
+};

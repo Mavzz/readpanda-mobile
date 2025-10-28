@@ -11,7 +11,7 @@ node_modules/
 #ios build
 ios/Pods/
 ios/build/
-
+yarn-error.log
 
 # build outputs
 build/

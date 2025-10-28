@@ -11,19 +11,21 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
 import { primaryButton as PrimaryButton } from "../components/Button";
-import { usePost } from "../services/usePost";
-import { storage } from "../utils/storage";
-import { getBackendUrl } from "../utils/Helper";
 import log from "../utils/logger";
+import { useScreenTracking } from "../utils/screenTracking";
+import { useAuth } from '../contexts/AuthContext';
+import { PreferenceService } from "../services/user_PreferencesService";
 
-const InterestScreen = ({ route }) => {
+const InterestScreen = () => {
+  const { user, updateUser } = useAuth();
   const navigation = useNavigation();
-  const username = route.params.username;
-  const Interests = route.params.preferences;
+  const username = user.username;
+  const Interests = user.preferences;
   log.info(`InterestScreen loaded for user: ${username}`);
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
   let status, response;
+  const { previousScreen, currentScreen } = useScreenTracking();
 
 
   const toggleSelection = (category, preference_id) => {
@@ -72,36 +74,36 @@ const InterestScreen = ({ route }) => {
 
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
     log.info("Updating user preferences");
-    const userStorage = storage("user_storage");
-    const userToken = userStorage.getString("token");
-    username = userStorage.getString("username");
+    try {
 
-    log.info("User Token:", userToken);
-    log.info("Username:", username);
+      if (isUpdated) {
+        // Handle first time user experience
+        ({ status, response } = await PreferenceService.updateUserPreferences(username, interests, user.token));
 
-    userStorage.set("preferences", interests);
-    
-    if (!isUpdated) {
-      log.info("No changes in preferences, navigating back");
-      navigation.popTo("Root", { username });
-    } else {
-      try {
-        
-        ({ status, response } = await usePost(
-          await getBackendUrl(`/user/preferences?username=${username}`),
-          {
-            username,
-            preferences: interests,
-          },
-          {
-            Authorization: `Bearer ${userToken}`,
-          }
-        ));
-        log.info("Preferences updated successfully");
-        navigation.popTo("Root", { username });
-      } catch (error) {
-        log.error("Preferences update failed:", error);
+        if (status === 200 || status === 201) {
+          log.info("User preferences updated successfully");
+        } else {
+          log.error("Failed to update user preferences with status:", status);
+          throw new Error("Failed to update preferences");
+        }
+        updateUser({ preferences: interests });
+        log.info('First time user experience completed');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'HomeMain' }],
+        });
+      } else {
+        log.info("No changes made to preferences, navigating to Home");
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'HomeMain' }],
+        });
       }
+
+    } catch (error) {
+      log.error("Error updating preferences:", error);
+    } finally {
+      log.info("Finished updating preferences");
     }
   };
 
@@ -109,7 +111,7 @@ const InterestScreen = ({ route }) => {
     <Background>
       <View style={styles.container}>
         <SafeAreaView>
-          <View style={{ flexDirection: "row" , alignItems: "center", paddingBottom: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingBottom: 10 }}>
             <Text
               style={{
                 fontSize: 24,
@@ -138,8 +140,8 @@ const InterestScreen = ({ route }) => {
             keyExtractor={(item) => item}
             contentContainerStyle={styles.flatListContent}
             ListFooterComponent={
-              <PrimaryButton onPress = { () => updateUserPreferences(username, interests, isUpdated, navigation
-                  )} title = "Done!" />
+              <PrimaryButton onPress={() => updateUserPreferences(username, interests, isUpdated, navigation
+              )} title="Done!" />
             }
           />
         </SafeAreaView>

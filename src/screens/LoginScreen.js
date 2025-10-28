@@ -10,13 +10,14 @@ import {
 import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
 import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../components/Button";
-import { storage } from "../utils/storage";
-import { useGet } from "../services/useGet";
-import { getBackendUrl, SignUpType } from "../utils/Helper";
-import { googleSignUpLogin, emailLogin } from "../utils/auth";
+import {  SignUpType } from "../utils/Helper";
+import { googleSignUpLogin, emailLogin } from "../services/auth";
 import log from '../utils/logger';
+import { useAuth } from '../contexts/AuthContext';
+import { PreferenceService } from "../services/user_PreferencesService";
 
 const Login = ({ navigation }) => {
+  const { signIn, user, updateUser } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,23 +43,26 @@ const Login = ({ navigation }) => {
 
       if (response.token && (status === 200 || status === 201)) {
         // Store the token in MMKV storage
-        const userStorage = storage("user_storage");
-        userStorage.set("token", response.token);
-        userStorage.set("username", response.username);
 
-        ({ status, response } = await useGet(
-          await getBackendUrl(`/user/preferences?username=${response.username}`),
-          {
-            Authorization: `Bearer ${response.token}`,
-          }
-        ));
+        const userData = {
+          token: response.token,
+          username: response.username,
+          isNewUser: false,
+          email: response.email,
+
+          preferences: response.preferences || {},
+        };
+
+        log.info('Login successful', { username: response.username });
+        
+        // Fetch user preferences after login
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));
+
+        userData.preferences = response || {};
+        signIn(userData);
+
 
         log.info("Preferences Response:", response);
-
-        navigation.navigate("InterestScreen", {
-          username: response.username,
-          preferences: response,
-        });
 
       } else {
         setLoading(false);

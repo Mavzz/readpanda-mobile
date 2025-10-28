@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
 import Background from "../components/Background";
 import { bookCard as BookCard } from '../components/Card';
 import { loginStyles } from "../styles/global";
@@ -13,13 +12,12 @@ import { storage } from "../utils/storage";
 import { useGet } from "../services/useGet";
 import { getBackendUrl } from "../utils/Helper";
 import { useState, useEffect } from "react";
-import ManuscriptScreen from "./ManuscriptScreen";
 import log from "../utils/logger";
+import { useAuth } from '../contexts/AuthContext';
 
-const Home = () => {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const { username } = route.params;
+const Home = ({ navigation }) => {
+  const { user } = useAuth();
+  const { username } = user.username;
   log.info(`Home screen loaded for user: ${username}`);
 
   const [books, setBooks] = useState([]);
@@ -46,7 +44,7 @@ const Home = () => {
 
     try {
       const { status, response } = await useGet(
-        await getBackendUrl("/allbooks"),
+        await getBackendUrl("/books/all"),
         {
           Authorization: `Bearer ${userToken}`,
         }
@@ -62,13 +60,18 @@ const Home = () => {
     } catch (error) {
       log.error("Error fetching books:", error);
     }
-    
+
   };
 
   useEffect(() => {
-    fetchBooks();
-  }, []);
-
+    if (user.isNewUser) {
+      log.info("Navigating new user to InterestScreen");
+      navigation.navigate("Interest");
+    } else {
+      log.info("Existing user, fetching books");
+      fetchBooks();
+    }
+  }, [user]);
 
   return (
     <Background>

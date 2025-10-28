@@ -13,14 +13,14 @@ import {
   ssoButton as SSOButton,
 } from "../components/Button";
 import { loginStyles } from "../styles/global";
-import { useGet } from "../services/useGet";
-import { getBackendUrl, SignUpType } from "../utils/Helper";
-import { storage } from "../utils/storage";
+import { SignUpType } from "../utils/Helper";
 import log from "../utils/logger";
-import { googleSignUpLogin, emailSignUp } from "../utils/auth";
-
+import { googleSignUpLogin, emailSignUp } from "../services/auth";
+import { useAuth } from '../contexts/AuthContext';
+import { PreferenceService } from "../services/user_PreferencesService";
 
 const SignUp = ({ navigation }) => {
+  const { signIn, updateUser } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -57,25 +57,20 @@ const SignUp = ({ navigation }) => {
 
       if (response.token && (status === 200 || status === 201)) {
         // Store the token in MMKV storage
-        const userStorage = storage("user_storage");
-        userStorage.set("token", response.token);
-        userStorage.set("username", response.username);
+        const userData = {
+          token: response.token,
+          username: response.username,
+          email: email,
+          isNewUser: true,
+          preferences: response.preferences || {},
+        };
 
-        ({ status, response } = await useGet(
-          await getBackendUrl(
-            `/user/preferences?username=${response.username}`
-          ),
-          {
-            Authorization: `Bearer ${response.token}`,
-          }
-        ));
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));
+        
+        userData.preferences = response || {};
+        signIn(userData);
 
         log.info("Preferences Response:", response);
-
-        navigation.popTo("InterestScreen", {
-          username: username,
-          preferences: response,
-        });
 
       } else {
         setLoading(false);
@@ -86,6 +81,7 @@ const SignUp = ({ navigation }) => {
     } catch (error) {
       setLoading(false);
       Alert.alert("Login failed", "An error occurred. Please try again.");
+      log.error('Sign Up failed with error:', error);
     } finally {
       setLoading(false);
     }

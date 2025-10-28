@@ -13,7 +13,7 @@ import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../comp
 import { storage } from "../utils/storage";
 import { useGet } from "../services/useGet";
 import { getBackendUrl, SignUpType } from "../utils/Helper";
-import { googleSignUpLogin, emailLogin } from "../utils/auth";
+import { googleSignUpLogin, emailLogin } from "../services/auth";
 import log from '../utils/logger';
 
 const Login = ({ navigation }) => {
