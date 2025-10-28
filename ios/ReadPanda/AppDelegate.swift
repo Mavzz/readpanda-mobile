@@ -1,12 +1,14 @@
-import UIKit
-import React
-import React_RCTAppDelegate
-import ReactAppDependencyProvider
 import Firebase
+import React
+import ReactAppDependencyProvider
+import React_RCTAppDelegate
+import UIKit
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, RNAppAuthAuthorizationFlowManager {
   var window: UIWindow?
+
+  weak var authorizationFlowManagerDelegate: RNAppAuthAuthorizationFlowManagerDelegate?
 
   var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
@@ -21,7 +23,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
-    
+
     FirebaseApp.configure()
 
     window = UIWindow(frame: UIScreen.main.bounds)
@@ -34,6 +36,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     return true
   }
+
+  func application(
+    _ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    
+    if let authorizationFlowManagerDelegate = self.authorizationFlowManagerDelegate,
+        authorizationFlowManagerDelegate.resumeExternalUserAgentFlow(with: url) {
+       return true
+     }
+    
+    return RCTLinkingManager.application(app, open: url, options: options)
+  }
+
 }
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
@@ -42,10 +57,10 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   }
 
   override func bundleURL() -> URL? {
-#if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
-#else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
-#endif
+    #if DEBUG
+      RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    #else
+      Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    #endif
   }
 }

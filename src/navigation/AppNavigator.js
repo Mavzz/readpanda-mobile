@@ -4,9 +4,34 @@ import { MyTheme } from "../styles/global";
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import AuthStackNavigator from './AuthStackNavigator';
 import MainTabNavigator from './MainTabNavigator';
-import { View, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 
 const Stack = createStackNavigator();
+
+const linking = {
+  prefixes: ['readpanda://'],
+  config: {
+    screens: {
+      Auth: {
+        screens: {
+          Login: 'Login',
+          SignUp: 'SignUp',
+          Interest: 'Interest',
+        },
+      },
+      Main: {
+        screens: {
+          'Explore Books': 'Home',
+          'Join Room': 'JoinRoom',
+          'Current Read': 'CurrentRead',
+          'My Rooms': 'MyRooms',
+          Profile: 'Profile',
+        },
+      },
+      'oauth/google': 'Auth',
+    },
+  },
+};
 
 const AppContent = () => {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -21,7 +46,7 @@ const AppContent = () => {
   }
 
   return (
-    <NavigationContainer theme={MyTheme}>
+    <NavigationContainer theme={MyTheme} linking={linking} fallback={<Text>Loading...</Text>}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <>

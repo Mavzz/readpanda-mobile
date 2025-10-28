@@ -39,6 +39,7 @@
     "eslint-plugin-react-native": "^5.0.0",
     "react": "19.0.0",
     "react-native": "0.79.5",
+    "react-native-app-auth": "^8.1.0",
     "react-native-blob-util": "^0.19.11",
     "react-native-check-box": "2.1.7",
     "react-native-crypto-js": "1.0.0",

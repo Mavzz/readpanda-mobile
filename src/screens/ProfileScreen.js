@@ -5,6 +5,7 @@ import { primaryButton as PrimaryButton } from "../components/Button";
 import log from "../utils/logger";
 import { useScreenTracking } from "../utils/screenTracking";
 import { useAuth } from '../contexts/AuthContext';
+import { logout } from '../services/auth';
 
 const ProfileSection = ({ title, children }) => (
   <View style={styles.section}>
@@ -16,8 +17,8 @@ const ProfileSection = ({ title, children }) => (
 );
 
 const ProfileScreen = () => {
-  const { user, signOut } = useAuth();
-  const { username } = user.username;
+  const { user, signOut, refreshToken } = useAuth();
+  const username = user?.username;
   const navigation = useNavigation();
 
   log.info(`Profile screen loaded for user: ${username}`);
@@ -25,15 +26,9 @@ const ProfileScreen = () => {
   const handleSignOut = async () => {
     log.info("Signing out...");
     // Clear the token from storage
+    await logout(username, refreshToken);
     signOut();
     log.info("User signed out successfully");
-
-    // Navigate to the login screen
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "Login" }],
-      }));
   };
 
   return (
@@ -61,7 +56,7 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.settingItem}>
               <Text style={styles.settingText}>Edit Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('InterestScreen', { username: username, preferences: JSON.parse(preferences) })}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('InterestScreen', { username: username, preferences: JSON.parse(user.preferences) })}>
               <Text style={styles.settingText}>Edit Preferences</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.settingItem}>

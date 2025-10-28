@@ -9,16 +9,16 @@ const encryptedPassword = (password) => {
   return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
 };
 
-const getBackendUrl = async(path = "") => {
+const getBackendUrl = async (path = "") => {
 
   //const apiUrl = `https://${Constants.expoConfig.hostUri.split(':')[0]}:3000`;
 
   let backendUrl;
-    try {
+  try {
 
-      const ip = "192.168.0.105" //"192.168.0.104" //await Network.getIpAddressAsync();
-      const port = 3000; // your backend port
-      backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
+    const ip = "192.168.1.144" //"192.168.0.104" //await Network.getIpAddressAsync();
+    const port = 3000; // your backend port
+    backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
 
     return backendUrl;
 
@@ -29,13 +29,13 @@ const getBackendUrl = async(path = "") => {
 };
 
 const SignUpType = {
-  Email : "Email",
-  Google : "Google",
-  Facebook : "Facebook",
-  Other : "Other"
+  Email: "Email",
+  Google: "Google",
+  Facebook: "Facebook",
+  Other: "Other"
 }
 
-const checkNotificationPermission = async() => {
+const checkNotificationPermission = async () => {
   const authStatus = await messaging().requestPermission();
   const enabled =
     authStatus === messaging.AuthorizationStatus.AUTHORIZED ||

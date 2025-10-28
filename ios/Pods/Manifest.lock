@@ -1,4 +1,10 @@
 PODS:
+  - AppAuth (2.0.0):
+    - AppAuth/Core (= 2.0.0)
+    - AppAuth/ExternalUserAgent (= 2.0.0)
+  - AppAuth/Core (2.0.0)
+  - AppAuth/ExternalUserAgent (2.0.0):
+    - AppAuth/Core
   - boost (1.84.0)
   - BVLinearGradient (2.8.3):
     - React-Core
@@ -1394,6 +1400,9 @@ PODS:
     - React-jsiexecutor
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
+  - react-native-app-auth (8.1.0):
+    - AppAuth (>= 1.7.6)
+    - React-Core
   - react-native-blob-util (0.19.11):
     - DoubleConversion
     - glog
@@ -1544,6 +1553,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - react-native-splash-screen (3.3.0):
+    - React-Core
+  - react-native-sqlite-storage (6.0.1):
     - React-Core
   - React-NativeModulesApple (0.79.5):
     - glog
@@ -2270,12 +2281,14 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-app-auth (from `../node_modules/react-native-app-auth`)
   - react-native-blob-util (from `../node_modules/react-native-blob-util`)
   - react-native-mmkv (from `../node_modules/react-native-mmkv`)
   - react-native-network-info (from `../node_modules/react-native-network-info`)
   - react-native-pdf (from `../node_modules/react-native-pdf`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-splash-screen (from `../node_modules/react-native-splash-screen`)
+  - react-native-sqlite-storage (from `../node_modules/react-native-sqlite-storage`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -2322,6 +2335,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - AppAuth
     - Firebase
     - FirebaseCore
     - FirebaseCoreExtension
@@ -2414,6 +2428,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-app-auth:
+    :path: "../node_modules/react-native-app-auth"
   react-native-blob-util:
     :path: "../node_modules/react-native-blob-util"
   react-native-mmkv:
@@ -2426,6 +2442,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-splash-screen:
     :path: "../node_modules/react-native-splash-screen"
+  react-native-sqlite-storage:
+    :path: "../node_modules/react-native-sqlite-storage"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-oscompat:
@@ -2514,6 +2532,7 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  AppAuth: 1c1a8afa7e12f2ec3a294d9882dfa5ab7d3cb063
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
   BVLinearGradient: cb006ba232a1f3e4f341bb62c42d1098c284da70
   DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
@@ -2563,12 +2582,14 @@ SPEC CHECKSUMS:
   React-logger: 85fa3509931497c72ccd2547fcc91e7299d8591e
   React-Mapbuffer: 4141a0d94d47529afb85341b9c02baa3cc2a1fd5
   React-microtasksnativemodule: 4b0f5a344ca5ce6692650fae4fb67f7672bbd1b6
+  react-native-app-auth: e21c8ee920876b960e38c9381971bd189ebea06b
   react-native-blob-util: 8e949ad4ebe992f5b94774d24f75ec8a13be2565
   react-native-mmkv: 69af18f435f8978ed3e7b8c1b23bba35350ddcd8
   react-native-network-info: 23b4f34419d7998727c9e50bf8dee3c1bd3f975a
   react-native-pdf: f879d0adc72adee79e3c64950aafbbb11f8b7206
   react-native-safe-area-context: 5928d84c879db2f9eb6969ca70e68f58623dbf25
   react-native-splash-screen: 95994222cc95c236bd3cdc59fe45ed5f27969594
+  react-native-sqlite-storage: 0c84826214baaa498796c7e46a5ccc9a82e114ed
   React-NativeModulesApple: 0f1cdafa0517926f47ff74dbd92a1c9bb767cc69
   React-oscompat: 0592889a9fcf0eacb205532028e4a364e22907dd
   React-perflogger: c584fa50e422a46f37404d083fad12eb289d5de4

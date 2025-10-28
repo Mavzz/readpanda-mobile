@@ -4,6 +4,16 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>AppAuth-AppAuthCore_Privacy.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>AppAuth.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>BVLinearGradient.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -554,6 +564,11 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>react-native-app-auth.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>react-native-blob-util-ReactNativeBlobUtilPrivacyInfo.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -585,6 +600,11 @@
 			<false/>
 		</dict>
 		<key>react-native-splash-screen.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>react-native-sqlite-storage.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>

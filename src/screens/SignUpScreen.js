@@ -55,14 +55,17 @@ const SignUp = ({ navigation }) => {
         ({ status, response } = await emailSignUp(username, password, email));
       }
 
-      if (response.token && (status === 200 || status === 201)) {
+      if (response.accessToken && (status === 200 || status === 201)) {
         // Store the token in MMKV storage
         const userData = {
-          token: response.token,
-          username: response.username,
-          email: email,
-          isNewUser: true,
-          preferences: response.preferences || {},
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
+          userDetails: {
+            username: response.username,
+            email: email,
+            isNewUser: true,
+            preferences: response.preferences || {},
+          }
         };
 
         ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));

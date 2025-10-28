@@ -3,48 +3,76 @@ import { STORAGE_CATEGORIES } from '../constants/storageConstants';
 
 class EnhancedStorage {
   // Auth related storage (MMKV)
-  async storeAuthData(authData) {
+   storeAuthData(authData) {
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN, authData.token);
-    StorageService.setItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE, authData.user);
+    StorageService.setItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE, authData.userDetails);
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN, authData.refreshToken);
   }
 
-  async getAuthToken() {
+   getAuthData() {
+    const token =  this.getAuthToken();
+    const userProfile =  this.getUserProfile();
+    const refreshToken =  this.getRefreshToken();
+
+    return {
+      token,
+      userProfile,
+      refreshToken
+    };
+  }
+  
+   getAuthToken() {
     return StorageService.getItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN);
   }
 
-  async clearAuthData() {
+   getUserProfile() {
+    return StorageService.getItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE);
+  }
+
+   getRefreshToken() {
+    return StorageService.getItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN);
+  }
+
+   updateUserProfile(updates) {
+    const currentProfile =  this.getUserProfile();
+    if (!currentProfile) return;
+
+    const updatedProfile = { ...currentProfile, ...updates };
+    StorageService.setItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE, updatedProfile);
+  }
+
+   clearAuthData() {
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN);
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE);
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN);
   }
 
   // App preferences (MMKV)
-  async storeUserPreference(key, value) {
+   storeUserPreference(key, value) {
     StorageService.setItem(`pref_${key}`, value);
   }
 
-  async getUserPreference(key, defaultValue = null) {
+   getUserPreference(key, defaultValue = null) {
     return StorageService.getItem(`pref_${key}`) || defaultValue;
   }
 
   // Manuscript operations (SQLite)
-  async saveManuscript(manuscript) {
-    return await StorageService.saveManuscript(manuscript);
+   saveManuscript(manuscript) {
+    return  StorageService.saveManuscript(manuscript);
   }
 
-  async getManuscripts(filters) {
-    return await StorageService.getManuscripts(filters);
+   getManuscripts(filters) {
+    return  StorageService.getManuscripts(filters);
   }
 
-  async getFavoriteManuscripts() {
-    return await StorageService.getManuscripts({ isFavorite: true });
+   getFavoriteManuscripts() {
+    return  StorageService.getManuscripts({ isFavorite: true });
   }
 
   // Reading progress (Hybrid approach)
-  async saveReadingProgress(manuscriptId, progress) {
+   saveReadingProgress(manuscriptId, progress) {
     // Store in SQLite for persistence
-    await StorageService.updateReadingProgress(manuscriptId, progress);
+     StorageService.updateReadingProgress(manuscriptId, progress);
     
     // Store current position in MMKV for quick access
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION, {
@@ -54,12 +82,12 @@ class EnhancedStorage {
     });
   }
 
-  async getCurrentReadingPosition() {
+   getCurrentReadingPosition() {
     return StorageService.getItem(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION);
   }
 
   // Cache management (MMKV)
-  async cacheApiResponse(key, data, ttl = 5 * 60 * 1000) { // 5 minutes default
+   cacheApiResponse(key, data, ttl = 5 * 60 * 1000) { // 5 minutes default
     const cacheData = {
       data,
       timestamp: Date.now(),
@@ -68,7 +96,7 @@ class EnhancedStorage {
     StorageService.setItem(`cache_${key}`, cacheData);
   }
 
-  async getCachedData(key) {
+   getCachedData(key) {
     const cached = StorageService.getItem(`cache_${key}`);
     if (!cached) return null;
 
@@ -82,13 +110,13 @@ class EnhancedStorage {
   }
 
   // Clear all storage
-  async clearAll() {
+   clearAll() {
     // Clear MMKV
     mmkvStorage.clearAll();
     
     // Clear SQLite (optional - usually you'd want to keep some data)
-    // await StorageService.db.executeSql('DELETE FROM manuscripts');
-    // await StorageService.db.executeSql('DELETE FROM reading_rooms');
+    //  StorageService.db.executeSql('DELETE FROM manuscripts');
+    //  StorageService.db.executeSql('DELETE FROM reading_rooms');
   }
 }
 

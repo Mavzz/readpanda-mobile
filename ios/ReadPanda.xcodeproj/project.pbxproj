@@ -21,6 +21,7 @@
 
 /* Begin PBXFileReference section */
 		0A4EBFD12E5E390800EAF49B /* ReadPanda.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ReadPanda.entitlements; path = ReadPanda/ReadPanda.entitlements; sourceTree = "<group>"; };
+		0A68B02E2EAFEC4900871E69 /* RNAppAuthAuthorizationFlowManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNAppAuthAuthorizationFlowManager.h; sourceTree = "<group>"; };
 		0A9C25F12E5DBFFC00F1734F /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		0AC96C172E5259E800C72562 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		0AC96C192E5259EF00C72562 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -68,6 +69,7 @@
 				0AC96C1E2E525AB000C72562 /* RNPdfViewerManager.h */,
 				0AC96C1F2E525AB000C72562 /* RNPdfViewerManager.m */,
 				0AC96C1D2E525AB000C72562 /* ReadPanda-Bridging-Header.h */,
+				0A68B02E2EAFEC4900871E69 /* RNAppAuthAuthorizationFlowManager.h */,
 			);
 			name = ReadPanda;
 			sourceTree = "<group>";

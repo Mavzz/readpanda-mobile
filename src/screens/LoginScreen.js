@@ -41,28 +41,27 @@ const Login = ({ navigation }) => {
         ({ status, response } = await googleSignUpLogin());
       }
 
-      if (response.token && (status === 200 || status === 201)) {
+      if (response.accessToken && (status === 200 || status === 201)) {
         // Store the token in MMKV storage
 
         const userData = {
-          token: response.token,
-          username: response.username,
-          isNewUser: false,
-          email: response.email,
-
-          preferences: response.preferences || {},
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
+          userDetails: {
+            username: response.username,
+            email: response.email,
+            isNewUser: false,
+            preferences: {},
+          },
         };
-
-        log.info('Login successful', { username: response.username });
         
         // Fetch user preferences after login
-        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username, userData.token));
 
-        userData.preferences = response || {};
+        userData.userDetails.preferences = response || {};
+
+        log.info('Login successful userData:', userData);
         signIn(userData);
-
-
-        log.info("Preferences Response:", response);
 
       } else {
         setLoading(false);

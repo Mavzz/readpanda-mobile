@@ -5,8 +5,12 @@
 //  Created by Venkataramaaditya Nimmagadda on 27/10/25.
 //
 
-#ifndef RNAppAuthAuthorizationFlowManager_h
-#define RNAppAuthAuthorizationFlowManager_h
+#import <Foundation/Foundation.h>
 
+@protocol RNAppAuthAuthorizationFlowManagerDelegate
+- (BOOL)resumeExternalUserAgentFlowWithURL:(NSURL *)url;
+@end
 
-#endif /* RNAppAuthAuthorizationFlowManager_h */
+@protocol RNAppAuthAuthorizationFlowManager <NSObject>
+@property(nonatomic, weak, nullable) id<RNAppAuthAuthorizationFlowManagerDelegate> authorizationFlowManagerDelegate;
+@end

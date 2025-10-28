@@ -138,7 +138,7 @@ class StorageService {
     try {
       mmkvStorage.set(key, JSON.stringify(value));
     } catch (error) {
-      console.error('MMKV setItem error:', error);
+      console.error(`MMKV setItem error {${key}}, :{${value}}`, error);
     }
   }
 
