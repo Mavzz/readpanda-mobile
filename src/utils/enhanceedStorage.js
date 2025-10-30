@@ -3,16 +3,16 @@ import { STORAGE_CATEGORIES } from '../constants/storageConstants';
 
 class EnhancedStorage {
   // Auth related storage (MMKV)
-   storeAuthData(authData) {
+  storeAuthData(authData) {
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN, authData.token);
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE, authData.userDetails);
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN, authData.refreshToken);
   }
 
-   getAuthData() {
-    const token =  this.getAuthToken();
-    const userProfile =  this.getUserProfile();
-    const refreshToken =  this.getRefreshToken();
+  getAuthData() {
+    const token = this.getAuthToken();
+    const userProfile = this.getUserProfile();
+    const refreshToken = this.getRefreshToken();
 
     return {
       token,
@@ -20,60 +20,64 @@ class EnhancedStorage {
       refreshToken
     };
   }
-  
-   getAuthToken() {
+
+  getAuthToken() {
     return StorageService.getItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN);
   }
 
-   getUserProfile() {
+  getUserProfile() {
     return StorageService.getItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE);
   }
 
-   getRefreshToken() {
+  getRefreshToken() {
     return StorageService.getItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN);
   }
 
-   updateUserProfile(updates) {
-    const currentProfile =  this.getUserProfile();
+  updateAuthToken(newToken) {
+    StorageService.setItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN, newToken);
+  }
+
+  updateUserProfile(updates) {
+    const currentProfile = this.getUserProfile();
     if (!currentProfile) return;
 
     const updatedProfile = { ...currentProfile, ...updates };
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE, updatedProfile);
   }
 
-   clearAuthData() {
+  clearAuthData() {
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN);
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE);
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN);
   }
 
   // App preferences (MMKV)
-   storeUserPreference(key, value) {
+  storeUserPreference(key, value) {
     StorageService.setItem(`pref_${key}`, value);
   }
 
-   getUserPreference(key, defaultValue = null) {
+  getUserPreference(key, defaultValue = null) {
     return StorageService.getItem(`pref_${key}`) || defaultValue;
   }
 
   // Manuscript operations (SQLite)
-   saveManuscript(manuscript) {
-    return  StorageService.saveManuscript(manuscript);
+  saveManuscript(manuscript) {
+    return StorageService.saveManuscript(manuscript);
   }
 
-   getManuscripts(filters) {
-    return  StorageService.getManuscripts(filters);
+  getManuscripts(filters) {
+    return StorageService.getManuscripts(filters);
   }
 
-   getFavoriteManuscripts() {
-    return  StorageService.getManuscripts({ isFavorite: true });
+  getFavoriteManuscripts() {
+    return StorageService.getManuscripts({ isFavorite: true });
   }
 
   // Reading progress (Hybrid approach)
-   saveReadingProgress(manuscriptId, progress) {
+  saveReadingProgress(manuscriptId, progress) {
     // Store in SQLite for persistence
-     StorageService.updateReadingProgress(manuscriptId, progress);
-    
+    StorageService.updateReadingProgress(manuscriptId, progress);
+
     // Store current position in MMKV for quick access
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION, {
       manuscriptId,
@@ -82,12 +86,12 @@ class EnhancedStorage {
     });
   }
 
-   getCurrentReadingPosition() {
+  getCurrentReadingPosition() {
     return StorageService.getItem(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION);
   }
 
   // Cache management (MMKV)
-   cacheApiResponse(key, data, ttl = 5 * 60 * 1000) { // 5 minutes default
+  cacheApiResponse(key, data, ttl = 5 * 60 * 1000) { // 5 minutes default
     const cacheData = {
       data,
       timestamp: Date.now(),
@@ -96,7 +100,7 @@ class EnhancedStorage {
     StorageService.setItem(`cache_${key}`, cacheData);
   }
 
-   getCachedData(key) {
+  getCachedData(key) {
     const cached = StorageService.getItem(`cache_${key}`);
     if (!cached) return null;
 
@@ -110,10 +114,10 @@ class EnhancedStorage {
   }
 
   // Clear all storage
-   clearAll() {
+  clearAll() {
     // Clear MMKV
     mmkvStorage.clearAll();
-    
+
     // Clear SQLite (optional - usually you'd want to keep some data)
     //  StorageService.db.executeSql('DELETE FROM manuscripts');
     //  StorageService.db.executeSql('DELETE FROM reading_rooms');

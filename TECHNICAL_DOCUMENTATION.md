@@ -88,7 +88,7 @@ readpanda-mobile/
 
 ### Data Fetching
 
--   **Custom Hooks**: The app uses custom hooks (`useGet`, `usePost`) to abstract data fetching logic. These hooks encapsulate loading, data, and error states, providing a consistent and reusable way to interact with the API across different components.
+-   **Custom Hooks**: The app uses custom hooks (`getRequest`, `postRequest`) to abstract data fetching logic. These hooks encapsulate loading, data, and error states, providing a consistent and reusable way to interact with the API across different components.
 
 ## 5. API Interaction
 

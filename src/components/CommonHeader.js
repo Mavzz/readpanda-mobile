@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, Platform, Pressable, Modal, ActivityIndicator } from 'react-native';
 import SearchBar from './SearchBar';
+import ProfilePicture from './ProfilePicture';
 import log from "../utils/logger";
 import Icon from 'react-native-vector-icons/Ionicons';
 import Animated, {
@@ -14,9 +15,11 @@ import Animated, {
 import { NotificationBadge } from './Badge';
 import NotificationList from './NotificationList';
 import { NotificationService } from '../services/notificationService';
+import { useAuth } from '../contexts/AuthContext';
 
 
 const CommonHeader = ({ showSearch, navigation }) => {
+    const { user } = useAuth();
 
     const [notifications, setNotifications] = useState([]);
     const [notificationCount, setNotificationCount] = useState(0);
@@ -122,16 +125,16 @@ const CommonHeader = ({ showSearch, navigation }) => {
         }
     };
 
-   /* useEffect(() => {
-
-        // Set up polling for new notifications
-        const pollInterval = setInterval(async () => {
-            const unreadCount = await NotificationService.getUnreadCount();
-            setNotificationCount(unreadCount);
-        }, 30000); // Poll every 30 seconds
-
-        return () => clearInterval(pollInterval);
-    }, []);*/
+    /* useEffect(() => {
+ 
+         // Set up polling for new notifications
+         const pollInterval = setInterval(async () => {
+             const unreadCount = await NotificationService.getUnreadCount();
+             setNotificationCount(unreadCount);
+         }, 30000); // Poll every 30 seconds
+ 
+         return () => clearInterval(pollInterval);
+     }, []);*/
 
     return (
         <>
@@ -139,11 +142,11 @@ const CommonHeader = ({ showSearch, navigation }) => {
                 <View style={styles.headerContainer}>
                     {/* Profile Icon */}
                     <Pressable onPress={handleProfilePress}>
-                        <Animated.View style={[styles.iconContainer, profileAnimatedStyle]}>
-                            <Icon
-                                name="person-circle-outline"
-                                size={28}
-                                color="#666"
+                        <Animated.View style={[styles.profileContainer, profileAnimatedStyle]}>
+                            <ProfilePicture
+                                size={42}
+                                editable={false}
+                                user={user}
                             />
                         </Animated.View>
                     </Pressable>
@@ -220,6 +223,13 @@ const styles = StyleSheet.create({
 
     },
     iconContainer: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    profileContainer: {
         width: 40,
         height: 40,
         justifyContent: 'center',

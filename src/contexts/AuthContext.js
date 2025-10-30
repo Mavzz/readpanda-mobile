@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }) => {
             if (!user) return;
 
             const updatedUser = { ...user, ...updates };
+            log.info('Updating user data', { updatedUser });
             try {
                 enhanceedStorage.updateUserProfile(updates);
                 setUser(updatedUser);

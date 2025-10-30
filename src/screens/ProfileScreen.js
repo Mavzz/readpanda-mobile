@@ -2,10 +2,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import Background from "../components/Background";
 import { primaryButton as PrimaryButton } from "../components/Button";
+import ProfilePicture from "../components/ProfilePicture";
 import log from "../utils/logger";
 import { useScreenTracking } from "../utils/screenTracking";
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../services/auth';
+import enhanceedStorage from '../utils/enhanceedStorage';
 
 const ProfileSection = ({ title, children }) => (
   <View style={styles.section}>
@@ -17,18 +19,30 @@ const ProfileSection = ({ title, children }) => (
 );
 
 const ProfileScreen = () => {
-  const { user, signOut, refreshToken } = useAuth();
+  const { user, signOut, updateUser } = useAuth();
   const username = user?.username;
   const navigation = useNavigation();
+  const refreshToken = enhanceedStorage.getRefreshToken();
+
+  useScreenTracking('ProfileScreen');
 
   log.info(`Profile screen loaded for user: ${username}`);
 
   const handleSignOut = async () => {
     log.info("Signing out...");
     // Clear the token from storage
+    log.info("refreshToken:", refreshToken);
     await logout(username, refreshToken);
     signOut();
     log.info("User signed out successfully");
+  };
+
+  const handleProfilePictureChange = (newImageUri) => {
+    log.info('Profile picture changed:', newImageUri);
+    // Update the user context with new profile picture
+    if (updateUser) {
+      updateUser({ profilePicture: newImageUri });
+    }
   };
 
   return (
@@ -36,6 +50,13 @@ const ProfileScreen = () => {
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
           <View style={styles.header}>
+            <ProfilePicture
+              size={100}
+              editable={true}
+              user={user}
+              onImageChange={handleProfilePictureChange}
+              style={styles.profilePicture}
+            />
             <Text style={styles.welcome}>Welcome, {username}!</Text>
           </View>
 
@@ -101,6 +122,9 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 30,
+  },
+  profilePicture: {
+    marginBottom: 16,
   },
   welcome: {
     fontSize: 24,

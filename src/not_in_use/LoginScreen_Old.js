@@ -11,7 +11,7 @@ import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
 import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../components/Button";
 import { storage } from "../utils/storage";
-import { useGet } from "../services/useGet";
+import { getRequest } from "../services/useGet";
 import { getBackendUrl, SignUpType } from "../utils/Helper";
 import { googleSignUpLogin, emailLogin } from "../services/auth";
 import log from '../utils/logger';
@@ -51,7 +51,7 @@ const Login = ({ navigation }) => {
 
         if (status === 200) {
 
-          ({ status, response } = await useGet(
+          ({ status, response } = await getRequest(
             await getBackendUrl(`/user/preferences?username=${response.username}`),
             {
               Authorization: `Bearer ${response.token}`,
