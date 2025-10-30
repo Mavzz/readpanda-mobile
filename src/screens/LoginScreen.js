@@ -10,7 +10,7 @@ import {
 import Background from "../components/Background";
 import { loginStyles } from "../styles/global";
 import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../components/Button";
-import {  SignUpType } from "../utils/Helper";
+import { SignUpType } from "../utils/Helper";
 import { googleSignUpLogin, emailLogin } from "../services/auth";
 import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,18 +50,23 @@ const Login = ({ navigation }) => {
           userDetails: {
             username: response.username,
             email: response.email,
+            profilePicture: response.picture || null,
             isNewUser: false,
             preferences: {},
           },
         };
-        
+
+        signIn(userData);
+
         // Fetch user preferences after login
         ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username, userData.token));
 
         userData.userDetails.preferences = response || {};
 
+        updateUser(userData.userDetails);
+
         log.info('Login successful userData:', userData);
-        signIn(userData);
+
 
       } else {
         setLoading(false);

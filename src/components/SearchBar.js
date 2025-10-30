@@ -70,7 +70,7 @@ const SearchBar = () => {
       <IconButton
         name="search"
         size={20}
-        color="#666"
+        color="#999"
         style={styles.searchIcon}
         onPress={searchBooks}
       />
@@ -89,7 +89,7 @@ const SearchBar = () => {
         <IconButton
           name="close-circle"
           size={20}
-          color="#666"
+          color="#999"
           style={styles.icon}
           onPress={clearSearch}
         />

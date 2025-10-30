@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import AuthStackNavigator from './AuthStackNavigator';
 import MainTabNavigator from './MainTabNavigator';
 import { View, Text, ActivityIndicator } from 'react-native';
+import Toaster from "../components/Toaster";
 
 const Stack = createStackNavigator();
 
@@ -64,6 +65,7 @@ const AppNavigator = () => {
   return (
     <AuthProvider>
       <AppContent />
+      <Toaster />
     </AuthProvider>
   );
 };

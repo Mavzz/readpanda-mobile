@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import Icon from "react-native-vector-icons/Ionicons";
+import { Platform } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from "../screens/HomeScreen";
 import JoinRoomScreen from "../screens/JoinRoomScreen";
@@ -19,19 +20,29 @@ const Stack = createStackNavigator();
 // Stack navigator for each tab that needs additional screens
 const HomeStackNavigator = () => {
   const { user } = useAuth();
-  
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen 
-        name="HomeMain" 
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        presentation: 'card',
+        animationEnabled: true,
+        cardStyle: { backgroundColor: MyTheme.colors.background },
+      }}
+    >
+      <Stack.Screen
+        name="HomeMain"
         component={HomeScreen}
+        options={{
+          headerShown: false,
+        }}
       />
-      <Stack.Screen 
-        name="ManuscriptScreen" 
+      <Stack.Screen
+        name="ManuscriptScreen"
         component={ManuscriptScreen}
         options={{
-          headerShown: true,
-          title: "Manuscript"
+          headerShown: false,
+          animationEnabled: true,
         }}
       />
     </Stack.Navigator>
@@ -102,16 +113,16 @@ const MainStackNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
-      <Stack.Screen 
-        name="Profile" 
+      <Stack.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{
           headerShown: true,
           title: "Profile"
         }}
       />
-      <Stack.Screen 
-        name="Interest" 
+      <Stack.Screen
+        name="Interest"
         component={InterestScreen}
         options={{
           headerShown: true,
