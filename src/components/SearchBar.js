@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { TextInput, StyleSheet, View, Dimensions, Keyboard, Pressable } from 'react-native';
-import { iconButton as IconButton } from "../components/Button";
-import log from "../utils/logger";
+import { iconButton as IconButton } from '../components/Button';
+import log from '../utils/logger';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -12,7 +12,7 @@ import Animated, {
 const SearchBar = () => {
 
   const [isFocused, setIsFocused] = useState(false);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
 
   // Animation values
   const containerWidth = useSharedValue('95%');
@@ -21,22 +21,22 @@ const SearchBar = () => {
 
   const searchBooks = () => {
     log.info(`Searching for book: ${searchText}`);
-    setSearchText("");
+    setSearchText('');
     Keyboard.dismiss();
     // Implement search functionality here
     // For example, you might want to call a function passed via props
     // props.onSearch(searchText);
     // Placeholder for actual search logic
-    log.info("Search functionality is not yet implemented.");
-    alert("Search functionality is not yet implemented.");
+    log.info('Search functionality is not yet implemented.');
+    alert('Search functionality is not yet implemented.');
 
-  }
+  };
 
   const clearSearch = () => {
-    setSearchText("");
+    setSearchText('');
     // Implement clear functionality here
-    log.info("Cleared search input.");
-  }
+    log.info('Cleared search input.');
+  };
 
   const handleFocus = () => {
     setIsFocused(true);

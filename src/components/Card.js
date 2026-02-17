@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { cardStyles } from "../styles/global";
+import { cardStyles } from '../styles/global';
 import { log } from '../utils/logger';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -94,7 +94,7 @@ const NewBookCard = ({ book, onPress, style }) => {
               <View
                 style={[
                   cardStyles.progressFill,
-                  { width: `${book.reading_progress}%` }
+                  { width: `${book.reading_progress}%` },
                 ]}
               />
             </View>

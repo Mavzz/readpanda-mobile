@@ -1,6 +1,5 @@
-import axios from 'axios';
-import { putRequest } from "./usePut";
-import { getRequest } from "./useGet";
+import { putRequest } from './usePut';
+import { getRequest } from './useGet';
 import { getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
 
@@ -36,5 +35,5 @@ export const NotificationService = {
       log.error('Error fetching unread count:', error);
       return 0;
     }
-  }
+  },
 };

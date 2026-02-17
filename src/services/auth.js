@@ -1,8 +1,8 @@
 import { Alert } from 'react-native';
-import { postRequest } from "./usePost";
-import { NativeModules, Platform } from "react-native";
+import { postRequest } from './usePost';
+import { NativeModules, Platform } from 'react-native';
 import { GoogleAuthService } from './GoogleAuthService';
-import { encryptedPassword, getBackendUrl } from "../utils/Helper";
+import { encryptedPassword, getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
 
 
@@ -24,38 +24,38 @@ const googleSignUpLogin = async () => {
       const fetchOptions = {
         method: 'POST',
         headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       };
-      log.info("Google ID Token obtained", token);
+      log.info('Google ID Token obtained', token);
 
-      const responseAuth = await fetch(await getBackendUrl("/auth/google"), fetchOptions);
+      const responseAuth = await fetch(await getBackendUrl('/auth/google'), fetchOptions);
       status = responseAuth.status;
       response = await responseAuth.json();
 
     } else {
-      Alert.alert("Login failed", "An error occurred. Please try again.");
+      Alert.alert('Login failed', 'An error occurred. Please try again.');
     }
   } else {
     try {
       const token = await GoogleSignInModule.signIn();
-      console.log("Google ID Token:", token);
+      console.log('Google ID Token:', token);
 
       if (token) {
-        ({ status, response } = await postRequest(await getBackendUrl("/auth/google"),
+        ({ status, response } = await postRequest(await getBackendUrl('/auth/google'),
           {},
           { Authorization: `Bearer ${token}` },
         ));
 
-        console.log("Signup Response:", response);
+        console.log('Signup Response:', response);
       } else {
-        Alert.alert("Login failed", "An error occurred. Please try again.");
+        Alert.alert('Login failed', 'An error occurred. Please try again.');
       }
     } catch (error) {
-      console.error("Google Sign-In Error:", error);
-      Alert.alert("Login failed", "An error occurred. Please try again.");
+      console.error('Google Sign-In Error:', error);
+      Alert.alert('Login failed', 'An error occurred. Please try again.');
     }
 
   }
@@ -64,25 +64,22 @@ const googleSignUpLogin = async () => {
     return { status, response };
   } else {
 
-    log.error("Google Sign Up/Login failed with status:", status);
+    log.error('Google Sign Up/Login failed with status:', status);
     return { status, response: null };
 
   }
 };
 
 const emailLogin = async (username, password) => {
-  let status;
-  let response;
-
   const fetchOptions = {
     method: 'POST',
     headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
     },
   };
 
-  const responseAuth = await fetch(await getBackendUrl("/auth/login"), {
+  const responseAuth = await fetch(await getBackendUrl('/auth/login'), {
     ...fetchOptions,
     body: JSON.stringify({
       username,
@@ -90,39 +87,36 @@ const emailLogin = async (username, password) => {
     }),
   });
 
-  status = responseAuth.status;
-  response = await responseAuth.json();
+  const status = responseAuth.status;
+  const response = await responseAuth.json();
 
   if (status === 200) {
-    log.info("Login successful with status:", status);
+    log.info('Login successful with status:', status);
     return { status, response };
   }
   else {
-    log.error("Login failed with status:", status);
+    log.error('Login failed with status:', status);
     return { status, response: null };
   }
 
 
-}
+};
 
 const emailSignUp = async (username, password, email) => {
-  let status;
-  let response;
+  log.info('Attempting Sign Up with username:', username, 'email:', email);
 
-  log.info("Attempting Sign Up with username:", username, "email:", email);
-
-  ({ status, response } = await postRequest(await getBackendUrl("/signup"), {
+  const { status, response } = await postRequest(await getBackendUrl('/signup'), {
     username,
     password: encryptedPassword(password),
     email,
-  }));
+  });
 
   if (status === 201) {
-    log.info("Sign Up successful with status:", status);
+    log.info('Sign Up successful with status:', status);
     return { status, response };
   }
   else {
-    log.error("Sign Up failed with status:", status);
+    log.error('Sign Up failed with status:', status);
     return { status, response: null };
   }
 
@@ -130,13 +124,11 @@ const emailSignUp = async (username, password, email) => {
   //console.log("Sign Up Response:", response);
 };
 const logout = async (username, refreshToken) => {
-  let status;
-  let response;
-  ({ status, response } = await postRequest(await getBackendUrl(`/auth/logout?username=${username}`),
+  const { status, response } = await postRequest(await getBackendUrl(`/auth/logout?username=${username}`),
     {},
     { Authorization: `Bearer ${refreshToken}` },
-  ));
-  log.info(`User logged out: ${username}`);
+  );
+  log.info(`User logged out: ${username}`, status, response);
 };
 
 

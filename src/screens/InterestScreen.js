@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,15 +6,15 @@ import {
   SafeAreaView,
   Pressable,
   Text,
-} from "react-native";
+} from 'react-native';
 
-import { useNavigation } from "@react-navigation/native";
-import Background from "../components/Background";
-import { primaryButton as PrimaryButton } from "../components/Button";
-import log from "../utils/logger";
-import { useScreenTracking } from "../utils/screenTracking";
+import { useNavigation } from '@react-navigation/native';
+import Background from '../components/Background';
+import { primaryButton as PrimaryButton } from '../components/Button';
+import log from '../utils/logger';
+import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from "../services/user_PreferencesService";
+import { PreferenceService } from '../services/user_PreferencesService';
 
 const InterestScreen = () => {
   const { user, updateUser } = useAuth();
@@ -36,7 +36,7 @@ const InterestScreen = () => {
       [category]: prev[category].map((item) =>
         item.preference_id === preference_id
           ? { ...item, preference_value: !item.preference_value }
-          : item
+          : item,
       ),
     }));
   };
@@ -73,7 +73,7 @@ const InterestScreen = () => {
   );
 
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
-    log.info("Updating user preferences");
+    log.info('Updating user preferences');
     try {
 
       if (isUpdated) {
@@ -81,10 +81,10 @@ const InterestScreen = () => {
         ({ status, response } = await PreferenceService.updateUserPreferences(username, interests, user.token));
 
         if (status === 200 || status === 201) {
-          log.info("User preferences updated successfully");
+          log.info('User preferences updated successfully');
         } else {
-          log.error("Failed to update user preferences with status:", status);
-          throw new Error("Failed to update preferences");
+          log.error('Failed to update user preferences with status:', status);
+          throw new Error('Failed to update preferences');
         }
         updateUser({ preferences: interests });
         log.info('First time user experience completed');
@@ -93,7 +93,7 @@ const InterestScreen = () => {
           routes: [{ name: 'HomeMain' }],
         });
       } else {
-        log.info("No changes made to preferences, navigating to Home");
+        log.info('No changes made to preferences, navigating to Home');
         navigation.reset({
           index: 0,
           routes: [{ name: 'HomeMain' }],
@@ -101,9 +101,9 @@ const InterestScreen = () => {
       }
 
     } catch (error) {
-      log.error("Error updating preferences:", error);
+      log.error('Error updating preferences:', error);
     } finally {
-      log.info("Finished updating preferences");
+      log.info('Finished updating preferences');
     }
   };
 
@@ -111,13 +111,13 @@ const InterestScreen = () => {
     <Background>
       <View style={styles.container}>
         <SafeAreaView>
-          <View style={{ flexDirection: "row", alignItems: "center", paddingBottom: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 10 }}>
             <Text
               style={{
                 fontSize: 24,
                 //marginBottom: 20,
-                textAlign: "center",
-                color: "#0A210F",
+                textAlign: 'center',
+                color: '#0A210F',
               }}
             >
               What's your
@@ -126,8 +126,8 @@ const InterestScreen = () => {
               style={{
                 fontSize: 24,
                 //marginBottom: 20,
-                color: "#E34A6F",
-                fontWeight: "400",
+                color: '#E34A6F',
+                fontWeight: '400',
                 paddingLeft: 5,
               }}
             >
@@ -140,7 +140,7 @@ const InterestScreen = () => {
             keyExtractor={(item) => item}
             contentContainerStyle={styles.flatListContent}
             ListFooterComponent={
-              <PrimaryButton onPress={() => updateUserPreferences(username, interests, isUpdated, navigation
+              <PrimaryButton onPress={() => updateUserPreferences(username, interests, isUpdated, navigation,
               )} title="Done!" />
             }
           />
@@ -161,56 +161,56 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 20,
-    fontWeight: "600",
+    fontWeight: '600',
     marginVertical: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
   category: {
     marginBottom: 30,
   },
   categoryTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 10,
   },
   tagContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   tag: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: "#fff",
-    borderColor: "#D0D0D0",
+    backgroundColor: '#fff',
+    borderColor: '#D0D0D0',
     borderWidth: 1,
     marginRight: 8,
     marginBottom: 10,
   },
   tagSelected: {
-    backgroundColor: "#DDE8FF",
-    borderColor: "#3366FF",
+    backgroundColor: '#DDE8FF',
+    borderColor: '#3366FF',
   },
   tagText: {
-    color: "#333",
+    color: '#333',
     fontSize: 14,
   },
   tagTextSelected: {
-    color: "#3366FF",
-    fontWeight: "600",
+    color: '#3366FF',
+    fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: "#3366FF",
+    backgroundColor: '#3366FF',
     paddingVertical: 14,
     borderRadius: 30,
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 10,
   },
   saveButtonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });
 

@@ -1,7 +1,7 @@
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, StyleSheet } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { screenStyles, MyTheme } from "../styles/global";
-import log from "../utils/logger";
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { screenStyles, MyTheme } from '../styles/global';
+import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -13,12 +13,12 @@ const JoinRoom = () => {
   log.info(`JoinRoom screen loaded for user: ${username}`);
 
   const handleCreateRoom = () => {
-    log.info("Create room pressed");
+    log.info('Create room pressed');
     // TODO: Implement room creation
   };
 
   const handleJoinRoom = () => {
-    log.info("Join room pressed");
+    log.info('Join room pressed');
     // TODO: Implement room joining
   };
 

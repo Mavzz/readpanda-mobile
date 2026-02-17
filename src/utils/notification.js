@@ -5,12 +5,12 @@ const NOTIFICATION_STORAGE_KEY = 'notifications';
 
 export const NotificationType = {
   NEW_BOOK: 'NEW_BOOK',
-  SYSTEM: 'SYSTEM'
+  SYSTEM: 'SYSTEM',
 };
 
 export const saveNotification = async (notification) => {
   try {
-    const userStorage = storage("user_storage");
+    const userStorage = storage('user_storage');
     const existingNotifications = userStorage.getString(NOTIFICATION_STORAGE_KEY);
     const notifications = existingNotifications ? JSON.parse(existingNotifications) : [];
     
@@ -18,7 +18,7 @@ export const saveNotification = async (notification) => {
       id: Date.now(),
       timestamp: new Date().toISOString(),
       read: false,
-      ...notification
+      ...notification,
     });
 
     userStorage.set(NOTIFICATION_STORAGE_KEY, JSON.stringify(notifications));
@@ -31,7 +31,7 @@ export const saveNotification = async (notification) => {
 
 export const getNotifications = () => {
   try {
-    const userStorage = storage("user_storage");
+    const userStorage = storage('user_storage');
     const notifications = userStorage.getString(NOTIFICATION_STORAGE_KEY);
     return notifications ? JSON.parse(notifications) : [];
   } catch (error) {
@@ -42,12 +42,12 @@ export const getNotifications = () => {
 
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    const userStorage = storage("user_storage");
+    const userStorage = storage('user_storage');
     const notifications = getNotifications();
     const updatedNotifications = notifications.map(notification => 
       notification.id === notificationId 
         ? { ...notification, read: true }
-        : notification
+        : notification,
     );
     
     userStorage.set(NOTIFICATION_STORAGE_KEY, JSON.stringify(updatedNotifications));

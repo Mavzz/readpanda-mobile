@@ -1,9 +1,9 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRoute } from "@react-navigation/native";
-import { loginStyles } from "../styles/global";
-import Background from "../components/Background";
-import log from "../utils/logger";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import { loginStyles } from '../styles/global';
+import Background from '../components/Background';
+import log from '../utils/logger';
 
 const Favorite = () => {
   const route = useRoute();
@@ -24,7 +24,7 @@ const Favorite = () => {
 const styles = StyleSheet.create({
   welcome: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });
 
