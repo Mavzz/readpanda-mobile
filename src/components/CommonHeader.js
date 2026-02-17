@@ -32,10 +32,8 @@ const CommonHeader = ({ showSearch, navigation }) => {
   const animateIcon = (scaleValue, onComplete) => {
     'worklet';
     scaleValue.value = withSequence(
-      scaleValue.value = withSequence(
-        withSpring(1.2, { damping: 200 }),
-        withSpring(1, { damping: 200 }),
-      ),
+      withSpring(1.2, { damping: 200 }),
+      withSpring(1, { damping: 200 }),
     );
     onComplete?.();
   };

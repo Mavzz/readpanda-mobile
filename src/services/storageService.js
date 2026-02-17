@@ -1,10 +1,11 @@
 import { MMKV } from 'react-native-mmkv';
 import SQLite from 'react-native-sqlite-storage';
 import log from '../utils/logger';
+import { SECRET_KEY } from '@env';
 
 export const mmkvStorage = new MMKV({
   id: 'readpanda-storage',
-  encryptionKey: 'your-encryption-key', // Replace with your actual encryption key
+  encryptionKey: SECRET_KEY, // Use encryption key from environment
 });
 
 SQLite.enablePromise(true);

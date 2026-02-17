@@ -124,11 +124,11 @@ const emailSignUp = async (username, password, email) => {
   //console.log("Sign Up Response:", response);
 };
 const logout = async (username, refreshToken) => {
-  const { status, response } = await postRequest(await getBackendUrl(`/auth/logout?username=${username}`),
+  const { status } = await postRequest(await getBackendUrl(`/auth/logout?username=${username}`),
     {},
     { Authorization: `Bearer ${refreshToken}` },
   );
-  log.info(`User logged out: ${username}`, status, response);
+  log.info(`User logged out: ${username}`, status);
 };
 
 

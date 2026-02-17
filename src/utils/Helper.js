@@ -1,5 +1,5 @@
 import CryptoJS from 'react-native-crypto-js';
-import { SECRET_KEY, API_VERSION } from '@env';
+import { SECRET_KEY, Local_IP, API_VERSION } from '@env';
 import messaging from '@react-native-firebase/messaging';
 import log from '../utils/logger';
 import { saveNotification, NotificationType } from './notification';
@@ -16,7 +16,7 @@ const getBackendUrl = async (path = '') => {
   let backendUrl;
   try {
 
-    const ip = '192.168.1.144'; //"192.168.0.104" //await Network.getIpAddressAsync();
+    const ip = Local_IP || '192.168.1.144'; // Use Local_IP from .env, fallback for dev
     const port = 3000; // your backend port
     backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
 

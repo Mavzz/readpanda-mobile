@@ -3,10 +3,13 @@
  * 
  * This file documents how the app handles missing authentication tokens
  * and provides examples of proper error handling in components.
+ * 
+ * NOTE: This file contains example/documentation code with intentional
+ * placeholder variables (showToast, authContext, setUserData) that are
+ * meant to be replaced in actual implementation.
  */
 
-/* eslint-disable no-unused-vars */
-/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars, no-undef */
 
 import { AuthError, AUTH_ERRORS } from './apiService';
 import {
