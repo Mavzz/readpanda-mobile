@@ -1,17 +1,17 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { encryptedPassword, getBackendUrl} from "../utils/Helper";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { encryptedPassword, getBackendUrl } from '../utils/Helper';
 // import { GoogleSignin } from '@react-native-google-signin/google-signin';
 // import axios from 'axios';
 
 export const loginUser = async (username, password) => {
 
-  const url = await getBackendUrl("/auth/login");
+  const url = await getBackendUrl('/auth/login');
   console.log(url);
 
   const response = await fetch(`${url}`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ username, password: encryptedPassword(password) }),
   });
@@ -27,7 +27,7 @@ export const getUserPreferences = async (token, username) => {
   
   console.log(`getUserPreferences token: ${token}`);
 
-  const url = await getBackendUrl("/user/preferences?username=${username}");
+  const url = await getBackendUrl('/user/preferences?username=${username}');
   console.log(url);
 
   const response = await fetch(`${url}/user/preferences?username=${username}`, {
@@ -37,7 +37,7 @@ export const getUserPreferences = async (token, username) => {
   });
 
   if (!response.ok) {
-    throw new Error(`There was an error fetching the preferences`);
+    throw new Error('There was an error fetching the preferences');
   }
   return response.json();
 
@@ -46,22 +46,22 @@ export const getUserPreferences = async (token, username) => {
 export const updateUserPreferences = async ( username, preferences, isUpdated, navigation) => {
   
   if (!isUpdated) {
-    navigation.popTo("Root", { username });
-  }else{
+    navigation.popTo('Root', { username });
+  } else {
     
     const isTokenExists = await AsyncStorage.getItem(`token_${username}`);
     
     if (isTokenExists) {
-      try{
+      try {
         console.log(`updateUserPreferences token: ${isTokenExists}`);
 
-        const url = await getBackendUrl("/user/preferences?username=${username}");
+        const url = await getBackendUrl('/user/preferences?username=${username}');
         console.log(url);
 
         const response = await fetch(`${url}`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${isTokenExists}`,
           },
           body: JSON.stringify({ username, preferences }),
@@ -69,39 +69,39 @@ export const updateUserPreferences = async ( username, preferences, isUpdated, n
     
         if (response.status === 200) {
     
-          console.log("Preferences updated successfully");
-          navigation.popTo("Root", { username });
+          console.log('Preferences updated successfully');
+          navigation.popTo('Root', { username });
         
         } else if (response.status === 400) {
-          throw new Error("Bad Request: Please check the data sent to the server.");
+          throw new Error('Bad Request: Please check the data sent to the server.');
         } else if (response.status === 401) {
-          throw new Error("Unauthorized: Please check your authentication token.");
+          throw new Error('Unauthorized: Please check your authentication token.');
         } else if (response.status === 500) {
-          throw new Error("Internal Server Error: Please try again later.");
+          throw new Error('Internal Server Error: Please try again later.');
         } else {
           throw new Error(`Unexpected error: ${response.statusText}`);
         }
       } catch (error) {
-        Alert.alert("Preferences Update failed", error.message);
+        Alert.alert('Preferences Update failed', error.message);
       }
     } 
     else {
-      throw new Error(`Token does not exist`);
+      throw new Error('Token does not exist');
     }
   }
 };
 
 export const signUpUser = async (username, password, email) => {
   
-  const url = await getBackendUrl("/signup");
+  const url = await getBackendUrl('/signup');
   console.log(url);
 
   let response;
   try {
     response = await fetch(`${url}`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         username,
@@ -110,11 +110,11 @@ export const signUpUser = async (username, password, email) => {
       }),
     });
   } catch (error) {
-    console.error("Error during sign up:", error);
-    throw new Error("Sign up failed due to network error or server issue.");
+    console.error('Error during sign up:', error);
+    throw new Error('Sign up failed due to network error or server issue.');
   }
 
-  console.log("Sign Up Status:", response.status);
+  console.log('Sign Up Status:', response.status);
 
   return JSON.stringify({
     status: response.status,
@@ -124,14 +124,14 @@ export const signUpUser = async (username, password, email) => {
 
 export const ssoSignUpUser = async (idToken ) => {
   
-  const url = await getBackendUrl("/auth/google");
+  const url = await getBackendUrl('/auth/google');
   console.log(url);
 
   console.log( JSON.stringify({ idToken }));
   const response = await fetch(`${url}`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ idToken }),
   });

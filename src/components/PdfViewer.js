@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { requireNativeComponent, Platform, ActivityIndicator, View, StyleSheet } from 'react-native';
 
 const LINKING_ERROR = 
-  `The native module for PDF Viewer is not available. Make sure: \n\n` +
-  Platform.select({ ios: "- You have run 'pod install' in the 'ios' directory and restarted your project.\n", default: '' }) ;
+  'The native module for PDF Viewer is not available. Make sure: \n\n' +
+  Platform.select({ ios: '- You have run \'pod install\' in the \'ios\' directory and restarted your project.\n', default: '' }) ;
 
 // The name 'RNPdfViewer' must exactly match the RCT_EXPORT_MODULE name from RNPdfViewerManager.m
 const RNPdfViewerComponent = Platform.select({

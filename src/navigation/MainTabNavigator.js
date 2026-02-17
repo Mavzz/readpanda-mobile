@@ -1,17 +1,17 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createStackNavigator } from "@react-navigation/stack";
-import Icon from "react-native-vector-icons/Ionicons";
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { Platform } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import HomeScreen from "../screens/HomeScreen";
-import JoinRoomScreen from "../screens/JoinRoomScreen";
-import CurrentReadScreen from "../screens/CurrentReadScreen";
-import MyRoomsScreen from "../screens/MyRoomsScreen";
-import InterestScreen from "../screens/InterestScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import ManuscriptScreen from "../screens/ManuscriptScreen";
+import HomeScreen from '../screens/HomeScreen';
+import JoinRoomScreen from '../screens/JoinRoomScreen';
+import CurrentReadScreen from '../screens/CurrentReadScreen';
+import MyRoomsScreen from '../screens/MyRoomsScreen';
+import InterestScreen from '../screens/InterestScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import ManuscriptScreen from '../screens/ManuscriptScreen';
 import CommonHeader from '../components/CommonHeader';
-import { MyTheme } from "../styles/global";
+import { MyTheme } from '../styles/global';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -57,14 +57,14 @@ const TabNavigator = () => {
       screenOptions={{
         presentation: 'screen',
         header: ({ navigation, route }) => {
-          const showSearch = route.name === "Explore Books";
+          const showSearch = route.name === 'Explore Books';
           return (
             <CommonHeader
               showSearch={showSearch}
               navigation={navigation}
             />
           );
-        }
+        },
       }}
     >
       <Tab.Screen
@@ -118,7 +118,7 @@ const MainStackNavigator = () => {
         component={ProfileScreen}
         options={{
           headerShown: true,
-          title: "Profile"
+          title: 'Profile',
         }}
       />
       <Stack.Screen
@@ -126,7 +126,7 @@ const MainStackNavigator = () => {
         component={InterestScreen}
         options={{
           headerShown: true,
-          title: "Select Interests"
+          title: 'Select Interests',
         }}
       />
     </Stack.Navigator>

@@ -1,5 +1,5 @@
 
-import { logger, consoleTransport } from "react-native-logs";
+import { logger, consoleTransport } from 'react-native-logs';
 
 const defaultConfig = {
   levels: {

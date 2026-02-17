@@ -3,14 +3,14 @@ import React from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import Background from '../components/Background';
 import PdfViewer from '../components/PdfViewer';
-import log from "../utils/logger";
+import log from '../utils/logger';
 
 const ManuscriptScreen = ({ route }) => {
   const { book } = route.params;
   const pdfUrl = book.manuscript_url;
   log.info(`ManuscriptScreen loaded for book: ${book.title}`);
-  log.info(`pdfDetails:`,{url:pdfUrl,
-          title: book.title});
+  log.info('pdfDetails:',{ url:pdfUrl,
+    title: book.title });
 
   return (
     <View style={styles.container}>

@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
-import { useNavigation, CommonActions } from "@react-navigation/native";
-import Background from "../components/Background";
-import { primaryButton as PrimaryButton } from "../components/Button";
-import ProfilePicture from "../components/ProfilePicture";
-import log from "../utils/logger";
-import { useScreenTracking } from "../utils/screenTracking";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
+import Background from '../components/Background';
+import { primaryButton as PrimaryButton } from '../components/Button';
+import ProfilePicture from '../components/ProfilePicture';
+import log from '../utils/logger';
+import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../services/auth';
 import enhanceedStorage from '../utils/enhanceedStorage';
@@ -29,12 +29,12 @@ const ProfileScreen = () => {
   log.info(`Profile screen loaded for user: ${username}`);
 
   const handleSignOut = async () => {
-    log.info("Signing out...");
+    log.info('Signing out...');
     // Clear the token from storage
-    log.info("refreshToken:", refreshToken);
+    log.info('refreshToken:', refreshToken);
     await logout(username, refreshToken);
     signOut();
-    log.info("User signed out successfully");
+    log.info('User signed out successfully');
   };
 
   const handleProfilePictureChange = (newImageUri) => {
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   welcome: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     textAlign: 'center',
   },
   section: {

@@ -3,14 +3,20 @@
  * 
  * This file documents how the app handles missing authentication tokens
  * and provides examples of proper error handling in components.
+ * 
+ * NOTE: This file contains example/documentation code with intentional
+ * placeholder variables (showToast, authContext, setUserData) that are
+ * meant to be replaced in actual implementation.
  */
+
+/* eslint-disable no-unused-vars, no-undef */
 
 import { AuthError, AUTH_ERRORS } from './apiService';
 import {
-    makeAuthenticatedGetRequest,
-    makePublicPostRequest,
-    loginRequest,
-    signupRequest
+  makeAuthenticatedGetRequest,
+  makePublicPostRequest,
+  loginRequest,
+  signupRequest,
 } from './authenticatedRequests';
 import log from '../utils/logger';
 
@@ -46,60 +52,60 @@ import log from '../utils/logger';
 
 // Example 1: Login/Signup (Public Request - No Auth Required)
 export const ExampleLoginUsage = () => {
-    const handleLogin = async (username, password) => {
-        try {
-            // Use public request for login - no tokens needed
-            const { status, response } = await loginRequest('/auth/login', {
-                username,
-                password
-            });
+  const handleLogin = async (username, password) => {
+    try {
+      // Use public request for login - no tokens needed
+      const { status, response } = await loginRequest('/auth/login', {
+        username,
+        password,
+      });
 
-            if (status === 200) {
-                // Login successful - store tokens and redirect
-                await authContext.signIn(response);
-            } else {
-                showToast('Invalid credentials', 'error');
-            }
+      if (status === 200) {
+        // Login successful - store tokens and redirect
+        await authContext.signIn(response);
+      } else {
+        showToast('Invalid credentials', 'error');
+      }
 
-        } catch (error) {
-            // Only network/server errors possible - no auth errors
-            log.error('Login request failed:', error);
-            showToast('Login failed. Please try again.', 'error');
-        }
-    };
+    } catch (error) {
+      // Only network/server errors possible - no auth errors
+      log.error('Login request failed:', error);
+      showToast('Login failed. Please try again.', 'error');
+    }
+  };
 };
 
 // Example 2: Authenticated Request (Requires Valid Tokens)
 export const ExampleAuthenticatedUsage = () => {
-    const fetchUserData = async () => {
-        try {
-            const { status, response } = await makeAuthenticatedGetRequest('/api/user/profile');
+  const fetchUserData = async () => {
+    try {
+      const { status, response } = await makeAuthenticatedGetRequest('/api/user/profile');
 
-            if (status === 200) {
-                // Handle successful response
-                setUserData(response);
-            } else {
-                // Handle unexpected status codes
-                log.warn('Unexpected response status:', status);
-            }
+      if (status === 200) {
+        // Handle successful response
+        setUserData(response);
+      } else {
+        // Handle unexpected status codes
+        log.warn('Unexpected response status:', status);
+      }
 
-        } catch (error) {
-            if (error instanceof AuthError) {
-                // Authentication errors are automatically handled by the API service
-                // The user will be signed out and redirected to login
-                // You can optionally show a message here
-                log.info('Authentication error occurred, user will be redirected to login');
+    } catch (error) {
+      if (error instanceof AuthError) {
+        // Authentication errors are automatically handled by the API service
+        // The user will be signed out and redirected to login
+        // You can optionally show a message here
+        log.info('Authentication error occurred, user will be redirected to login');
 
-                // Optional: Show a brief message before redirect
-                // showToast('Session expired. Please log in again.', 'info');
+        // Optional: Show a brief message before redirect
+        // showToast('Session expired. Please log in again.', 'info');
 
-            } else {
-                // Handle other types of errors (network, server, etc.)
-                log.error('API request failed:', error);
-                showToast('Failed to load data. Please try again.', 'error');
-            }
-        }
-    };
+      } else {
+        // Handle other types of errors (network, server, etc.)
+        log.error('API request failed:', error);
+        showToast('Failed to load data. Please try again.', 'error');
+      }
+    }
+  };
 };/**
  * ERROR TYPES AND HANDLING:
  * 
@@ -138,6 +144,6 @@ export const ExampleAuthenticatedUsage = () => {
  */
 
 export default {
-    AuthError,
-    AUTH_ERRORS,
+  AuthError,
+  AUTH_ERRORS,
 };

@@ -1,7 +1,7 @@
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, StyleSheet } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { screenStyles, MyTheme } from "../styles/global";
-import log from "../utils/logger";
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { screenStyles, MyTheme } from '../styles/global';
+import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -13,12 +13,12 @@ const CurrentRead = ({ route }) => {
   log.info(`CurrentRead screen loaded for user: ${username}`);
 
   const handleContinueReading = () => {
-    log.info("Continue reading pressed");
+    log.info('Continue reading pressed');
     // TODO: Navigate to current book
   };
 
   const handleViewProgress = () => {
-    log.info("View progress pressed");
+    log.info('View progress pressed');
     // TODO: Show reading statistics
   };
 

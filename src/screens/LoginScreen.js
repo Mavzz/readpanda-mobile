@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,24 @@ import {
   Alert,
   ActivityIndicator,
   Pressable,
-} from "react-native";
-import Background from "../components/Background";
-import { loginStyles } from "../styles/global";
-import { primaryButton as PrimaryButton, ssoButton as SSOButton, } from "../components/Button";
-import { SignUpType } from "../utils/Helper";
-import { googleSignUpLogin, emailLogin } from "../services/auth";
+} from 'react-native';
+import Background from '../components/Background';
+import { loginStyles } from '../styles/global';
+import { primaryButton as PrimaryButton, ssoButton as SSOButton } from '../components/Button';
+import { SignUpType } from '../utils/Helper';
+import { googleSignUpLogin, emailLogin } from '../services/auth';
 import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from "../services/user_PreferencesService";
+import { PreferenceService } from '../services/user_PreferencesService';
 
 const Login = ({ navigation }) => {
   const { signIn, user, updateUser } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   let status, response;
 
-  const handleLogin = async (signUpType = "") => {
+  const handleLogin = async (signUpType = '') => {
     log.info('Login attempt with type:', signUpType);
     try {
 
@@ -32,7 +32,7 @@ const Login = ({ navigation }) => {
 
         if (!username || !password) {
           setLoading(false);
-          Alert.alert("Login In failed", "Please fill in all fields");
+          Alert.alert('Login In failed', 'Please fill in all fields');
           return;
         } else {
           ({ status, response } = await emailLogin(username, password));
@@ -70,13 +70,13 @@ const Login = ({ navigation }) => {
 
       } else {
         setLoading(false);
-        Alert.alert("Login failed", "An error occurred. Please try again.");
+        Alert.alert('Login failed', 'An error occurred. Please try again.');
         return;
       }
     } catch (error) {
       setLoading(false);
       log.error('Login failed with error:', error);
-      Alert.alert("Login failed", "An error occurred. Please try again.");
+      Alert.alert('Login failed', 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -89,13 +89,13 @@ const Login = ({ navigation }) => {
           <Text style={loginStyles.mainTitletext}>Login</Text>
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
+              flexDirection: 'row',
+              alignItems: 'center',
               marginBottom: 15,
             }}
           >
             <Text style={loginStyles.title}>Don't have an account?</Text>
-            <Pressable onPress={() => navigation.navigate("SignUp")}>
+            <Pressable onPress={() => navigation.navigate('SignUp')}>
               <Text style={loginStyles.signUpText}> sign up!</Text>
             </Pressable>
           </View>
@@ -123,7 +123,7 @@ const Login = ({ navigation }) => {
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
           <>
-            <PrimaryButton title="Login" onPress={() => handleLogin("Email")} />
+            <PrimaryButton title="Login" onPress={() => handleLogin('Email')} />
 
             <View style={loginStyles.dividerContainer}>
               <View style={loginStyles.divider} />
@@ -131,7 +131,7 @@ const Login = ({ navigation }) => {
               <View style={loginStyles.divider} />
             </View>
 
-            <SSOButton onPress={() => handleLogin("Google")} title="Sign In with Google" />
+            <SSOButton onPress={() => handleLogin('Google')} title="Sign In with Google" />
           </>
         )}
 
