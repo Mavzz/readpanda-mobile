@@ -112,6 +112,10 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     return plain_;
   }
 
+  ICast* castInterface(const UUID& interfaceUUID) override {
+    return plain().castInterface(interfaceUUID);
+  }
+
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       const std::string& sourceURL) override {
@@ -307,12 +311,18 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   Value getProperty(const Object& o, const String& name) override {
     return plain_.getProperty(o, name);
   };
+  Value getProperty(const Object& o, const Value& name) override {
+    return plain_.getProperty(o, name);
+  }
   bool hasProperty(const Object& o, const PropNameID& name) override {
     return plain_.hasProperty(o, name);
   };
   bool hasProperty(const Object& o, const String& name) override {
     return plain_.hasProperty(o, name);
   };
+  bool hasProperty(const Object& o, const Value& name) override {
+    return plain_.hasProperty(o, name);
+  }
   void setPropertyValue(
       const Object& o,
       const PropNameID& name,
@@ -323,6 +333,22 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
       override {
     plain_.setPropertyValue(o, name, value);
   };
+  void setPropertyValue(const Object& o, const Value& name, const Value& value)
+      override {
+    plain_.setPropertyValue(o, name, value);
+  }
+
+  void deleteProperty(const Object& object, const PropNameID& name) override {
+    plain_.deleteProperty(object, name);
+  }
+
+  void deleteProperty(const Object& object, const String& name) override {
+    plain_.deleteProperty(object, name);
+  }
+
+  void deleteProperty(const Object& object, const Value& name) override {
+    plain_.deleteProperty(object, name);
+  }
 
   bool isArray(const Object& o) const override {
     return plain_.isArray(o);
@@ -392,6 +418,17 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
       override {
     return plain_.callAsConstructor(f, args, count);
   };
+
+  void setRuntimeDataImpl(
+      const UUID& uuid,
+      const void* data,
+      void (*deleter)(const void* data)) override {
+    return plain_.setRuntimeDataImpl(uuid, data, deleter);
+  }
+
+  const void* getRuntimeDataImpl(const UUID& uuid) override {
+    return plain_.getRuntimeDataImpl(uuid);
+  }
 
   // Private data for managing scopes.
   Runtime::ScopeState* pushScope() override {
@@ -575,6 +612,11 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
   // the ctor, and there is no ctor, so they can be passed members of
   // the derived class.
   WithRuntimeDecorator(Plain& plain, With& with) : RD(plain), with_(with) {}
+
+  ICast* castInterface(const UUID& interfaceUUID) override {
+    Around around{with_};
+    return RD::castInterface(interfaceUUID);
+  }
 
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
@@ -811,6 +853,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::getProperty(o, name);
   };
+  Value getProperty(const Object& o, const Value& name) override {
+    Around around{with_};
+    return RD::getProperty(o, name);
+  }
   bool hasProperty(const Object& o, const PropNameID& name) override {
     Around around{with_};
     return RD::hasProperty(o, name);
@@ -819,6 +865,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     return RD::hasProperty(o, name);
   };
+  bool hasProperty(const Object& o, const Value& name) override {
+    Around around{with_};
+    return RD::hasProperty(o, name);
+  }
   void setPropertyValue(
       const Object& o,
       const PropNameID& name,
@@ -831,6 +881,26 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     RD::setPropertyValue(o, name, value);
   };
+  void setPropertyValue(const Object& o, const Value& name, const Value& value)
+      override {
+    Around around{with_};
+    RD::setPropertyValue(o, name, value);
+  }
+
+  void deleteProperty(const Object& object, const PropNameID& name) override {
+    Around around{with_};
+    RD::deleteProperty(object, name);
+  }
+
+  void deleteProperty(const Object& object, const String& name) override {
+    Around around{with_};
+    RD::deleteProperty(object, name);
+  }
+
+  void deleteProperty(const Object& object, const Value& name) override {
+    Around around{with_};
+    RD::deleteProperty(object, name);
+  }
 
   bool isArray(const Object& o) const override {
     Around around{with_};
@@ -956,6 +1026,19 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     Around around{with_};
     RD::setExternalMemoryPressure(obj, amount);
   };
+
+  void setRuntimeDataImpl(
+      const UUID& uuid,
+      const void* data,
+      void (*deleter)(const void* data)) override {
+    Around around{with_};
+    RD::setRuntimeDataImpl(uuid, data, deleter);
+  }
+
+  const void* getRuntimeDataImpl(const UUID& uuid) override {
+    Around around{with_};
+    return RD::getRuntimeDataImpl(uuid);
+  }
 
  private:
   // Wrap an RAII type around With& to guarantee after always happens.

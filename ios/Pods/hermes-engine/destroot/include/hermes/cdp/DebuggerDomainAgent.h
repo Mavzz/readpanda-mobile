@@ -173,8 +173,13 @@ class DebuggerDomainAgent : public DomainAgent {
       debugger::ScriptID scriptID,
       const CDPBreakpointDescription &description);
 
+  void applyBreakpointAndSendNotification(
+      CDPBreakpointID cdpBreakpointID,
+      CDPBreakpoint &cdpBreakpoint,
+      const debugger::SourceLocation &srcLoc);
+
   std::optional<HermesBreakpointLocation> applyBreakpoint(
-      CDPBreakpoint &breakpoint,
+      CDPBreakpoint &cdpBreakpoint,
       debugger::ScriptID scriptID);
 
   /// Holds a boolean that determines if scripts without a script url
@@ -275,7 +280,7 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Whether the currently installed breakpoints actually take effect. If
   /// they're supposed to be inactive, then debugger agent will automatically
   /// resume execution when breakpoints are hit.
-  bool breakpointsActive_ = true;
+  bool breakpointsActive_;
 
   /// Whether Debugger.enable was received and wasn't disabled by receiving
   /// Debugger.disable

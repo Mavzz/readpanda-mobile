@@ -14,6 +14,9 @@
 #import "react/featureflags/ReactNativeFeatureFlagsAccessor.h"
 #import "react/featureflags/ReactNativeFeatureFlagsDefaults.h"
 #import "react/featureflags/ReactNativeFeatureFlagsDynamicProvider.h"
+#import "react/featureflags/ReactNativeFeatureFlagsOverridesOSSCanary.h"
+#import "react/featureflags/ReactNativeFeatureFlagsOverridesOSSExperimental.h"
+#import "react/featureflags/ReactNativeFeatureFlagsOverridesOSSStable.h"
 #import "react/featureflags/ReactNativeFeatureFlagsProvider.h"
 
 FOUNDATION_EXPORT double React_featureflagsVersionNumber;

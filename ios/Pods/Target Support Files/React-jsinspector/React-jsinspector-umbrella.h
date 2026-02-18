@@ -11,7 +11,6 @@
 #endif
 
 #import "Base64.h"
-#import "CdpJson.h"
 #import "ConsoleMessage.h"
 #import "ExecutionContext.h"
 #import "ExecutionContextManager.h"
@@ -20,6 +19,7 @@
 #import "HostAgent.h"
 #import "HostCommand.h"
 #import "HostTarget.h"
+#import "HostTargetTraceRecording.h"
 #import "InspectorFlags.h"
 #import "InspectorInterfaces.h"
 #import "InspectorPackagerConnection.h"
@@ -28,6 +28,7 @@
 #import "InstanceAgent.h"
 #import "InstanceTarget.h"
 #import "NetworkIOAgent.h"
+#import "PerfMonitorV2.h"
 #import "ReactCdp.h"
 #import "RuntimeAgent.h"
 #import "RuntimeAgentDelegate.h"

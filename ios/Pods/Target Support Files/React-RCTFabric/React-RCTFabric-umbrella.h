@@ -27,6 +27,9 @@
 #import "RCTEnhancedScrollView.h"
 #import "RCTPullToRefreshViewComponentView.h"
 #import "RCTScrollViewComponentView.h"
+#import "RCTVirtualViewContainerProtocol.h"
+#import "RCTVirtualViewContainerState.h"
+#import "RCTVirtualViewProtocol.h"
 #import "RCTSwitchComponentView.h"
 #import "RCTAccessibilityElement.h"
 #import "RCTParagraphComponentAccessibilityProvider.h"
@@ -37,6 +40,10 @@
 #import "RCTUnimplementedNativeComponentView.h"
 #import "RCTUnimplementedViewComponentView.h"
 #import "RCTViewComponentView.h"
+#import "RCTVirtualViewComponentView.h"
+#import "RCTVirtualViewExperimentalComponentView.h"
+#import "RCTVirtualViewMode.h"
+#import "RCTVirtualViewRenderState.h"
 #import "RCTComponentViewClassDescriptor.h"
 #import "RCTComponentViewDescriptor.h"
 #import "RCTComponentViewFactory.h"
@@ -64,10 +71,11 @@
 #import "RCTBoxShadow.h"
 #import "RCTColorSpaceUtils.h"
 #import "RCTGenericDelegateSplitter.h"
+#import "RCTGradientUtils.h"
 #import "RCTIdentifierPool.h"
 #import "RCTLinearGradient.h"
+#import "RCTRadialGradient.h"
 #import "RCTReactTaggedView.h"
-#import "RCTViewFinder.h"
 
 FOUNDATION_EXPORT double RCTFabricVersionNumber;
 FOUNDATION_EXPORT const unsigned char RCTFabricVersionString[];

@@ -104,6 +104,26 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>MMKVCore.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>NitroMmkv.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>NitroModules.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>NitroPdfreader.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>Pods-ReadPanda.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -409,6 +429,16 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>React-jsinspectorcdp.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-jsinspectornetwork.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>React-jsinspectortracing.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -444,6 +474,11 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>React-performancecdpmetrics.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>React-performancetimeline.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -464,11 +499,6 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>React-rncore.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>React-runtimeexecutor.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -485,6 +515,11 @@
 			<false/>
 		</dict>
 		<key>React-utils.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>React-webperformancenativemodule.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -569,27 +604,17 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>react-native-blob-util-ReactNativeBlobUtilPrivacyInfo.xcscheme</key>
+		<key>react-native-image-picker-RNImagePickerPrivacyInfo.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>react-native-blob-util.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>react-native-mmkv.xcscheme</key>
+		<key>react-native-image-picker.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
 		<key>react-native-network-info.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>react-native-pdf.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>

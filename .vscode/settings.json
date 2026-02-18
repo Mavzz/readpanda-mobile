@@ -16,5 +16,6 @@
     },
     "[javascriptreact]": {
         "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-    }
+    },
+    "cmake.ignoreCMakeListsMissing": true
 }

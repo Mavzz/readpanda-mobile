@@ -8,10 +8,49 @@ GoogleService-Info.plist
 # dependencies
 node_modules/
 
-#ios build
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Android build
+android/build/
+android/app/build/
+android/.gradle/
+*.apk
+*.aab
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# iOS build
 ios/Pods/
 ios/build/
+ios/DerivedData/
 yarn-error.log
+
+# iOS Xcode user data
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# iOS artifacts
+*.ipa
+*.dSYM.zip
+*.app
+
+# iOS environment
+ios/.xcode.env.local
+
+# Fastlane
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots/
+ios/fastlane/test_output/
 
 # build outputs
 build/
@@ -33,6 +72,21 @@ web-build/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+
+# Logs and cache
+*.log
+logs/
+.tmp/
+tmp/
+.cache/
+
+# React Native specific
+.buckconfig.local
+.bundle/
+*.hprof
+
+# Flipper
+android/app/src/debug/assets/
 
 # macOS
 .DS_Store

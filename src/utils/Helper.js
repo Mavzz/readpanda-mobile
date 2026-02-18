@@ -16,7 +16,7 @@ const getBackendUrl = async (path = "") => {
   let backendUrl;
   try {
 
-    const ip = "192.168.1.144" //"192.168.0.104" //await Network.getIpAddressAsync();
+    const ip = Local_IP //"192.168.1.144" //"192.168.0.104" //await Network.getIpAddressAsync();
     const port = 3000; // your backend port
     backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
 
@@ -60,4 +60,8 @@ const checkNotificationPermission = async () => {
   return enabled;
 };
 
-export { encryptedPassword, getBackendUrl, SignUpType, checkNotificationPermission };
+const createEncrytionKey = () => {
+  return CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+}
+
+export { encryptedPassword, getBackendUrl, SignUpType, checkNotificationPermission, createEncrytionKey };

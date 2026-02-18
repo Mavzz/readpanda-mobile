@@ -1,0 +1,146 @@
+workflows:
+  ios-development:
+    name: ReadPanda iOS Development Build
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: ReadPanda Team # Configure in Codemagic UI
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: 'develop'
+          include: true
+          source: true
+        - pattern: 'feature/*'
+          include: true
+          source: true
+        - pattern: 'main'
+          include: false
+          source: true
+    environment:
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.readpanda.app
+      vars:
+        # Environment variables - configure these in Codemagic UI
+        XCODE_WORKSPACE: "ReadPanda.xcworkspace"
+        XCODE_SCHEME: "ReadPanda"
+        BUNDLE_ID: "com.readpanda.app"
+        # Add your environment variables here
+        # API_BASE_URL: "https://api.readpanda.com"
+      node: v18.19.0
+      xcode: 15.2
+      cocoapods: default
+    scripts:
+      - name: Set up local properties
+        script: |
+          echo "Setting up local environment..."
+          
+      - name: Install npm dependencies
+        script: |
+          npm ci # Using ci for faster, reliable installs
+          
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install --repo-update
+          
+      - name: Set up provisioning profiles
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_DEVELOPMENT \
+            --create
+            
+      - name: Set up signing certificate
+        script: |
+          keychain add-certificates
+          xcode-project use-profiles
+          
+      - name: Increment build number
+        script: |
+          cd ios
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID") + 1))
+          
+      - name: Build iOS app for development
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --config Debug \
+            --destination generic/platform=iOS \
+            --archive-flags="-allowProvisioningUpdates ENABLE_BITCODE=NO"
+            
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      
+    publishing:
+      email:
+        recipients:
+          - venkataramanaadityanimmagadda@gmail.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration # Uses App Store Connect integration
+        submit_to_testflight: true
+        beta_groups:
+          - ReadPanda Developers
+        submit_to_app_store: false
+        
+  ios-development-simulator:
+    name: ReadPanda iOS Simulator Build (Development)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    triggering:
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: 'feature/*'
+          include: true
+          source: true
+    environment:
+      vars:
+        XCODE_WORKSPACE: "ReadPanda.xcworkspace"
+        XCODE_SCHEME: "ReadPanda"
+      node: v18.19.0
+      xcode: 15.2
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+          
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install --repo-update
+          
+      - name: Run tests (if available)
+        script: |
+          # Add your test commands here
+          # npm test
+          echo "Skipping tests - add test configuration as needed"
+          
+      - name: Build for iOS Simulator
+        script: |
+          xcodebuild \
+            -workspace ios/$XCODE_WORKSPACE \
+            -scheme $XCODE_SCHEME \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' \
+            build
+            
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log
+      
+    publishing:
+      email:
+        recipients:
+          - adityaabhay96@gmail.com
+        notify:
+          success: false
+          failure: true

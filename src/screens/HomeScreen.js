@@ -21,6 +21,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { showToast } from "../components/Toaster";
 import { MyTheme } from '../styles/global';
 import { fetchManuscripts } from '../services/bookService';
+// TODO: Re-enable when HybridPdfReader is properly implemented
+// import { HybridPdfReader } from 'react-native-pdfreader';
 
 const { width, height } = Dimensions.get('window');
 
@@ -87,6 +89,9 @@ const Home = ({ navigation }) => {
   };
 
   useEffect(() => {
+
+    // TODO: Re-enable when HybridPdfReader is properly implemented
+    // log.info(HybridPdfReader.add(2, 3));
     if (!user) {
       log.info("No user found, skipping book fetch");
       return;

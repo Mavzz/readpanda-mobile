@@ -1,9 +1,11 @@
 import { MMKV } from "react-native-mmkv";
 import SQLite from "react-native-sqlite-storage";
+import log from '../utils/logger';
+import { createEncrytionKey } from '../utils/Helper';
 
 export const mmkvStorage = new MMKV({
   id: "readpanda-storage",
-  encryptionKey: "your-encryption-key", // Replace with your actual encryption key
+  encryptionKey: createEncrytionKey(),
 });
 
 SQLite.enablePromise(true);
@@ -167,7 +169,7 @@ class StorageService {
         (book_id, title, author, genre, cover_image_url, manuscript_url, 
          description, publication_date, rating, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
-      
+
       for (const book of books) {
         await this.db.executeSql(insertSQL, [
           book.book_id,
@@ -203,11 +205,11 @@ class StorageService {
       `;
       const searchTerm = `%${query}%`;
       const exactMatch = `${query}%`;
-      
+
       const [results] = await this.db.executeSql(searchSQL, [
         searchTerm, searchTerm, searchTerm, exactMatch, exactMatch
       ]);
-      
+
       const books = [];
       for (let i = 0; i < results.rows.length; i++) {
         books.push(results.rows.item(i));
@@ -224,7 +226,7 @@ class StorageService {
       const [results] = await this.db.executeSql(
         'SELECT * FROM books WHERE is_favorite = 1 ORDER BY updated_at DESC'
       );
-      
+
       const books = [];
       for (let i = 0; i < results.rows.length; i++) {
         books.push(results.rows.item(i));
@@ -240,20 +242,20 @@ class StorageService {
   async saveReadingProgress(username, bookId, currentPage, totalPages) {
     try {
       const completionPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
-      
+
       const insertSQL = `INSERT OR REPLACE INTO reading_progress 
         (username, book_id, current_page, total_pages, completion_percentage, last_read) 
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
-      
+
       await this.db.executeSql(insertSQL, [
         username, bookId, currentPage, totalPages, completionPercentage
       ]);
-      
+
       // Add to sync queue for later upload
       await this.addToSyncQueue('progress', {
         username, bookId, currentPage, totalPages, completionPercentage
       });
-      
+
     } catch (error) {
       log.error('Error saving reading progress:', error);
       throw error;
@@ -270,7 +272,7 @@ class StorageService {
         ORDER BY rp.last_read DESC
         LIMIT ?
       `, [username, limit]);
-      
+
       const books = [];
       for (let i = 0; i < results.rows.length; i++) {
         books.push(results.rows.item(i));
@@ -297,7 +299,7 @@ class StorageService {
       const [results] = await this.db.executeSql(
         'SELECT * FROM sync_queue WHERE is_synced = 0 ORDER BY created_at ASC'
       );
-      
+
       const operations = [];
       for (let i = 0; i < results.rows.length; i++) {
         const row = results.rows.item(i);

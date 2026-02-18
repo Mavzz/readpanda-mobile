@@ -16,6 +16,7 @@
 #import "react/performance/timeline/PerformanceEntryCircularBuffer.h"
 #import "react/performance/timeline/PerformanceEntryKeyedBuffer.h"
 #import "react/performance/timeline/PerformanceEntryReporter.h"
+#import "react/performance/timeline/PerformanceEntryReporterListeners.h"
 #import "react/performance/timeline/PerformanceObserver.h"
 #import "react/performance/timeline/PerformanceObserverRegistry.h"
 

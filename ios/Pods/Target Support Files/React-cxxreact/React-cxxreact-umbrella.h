@@ -31,7 +31,6 @@
 #import "ReactMarker.h"
 #import "ReactNativeVersion.h"
 #import "RecoverableError.h"
-#import "SharedProxyCxxModule.h"
 #import "SystraceSection.h"
 #import "TraceSection.h"
 
