@@ -1,6 +1,0 @@
-framework module RNKeychain {
-  umbrella header "RNKeychain-umbrella.h"
-
-  export *
-  module * { export * }
-}
