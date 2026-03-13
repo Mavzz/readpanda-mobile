@@ -16,8 +16,10 @@ end
 
 target 'ReadPanda' do
   config = use_native_modules!
-  use_frameworks! :linkage => :static
-  $RNFirebaseAsStaticFramework = true
+
+  # Firebase Swift pods require module maps when linked as static libraries.
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCoreInternal', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -26,7 +28,6 @@ target 'ReadPanda' do
   )
 
   post_install do |installer|
-    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
