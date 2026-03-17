@@ -1,7 +1,7 @@
-import { View, Text, Pressable } from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
+import { View, Text, Pressable } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-import { loginStyles } from "../styles/global";
+import { loginStyles } from '../styles/global';
 
 const primaryButton = (props) => (
   <View>
@@ -28,14 +28,14 @@ const signOutButton = (props) => (
 );
 
 const iconButton = (props) => {
-return (
-  <View>
-    <Pressable onPress={ props.onPress } style={ loginStyles.iconButton }>
-      <Icon name={ props.name } size={ props.size } color={ props.color } />
-    </Pressable>
-  </View>
-);
+  return (
+    <View>
+      <Pressable onPress={ props.onPress } style={ loginStyles.iconButton }>
+        <Icon name={ props.name } size={ props.size } color={ props.color } />
+      </Pressable>
+    </View>
+  );
 
-}
+};
 
 export { primaryButton, signOutButton, ssoButton, iconButton };

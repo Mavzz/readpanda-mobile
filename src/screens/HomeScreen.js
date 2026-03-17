@@ -9,16 +9,16 @@ import {
   StatusBar,
   RefreshControl,
   Dimensions,
-} from "react-native";
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { newBookCard as BookCard } from '../components/Card';
-import { getRequest } from "../services/useGet";
-import { getBackendUrl } from "../utils/Helper";
-import { useState, useEffect, useCallback } from "react";
-import log from "../utils/logger";
+import { getRequest } from '../services/useGet';
+import { getBackendUrl } from '../utils/Helper';
+import { useState, useEffect, useCallback } from 'react';
+import log from '../utils/logger';
 import enhanceedStorage from '../utils/enhanceedStorage';
 import { useAuth } from '../contexts/AuthContext';
-import { showToast } from "../components/Toaster";
+import { showToast } from '../components/Toaster';
 import { MyTheme } from '../styles/global';
 import { fetchManuscripts } from '../services/bookService';
 
@@ -50,27 +50,27 @@ const Home = ({ navigation }) => {
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
 
-    log.info("Fetching books");
+    log.info('Fetching books');
     const userToken = enhanceedStorage.getAuthToken();
 
     try {
       const { status, response } = await fetchManuscripts(userToken);
 
       if (status === 200) {
-        log.info("Books fetched successfully:", response);
+        log.info('Books fetched successfully:', response);
         const booksData = response.books || [];
         setBooks(booksData);
         setFilteredBooks(booksData);
 
         if (showRefresh) {
-          showToast("Library refreshed successfully! 📚", 'success');
+          showToast('Library refreshed successfully! 📚', 'success');
         }
       } else {
-        log.error("Failed to fetch books:", response);
+        log.error('Failed to fetch books:', response);
       }
     } catch (error) {
-      log.error("Error fetching books:", error);
-      showToast("Connection error. Please try again.", 'error');
+      log.error('Error fetching books:', error);
+      showToast('Connection error. Please try again.', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,7 +78,7 @@ const Home = ({ navigation }) => {
   };
 
   const onRefresh = useCallback(() => {
-    showToast("Refreshing your library...", 'info');
+    showToast('Refreshing your library...', 'info');
     fetchBooks(true);
   }, []);
 
@@ -88,13 +88,13 @@ const Home = ({ navigation }) => {
 
   useEffect(() => {
     if (!user) {
-      log.info("No user found, skipping book fetch");
+      log.info('No user found, skipping book fetch');
       return;
     }
 
     // Show welcome toast only once
     if (!hasShownWelcome) {
-      log.info("Showing welcome back toast");
+      log.info('Showing welcome back toast');
       setTimeout(() => {
         showToast(`Welcome back, ${username}! 👋`, 'success', 4000);
         setHasShownWelcome(true);
@@ -102,10 +102,10 @@ const Home = ({ navigation }) => {
     }
 
     if (user.isNewUser) {
-      log.info("Navigating new user to InterestScreen");
-      navigation.navigate("Interest");
+      log.info('Navigating new user to InterestScreen');
+      navigation.navigate('Interest');
     } else {
-      log.info("Existing user, fetching books");
+      log.info('Existing user, fetching books');
       fetchBooks();
     }
   }, [user, hasShownWelcome]);

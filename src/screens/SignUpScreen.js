@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -6,29 +6,29 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
-} from "react-native";
-import Background from "../components/Background";
+} from 'react-native';
+import Background from '../components/Background';
 import {
   primaryButton as PrimaryButton,
   ssoButton as SSOButton,
-} from "../components/Button";
-import { loginStyles } from "../styles/global";
-import { SignUpType } from "../utils/Helper";
-import log from "../utils/logger";
-import { googleSignUpLogin, emailSignUp } from "../services/auth";
+} from '../components/Button';
+import { loginStyles } from '../styles/global';
+import { SignUpType } from '../utils/Helper';
+import log from '../utils/logger';
+import { googleSignUpLogin, emailSignUp } from '../services/auth';
 import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from "../services/user_PreferencesService";
+import { PreferenceService } from '../services/user_PreferencesService';
 
 const SignUp = ({ navigation }) => {
   const { signIn, updateUser } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   let status, response;
 
-  const handleSignUp = async (signUpType = "") => {
+  const handleSignUp = async (signUpType = '') => {
 
     log.info(`Sign up attempt with type: ${signUpType}`);
 
@@ -42,13 +42,13 @@ const SignUp = ({ navigation }) => {
 
         if (!username || !email || !password || !confirmPassword) {
           setLoading(false);
-          Alert.alert("Sign Up failed", "Please fill in all fields");
+          Alert.alert('Sign Up failed', 'Please fill in all fields');
           return;
         }
 
         if (password !== confirmPassword) {
           setLoading(false);
-          Alert.alert("Sign Up failed", "Passwords do not match");
+          Alert.alert('Sign Up failed', 'Passwords do not match');
           return;
         }
 
@@ -65,7 +65,7 @@ const SignUp = ({ navigation }) => {
             email: email,
             isNewUser: true,
             preferences: response.preferences || {},
-          }
+          },
         };
 
         ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));
@@ -73,17 +73,17 @@ const SignUp = ({ navigation }) => {
         userData.preferences = response || {};
         signIn(userData);
 
-        log.info("Preferences Response:", response);
+        log.info('Preferences Response:', response);
 
       } else {
         setLoading(false);
-        log.error("Sign Up failed with status:", status);
-        Alert.alert("Sign Up failed", "An error occurred. Please try again.");
+        log.error('Sign Up failed with status:', status);
+        Alert.alert('Sign Up failed', 'An error occurred. Please try again.');
         return;
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("Login failed", "An error occurred. Please try again.");
+      Alert.alert('Login failed', 'An error occurred. Please try again.');
       log.error('Sign Up failed with error:', error);
     } finally {
       setLoading(false);
@@ -96,13 +96,13 @@ const SignUp = ({ navigation }) => {
         <Text style={loginStyles.mainTitletext}>Sign Up</Text>
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: 'row',
+            alignItems: 'center',
             marginBottom: 15,
           }}
         >
           <Text style={loginStyles.title}>Already have an account?</Text>
-          <Pressable onPress={() => navigation.popTo("Login")}>
+          <Pressable onPress={() => navigation.popTo('Login')}>
             <Text style={loginStyles.signUpText}> Login!</Text>
           </Pressable>
         </View>
@@ -146,7 +146,7 @@ const SignUp = ({ navigation }) => {
         ) : (
           <>
             <PrimaryButton
-              onPress={() => handleSignUp("Email")}
+              onPress={() => handleSignUp('Email')}
               title="Sign Up"
             />
             <View style={loginStyles.dividerContainer}>
@@ -156,7 +156,7 @@ const SignUp = ({ navigation }) => {
             </View>
 
             <SSOButton
-              onPress={() => handleSignUp("Google")}
+              onPress={() => handleSignUp('Google')}
               title="Sign Up with Google"
             />
           </>

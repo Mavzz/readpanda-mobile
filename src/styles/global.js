@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet } from 'react-native';
 
 const WEB_FONT_STACK =
   'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
@@ -74,7 +74,7 @@ const MyTheme = {
 const loginStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     padding: 50,
   },
   mainTitletext: {
@@ -350,58 +350,6 @@ const cardStyles = StyleSheet.create({
     minWidth: 28,
     textAlign: 'center',
     fontWeight: '500',
-  },
-});
-
-const loginStylesOld = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 50,
-  },
-  mainTitletext: {
-    fontSize: 24,
-    //marginBottom: 20,
-    color: "#E34A6F",
-    fontWeight: "400",
-  },
-  signUpText: {
-    fontSize: 16,
-    color: "#548C2F",
-    fontStyle: 'italic',
-  },
-  title: {
-    fontSize: 14,
-    //marginBottom: 20,
-    textAlign: "center",
-    color: "#0A210F",
-  },
-  input: {
-    height: 40,
-    width: "100%",
-    backgroundColor: "#DBD9D8",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    color: "#E34A6F", // green text
-    fontSize: 18,
-    // Remove border
-    borderWidth: 0,
-  },
-  loginButton: {
-    backgroundColor: "#3B120B",
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 36,
-    alignSelf: "flex-end",
-    marginTop: 10,
-  },
-  loginButtonText: {
-    color: "#f15c8e",
-    fontSize: 16,
-    fontWeight: "bold",
-    fontStyle: "italic",
-    textAlign: "center",
   },
 });
 

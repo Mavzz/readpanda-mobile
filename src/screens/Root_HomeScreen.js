@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from '../contexts/AuthContext';
 import MainTabNavigator from '../navigation/MainTabNavigator';
-import log from "../utils/logger";
+import log from '../utils/logger';
 
 const Root = () => {
   const { user } = useAuth();

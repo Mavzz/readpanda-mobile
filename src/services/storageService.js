@@ -1,9 +1,11 @@
-import { MMKV } from "react-native-mmkv";
-import SQLite from "react-native-sqlite-storage";
+import { MMKV } from 'react-native-mmkv';
+import SQLite from 'react-native-sqlite-storage';
+import log from '../utils/logger';
+import { SECRET_KEY } from '@env';
 
 export const mmkvStorage = new MMKV({
-  id: "readpanda-storage",
-  encryptionKey: "your-encryption-key", // Replace with your actual encryption key
+  id: 'readpanda-storage',
+  encryptionKey: SECRET_KEY, // Use encryption key from environment
 });
 
 SQLite.enablePromise(true);
@@ -18,17 +20,17 @@ class StorageService {
   async initDatabase() {
     try {
       this.db = await SQLite.openDatabase({
-        name: "readpanda.db",
-        dbVersion: "1.0",
-        displayName: "ReadPanda Database",
+        name: 'readpanda.db',
+        dbVersion: '1.0',
+        displayName: 'ReadPanda Database',
         dbSize: 200000,
-        location: "default",
+        location: 'default',
       });
 
       await this.createTables();
-      console.log("Database initialized");
+      console.log('Database initialized');
     } catch (error) {
-      console.error("Error initializing database:", error);
+      console.error('Error initializing database:', error);
     }
   }
 
@@ -103,7 +105,7 @@ class StorageService {
         data TEXT NOT NULL, -- JSON data
         is_synced BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`
+      )`,
       ];
 
       for (const tableSQL of tables) {
@@ -113,9 +115,9 @@ class StorageService {
       // Create indexes for better performance
       await this.createIndexes();
 
-      console.log("Tables created");
+      console.log('Tables created');
     } catch (error) {
-      console.error("Error creating tables:", error);
+      console.error('Error creating tables:', error);
     }
   }
 
@@ -125,7 +127,7 @@ class StorageService {
       'CREATE INDEX IF NOT EXISTS idx_books_author ON books(author)',
       'CREATE INDEX IF NOT EXISTS idx_books_genre ON books(genre)',
       'CREATE INDEX IF NOT EXISTS idx_reading_progress_user ON reading_progress(username)',
-      'CREATE INDEX IF NOT EXISTS idx_bookmarks_user_book ON bookmarks(username, book_id)'
+      'CREATE INDEX IF NOT EXISTS idx_bookmarks_user_book ON bookmarks(username, book_id)',
     ];
 
     for (const indexSQL of indexes) {
@@ -178,7 +180,7 @@ class StorageService {
           book.manuscript_url || '',
           book.description || '',
           book.publication_date || '',
-          book.rating || 0
+          book.rating || 0,
         ]);
       }
       log.info(`Saved ${books.length} books to local database`);
@@ -205,7 +207,7 @@ class StorageService {
       const exactMatch = `${query}%`;
       
       const [results] = await this.db.executeSql(searchSQL, [
-        searchTerm, searchTerm, searchTerm, exactMatch, exactMatch
+        searchTerm, searchTerm, searchTerm, exactMatch, exactMatch,
       ]);
       
       const books = [];
@@ -219,10 +221,10 @@ class StorageService {
     }
   }
 
-  async getFavoriteBooks(username) {
+  async getFavoriteBooks(_username) {
     try {
       const [results] = await this.db.executeSql(
-        'SELECT * FROM books WHERE is_favorite = 1 ORDER BY updated_at DESC'
+        'SELECT * FROM books WHERE is_favorite = 1 ORDER BY updated_at DESC',
       );
       
       const books = [];
@@ -246,12 +248,12 @@ class StorageService {
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
       
       await this.db.executeSql(insertSQL, [
-        username, bookId, currentPage, totalPages, completionPercentage
+        username, bookId, currentPage, totalPages, completionPercentage,
       ]);
       
       // Add to sync queue for later upload
       await this.addToSyncQueue('progress', {
-        username, bookId, currentPage, totalPages, completionPercentage
+        username, bookId, currentPage, totalPages, completionPercentage,
       });
       
     } catch (error) {
@@ -285,7 +287,7 @@ class StorageService {
   // Sync queue for offline operations
   async addToSyncQueue(operationType, data) {
     try {
-      const insertSQL = `INSERT INTO sync_queue (operation_type, data) VALUES (?, ?)`;
+      const insertSQL = 'INSERT INTO sync_queue (operation_type, data) VALUES (?, ?)';
       await this.db.executeSql(insertSQL, [operationType, JSON.stringify(data)]);
     } catch (error) {
       log.error('Error adding to sync queue:', error);
@@ -295,7 +297,7 @@ class StorageService {
   async getPendingSyncOperations() {
     try {
       const [results] = await this.db.executeSql(
-        'SELECT * FROM sync_queue WHERE is_synced = 0 ORDER BY created_at ASC'
+        'SELECT * FROM sync_queue WHERE is_synced = 0 ORDER BY created_at ASC',
       );
       
       const operations = [];
@@ -303,7 +305,7 @@ class StorageService {
         const row = results.rows.item(i);
         operations.push({
           ...row,
-          data: JSON.parse(row.data)
+          data: JSON.parse(row.data),
         });
       }
       return operations;

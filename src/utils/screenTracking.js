@@ -19,6 +19,6 @@ export const useScreenTracking = () => {
 
   return {
     previousScreen,
-    currentScreen
+    currentScreen,
   };
 };

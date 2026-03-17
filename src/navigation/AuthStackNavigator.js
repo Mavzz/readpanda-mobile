@@ -1,8 +1,8 @@
-import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
-import Login from "../screens/LoginScreen";
-import Interest from "../screens/InterestScreen";
-import SignUp from "../screens/SignUpScreen";
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import Login from '../screens/LoginScreen';
+import Interest from '../screens/InterestScreen';
+import SignUp from '../screens/SignUpScreen';
 
 const Stack = createStackNavigator();
 

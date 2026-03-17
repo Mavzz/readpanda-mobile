@@ -15,7 +15,7 @@ export class GoogleAuthService {
         success: true,
         user: {
           idToken: result.idToken,
-        }
+        },
       };
     } catch (error) {
       console.error('Google Sign-In Error:', error);

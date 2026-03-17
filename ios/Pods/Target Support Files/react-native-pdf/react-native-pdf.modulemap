@@ -1,6 +1,0 @@
-framework module react_native_pdf {
-  umbrella header "react-native-pdf-umbrella.h"
-
-  export *
-  module * { export * }
-}

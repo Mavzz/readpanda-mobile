@@ -11,6 +11,15 @@ node_modules/
 #ios build
 ios/Pods/
 ios/build/
+ios/DerivedData/
+.xcode.env.local
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
 yarn-error.log
 
 # build outputs

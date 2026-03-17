@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { updateUserPreferences } from "../services/api";
-import { View, StyleSheet, FlatList, Button } from "react-native";
-import { CheckBox } from "react-native-elements";
-import { useNavigation } from "@react-navigation/native";
-import Background from "../components/Background";
-import log from "../utils/logger";
+import React, { useState } from 'react';
+import { updateUserPreferences } from '../services/api';
+import { View, StyleSheet, FlatList, Button } from 'react-native';
+import { CheckBox } from 'react-native-elements';
+import { useNavigation } from '@react-navigation/native';
+import Background from '../components/Background';
+import log from '../utils/logger';
 
 const InterestScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -20,8 +20,8 @@ const InterestScreen = ({ route }) => {
       prevPreferences.map((pref) =>
         pref.preference_id === id
           ? { ...pref, preference_value: !pref.preference_value }
-          : pref
-      )
+          : pref,
+      ),
     );
     setIsUpdated(true);
   };
@@ -66,13 +66,13 @@ const InterestScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: "column",
-    justifyContent: "flex-start",
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
   },
   buttonContainer: {
     marginTop: 10,
-    width: "100%",
-    alignItems: "center",
+    width: '100%',
+    alignItems: 'center',
   },
 });
 

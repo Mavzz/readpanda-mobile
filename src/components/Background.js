@@ -1,10 +1,10 @@
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 
 const Background = ({ children }) => (
   <View style={styles.container}>
     <LinearGradient
-      colors={["#CFFF8D", "#FFFFFF"]}
+      colors={['#CFFF8D', '#FFFFFF']}
       style={styles.gradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -18,7 +18,7 @@ const Background = ({ children }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: "relative",
+    position: 'relative',
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,

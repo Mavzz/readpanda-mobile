@@ -17,7 +17,7 @@ class EnhancedStorage {
     return {
       token,
       userProfile,
-      refreshToken
+      refreshToken,
     };
   }
 
@@ -82,7 +82,7 @@ class EnhancedStorage {
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION, {
       manuscriptId,
       progress,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -95,7 +95,7 @@ class EnhancedStorage {
     const cacheData = {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     };
     StorageService.setItem(`cache_${key}`, cacheData);
   }

@@ -1,129 +1,81 @@
-import UIKit
+//
+//  RNPdfViewer.swift
+//  ReadPanda
+//
+//  Created by Venkataramaaditya Nimmagadda on 15/03/26.
+//
+
 import PDFKit
+import React
+import UIKit
 
 @objc(RNPdfViewer)
-class RNPdfViewer: UIView {
-  
-  private var pdfView: PDFView!
-  private let cacheFolderName = "PDFCache"
-  private var activityIndicator: UIActivityIndicatorView!
-  private var currentDocumentURL: URL?
-  private var fileManager = FileManager.default
-  private var cacheDirectory: URL? {
-    return fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first?
-    .appendingPathComponent(cacheFolderName)
-  }
-  
-  override init(frame: CGRect) {
-    super.init(frame: frame)
-    setupPdfView()
-    setupActivityIndicator()
-  }
+class RNPdfViewerManager: RCTViewManager {
 
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-  
-  private func setupPdfView() {
-    pdfView = PDFView()
-    pdfView.translatesAutoresizingMaskIntoConstraints = false
-    self.addSubview(pdfView)
-    
-    NSLayoutConstraint.activate([
-      pdfView.topAnchor.constraint(equalTo: self.topAnchor),
-      pdfView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
-      pdfView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-      pdfView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
-    ])
-    
-    // Optimize PDF rendering
-    pdfView.autoScales = true
-    pdfView.displayMode = .singlePageContinuous
-    pdfView.displaysPageBreaks = true
-    pdfView.displayDirection = .vertical
-    
-    // Optimize performance
-    pdfView.enableDataDetectors = false // Disable data detectors for better performance
-    pdfView.backgroundColor = .clear // Reduce compositing
-  }
-  
-  private func setupActivityIndicator() {
-    activityIndicator = UIActivityIndicatorView(style: .large) // Or .medium based on preference
-    activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-    activityIndicator.hidesWhenStopped = true // Hide when not animating
-    self.addSubview(activityIndicator)
-    
-    NSLayoutConstraint.activate([
-      activityIndicator.centerXAnchor.constraint(equalTo: self.centerXAnchor),
-      activityIndicator.centerYAnchor.constraint(equalTo: self.centerYAnchor)
-    ])
-    activityIndicator.stopAnimating() // Start hidden
-  }
-  
-  @objc func setPdfUrl(_ urlString: String, title: String) {
-    guard let newURL = URL(string: urlString) else {
-      print("Invalid URL string: \(urlString)")
-      return
-    }
-    
-    currentDocumentURL = newURL
-    
-    DispatchQueue.main.async {
-      self.activityIndicator.startAnimating()
-    }
-    // Create cached file URL
-    guard let cacheDir = cacheDirectory else {
-      print("Could not access cache directory")
-      return
+    override func view() -> UIView! {
+        return RNPdfView()
     }
 
-    // Ensure cache directory exists
-    do {
-        try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true, attributes: nil)
-    } catch {
-        print("Failed to create cache directory: \(error)")
-        return
+    override static func requiresMainQueueSetup() -> Bool {
+        return true
+    }
+}
+
+class RNPdfView: UIView {
+
+    private let pdfView = PDFView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupPdfView()
     }
 
-    let cachedFileURL = cacheDir.appendingPathComponent("\(title).pdf")
-
-    // Check if file exists in cache
-    if fileManager.fileExists(atPath: cachedFileURL.path),
-       let cachedDocument = PDFDocument(url: cachedFileURL) {
-        DispatchQueue.main.async {
-            self.pdfView.document = cachedDocument
-            self.activityIndicator.stopAnimating()
-            print("PDF loaded from cache: \(cachedFileURL.path)")
-        }
-        return
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupPdfView()
     }
 
-    // Download and cache if not found
-    DispatchQueue.global(qos: .userInitiated).async {
-        do {
-            let data = try Data(contentsOf: newURL)
-            guard let document = PDFDocument(data: data) else {
-                print("Failed to create PDF document from data")
+    private func setupPdfView() {
+        pdfView.autoScales = true
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.displayDirection = .vertical
+        addSubview(pdfView)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        pdfView.frame = bounds
+    }
+
+    @objc var pdfDetails: NSDictionary? {
+        didSet {
+            guard let details = pdfDetails,
+                let urlString = details["url"] as? String,
+                let url = URL(string: urlString)
+            else {
                 return
             }
-            
-            // Save to cache with proper error handling
-            try data.write(to: cachedFileURL, options: .atomic)
-            
-            DispatchQueue.main.async {
-                // Only set document if this is still the current URL
-                if self.currentDocumentURL == newURL {
-                    self.pdfView.document = document
-                    self.activityIndicator.stopAnimating()
-                    print("PDF downloaded and cached: \(cachedFileURL.path)")
-                }
+            loadPdf(from: url)
+        }
+    }
+
+    private func loadPdf(from url: URL) {
+        if url.isFileURL {
+            if let document = PDFDocument(url: url) {
+                pdfView.document = document
             }
-        } catch {
-            DispatchQueue.main.async {
-                self.activityIndicator.stopAnimating()
-                print("Error handling PDF: \(error)")
+        } else {
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let data = try? Data(contentsOf: url),
+                    let document = PDFDocument(data: data)
+                else {
+                    return
+                }
+                DispatchQueue.main.async {
+                    self?.pdfView.document = document
+                }
             }
         }
     }
-  }
 }
+

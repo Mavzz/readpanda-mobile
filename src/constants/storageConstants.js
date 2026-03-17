@@ -30,5 +30,5 @@ export const STORAGE_CATEGORIES = {
     NOTIFICATIONS: 'notifications',
     USER_PREFERENCES: 'user_preferences',
     READING_HISTORY: 'reading_history',
-  }
+  },
 };
