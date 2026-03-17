@@ -16,7 +16,7 @@ const getBackendUrl = async (path = '') => {
   let backendUrl;
   try {
 
-    const ip = Local_IP || '192.168.1.144'; // Use Local_IP from .env, fallback for dev
+    const ip = '192.168.1.189'; // Use Local_IP from .env, fallback for dev
     const port = 3000; // your backend port
     backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
 
