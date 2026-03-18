@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, Platform, Pressable, Modal, ActivityIndicator } from 'react-native';
 import SearchBar from './SearchBar';
 import ProfilePicture from './ProfilePicture';
@@ -14,17 +14,19 @@ import Animated, {
 } from 'react-native-reanimated';
 import { NotificationBadge } from './Badge';
 import NotificationList from './NotificationList';
-import { NotificationService } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
+import useNotificationStore from '../stores/notificationStore';
 
 
 const CommonHeader = ({ showSearch, navigation }) => {
   const { user } = useAuth();
 
-  const [notifications, setNotifications] = useState([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const loading = useNotificationStore((s) => s.loading);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const [isModalVisible, setIsModalVisible] = React.useState(false);
 
   const notificationScale = useSharedValue(1);
   const profileScale = useSharedValue(1);
@@ -82,20 +84,6 @@ const CommonHeader = ({ showSearch, navigation }) => {
     });
   };
 
-  const fetchNotifications = async () => {
-    setIsLoading(true);
-    try {
-      const fetchedNotifications = await NotificationService.getNotifications();
-      setNotifications(fetchedNotifications);
-      //const unreadCount = await NotificationService.getUnreadCount();
-      //setNotificationCount(unreadCount);
-    } catch (error) {
-      log.error('Error fetching notifications:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleNotificationPress = async () => {
     log.info('Notification icon pressed');
     ringBell();
@@ -106,21 +94,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
   };
 
   const handleNotificationRead = async (notificationId) => {
-    try {
-      await NotificationService.markAsRead(notificationId);
-      // Update local state
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notif =>
-          notif.id === notificationId
-            ? { ...notif, read: true }
-            : notif,
-        ),
-      );
-      const unreadCount = await NotificationService.getUnreadCount();
-      setNotificationCount(unreadCount);
-    } catch (error) {
-      log.error('Error marking notification as read:', error);
-    }
+    await markAsRead(notificationId);
   };
 
   /* useEffect(() => {
@@ -166,8 +140,8 @@ const CommonHeader = ({ showSearch, navigation }) => {
                 size={28}
                 color="#666"
               />
-              {notificationCount > 0 && (
-                <NotificationBadge count={notificationCount} />
+              {unreadCount > 0 && (
+                <NotificationBadge count={unreadCount} />
               )}
             </Animated.View>
           </Pressable>
@@ -182,7 +156,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            {isLoading ? (
+            {loading ? (
               <ActivityIndicator size="large" color="#0000ff" />
             ) : (
               <NotificationList

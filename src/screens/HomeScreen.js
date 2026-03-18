@@ -23,7 +23,11 @@ const { width, height } = Dimensions.get('window');
 
 const Home = ({ navigation }) => {
   const { user } = useAuth();
-  const { filteredBooks, loading, refreshing, fetchBooks, filterBooks } = useBooksStore();
+  const filteredBooks = useBooksStore((s) => s.filteredBooks);
+  const loading = useBooksStore((s) => s.loading);
+  const refreshing = useBooksStore((s) => s.refreshing);
+  const fetchBooks = useBooksStore((s) => s.fetchBooks);
+  const filterBooks = useBooksStore((s) => s.filterBooks);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
 
   const username = user?.username || 'Reader';
