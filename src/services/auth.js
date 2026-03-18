@@ -1,6 +1,5 @@
-import { Alert } from 'react-native';
+import { Alert, Platform, NativeModules } from 'react-native';
 import { postRequest } from './usePost';
-import { NativeModules, Platform } from 'react-native';
 import { GoogleAuthService } from './GoogleAuthService';
 import { encryptedPassword, getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
@@ -21,19 +20,13 @@ const googleSignUpLogin = async () => {
     if (result) {
 
       const token = result.user.idToken;
-      const fetchOptions = {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      };
-      log.info('Google ID Token obtained', token);
+      log.info('Google ID Token obtained');
 
-      const responseAuth = await fetch(await getBackendUrl('/auth/google'), fetchOptions);
-      status = responseAuth.status;
-      response = await responseAuth.json();
+      ({ status, response } = await postRequest(
+        getBackendUrl('/auth/google'),
+        {},
+        { Authorization: `Bearer ${token}` },
+      ));
 
     } else {
       Alert.alert('Login failed', 'An error occurred. Please try again.');
@@ -41,20 +34,20 @@ const googleSignUpLogin = async () => {
   } else {
     try {
       const token = await GoogleSignInModule.signIn();
-      console.log('Google ID Token:', token);
 
       if (token) {
-        ({ status, response } = await postRequest(await getBackendUrl('/auth/google'),
+        ({ status, response } = await postRequest(
+          getBackendUrl('/auth/google'),
           {},
           { Authorization: `Bearer ${token}` },
         ));
 
-        console.log('Signup Response:', response);
+        log.info('Google sign-in response received');
       } else {
         Alert.alert('Login failed', 'An error occurred. Please try again.');
       }
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
+      log.error('Google Sign-In Error:', error);
       Alert.alert('Login failed', 'An error occurred. Please try again.');
     }
 
@@ -71,41 +64,27 @@ const googleSignUpLogin = async () => {
 };
 
 const emailLogin = async (username, password) => {
-  const fetchOptions = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-  };
-
-  const responseAuth = await fetch(await getBackendUrl('/auth/login'), {
-    ...fetchOptions,
-    body: JSON.stringify({
+  const { status, response } = await postRequest(
+    getBackendUrl('/auth/login'),
+    {
       username,
       password: encryptedPassword(password),
-    }),
-  });
-
-  const status = responseAuth.status;
-  const response = await responseAuth.json();
+    },
+  );
 
   if (status === 200) {
     log.info('Login successful with status:', status);
     return { status, response };
-  }
-  else {
+  } else {
     log.error('Login failed with status:', status);
     return { status, response: null };
   }
-
-
 };
 
 const emailSignUp = async (username, password, email) => {
   log.info('Attempting Sign Up with username:', username, 'email:', email);
 
-  const { status, response } = await postRequest(await getBackendUrl('/signup'), {
+  const { status, response } = await postRequest(getBackendUrl('/signup'), {
     username,
     password: encryptedPassword(password),
     email,
@@ -114,17 +93,15 @@ const emailSignUp = async (username, password, email) => {
   if (status === 201) {
     log.info('Sign Up successful with status:', status);
     return { status, response };
-  }
-  else {
+  } else {
     log.error('Sign Up failed with status:', status);
     return { status, response: null };
   }
-
-  //const response = await signUpUser(username, password, email);
-  //console.log("Sign Up Response:", response);
 };
+
 const logout = async (username, refreshToken) => {
-  const { status } = await postRequest(await getBackendUrl(`/auth/logout?username=${username}`),
+  const { status } = await postRequest(
+    getBackendUrl(`/auth/logout?username=${username}`),
     {},
     { Authorization: `Bearer ${refreshToken}` },
   );

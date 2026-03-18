@@ -68,10 +68,13 @@ const SignUp = ({ navigation }) => {
           },
         };
 
-        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.username, userData.token));
-        
-        userData.preferences = response || {};
+        // Sign in first so the token is available for the preferences fetch
         signIn(userData);
+
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username));
+
+        userData.userDetails.preferences = response || {};
+        updateUser(userData.userDetails);
 
         log.info('Preferences Response:', response);
 

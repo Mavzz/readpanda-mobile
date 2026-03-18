@@ -1,17 +1,14 @@
-import { postRequest } from './usePost';
-import { getRequest } from './useGet';
+import { makeAuthenticatedPostRequest, makeAuthenticatedGetRequest } from './authenticatedRequests';
 import { getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
 
 export const PreferenceService = {
-  async updateUserPreferences(username, preferences, token) {
-    let status, response;
+  async updateUserPreferences(username, preferences) {
     try {
-      ({ status, response } = await postRequest(
-        await getBackendUrl(`/user/preferences?username=${username}`),
+      const { status, response } = await makeAuthenticatedPostRequest(
+        getBackendUrl(`/user/preferences?username=${username}`),
         { username, preferences },
-        { Authorization: `Bearer ${token}` },
-      ));
+      );
 
       if (status === 200 || status === 201) {
         log.info('User preferences updated successfully');
@@ -26,13 +23,11 @@ export const PreferenceService = {
     }
   },
 
-  async fetchUserPreferences(username, token) {
-    let status, response;
+  async fetchUserPreferences(username) {
     try {
-      ({ status, response } = await getRequest(
-        await getBackendUrl(`/user/preferences?username=${username}`),
-        { Authorization: `Bearer ${token}` },
-      ));
+      const { status, response } = await makeAuthenticatedGetRequest(
+        getBackendUrl(`/user/preferences?username=${username}`),
+      );
 
       if (status === 200) {
         log.info('User preferences fetched successfully');

@@ -1,7 +1,6 @@
 // src/screens/ManuscriptScreen.js
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
-import Background from '../components/Background';
 import PdfViewer from '../components/PdfViewer';
 import log from '../utils/logger';
 import useReadingProgressStore from '../stores/readingProgressStore';
@@ -16,7 +15,7 @@ const ManuscriptScreen = ({ route }) => {
   log.info(`ManuscriptScreen loaded for book: ${book.title}`);
   log.info('pdfDetails:', {
     url: pdfUrl,
-    title: book.title
+    title: book.title,
   });
 
   useEffect(() => {
@@ -28,7 +27,7 @@ const ManuscriptScreen = ({ route }) => {
       saveProgress(book.book_id, { lastReadAt: Date.now() });
       setCurrentBook(null);
     };
-  }, [book]);
+  }, [book, setCurrentBook, addToRecentBooks, saveProgress]);
 
   return (
     <View style={styles.container}>

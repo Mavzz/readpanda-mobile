@@ -78,7 +78,7 @@ const InterestScreen = () => {
 
       if (isUpdated) {
         // Handle first time user experience
-        ({ status, response } = await PreferenceService.updateUserPreferences(username, interests, user.token));
+        ({ status, response } = await PreferenceService.updateUserPreferences(username, interests));
 
         if (status === 200 || status === 201) {
           log.info('User preferences updated successfully');

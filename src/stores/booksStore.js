@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
-import enhanceedStorage from '../utils/enhanceedStorage';
 import { fetchManuscripts } from '../services/bookService';
 
 const useBooksStore = create((set) => ({
@@ -17,10 +16,9 @@ const useBooksStore = create((set) => ({
     }
 
     log.info('Fetching books');
-    const userToken = enhanceedStorage.getAuthToken();
 
     try {
-      const { status, response } = await fetchManuscripts(userToken);
+      const { status, response } = await fetchManuscripts();
 
       if (status === 200) {
         log.info('Books fetched successfully:', response);
