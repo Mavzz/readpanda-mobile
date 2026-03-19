@@ -1,16 +1,9 @@
-import enhanceedStorage from '../utils/enhanceedStorage';
 import { getBackendUrl } from '../utils/Helper';
-import { getRequest } from '../services/useGet';
+import { makeAuthenticatedGetRequest } from './authenticatedRequests';
 
-const fetchManuscripts = async (accessToken) => {
-
-  const userToken = accessToken || await enhanceedStorage.getAuthToken();
-
-  const { status, response } = await getRequest(
-    await getBackendUrl('/books/all'),
-    {
-      Authorization: `Bearer ${userToken}`,
-    },
+const fetchManuscripts = async () => {
+  const { status, response } = await makeAuthenticatedGetRequest(
+    getBackendUrl('/books/all'),
   );
 
   return { status, response };

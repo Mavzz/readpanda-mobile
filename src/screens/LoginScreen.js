@@ -59,7 +59,7 @@ const Login = ({ navigation }) => {
         signIn(userData);
 
         // Fetch user preferences after login
-        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username, userData.token));
+        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username));
 
         userData.userDetails.preferences = response || {};
 

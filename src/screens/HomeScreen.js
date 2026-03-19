@@ -12,24 +12,22 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { newBookCard as BookCard } from '../components/Card';
-import { getRequest } from '../services/useGet';
-import { getBackendUrl } from '../utils/Helper';
 import { useState, useEffect, useCallback } from 'react';
 import log from '../utils/logger';
-import enhanceedStorage from '../utils/enhanceedStorage';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from '../components/Toaster';
 import { MyTheme } from '../styles/global';
-import { fetchManuscripts } from '../services/bookService';
+import useBooksStore from '../stores/booksStore';
 
 const { width, height } = Dimensions.get('window');
 
 const Home = ({ navigation }) => {
   const { user } = useAuth();
-  const [books, setBooks] = useState([]);
-  const [filteredBooks, setFilteredBooks] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const filteredBooks = useBooksStore((s) => s.filteredBooks);
+  const loading = useBooksStore((s) => s.loading);
+  const refreshing = useBooksStore((s) => s.refreshing);
+  const fetchBooks = useBooksStore((s) => s.fetchBooks);
+  const filterBooks = useBooksStore((s) => s.filterBooks);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
 
   const username = user?.username || 'Reader';
@@ -46,44 +44,22 @@ const Home = ({ navigation }) => {
     />
   );
 
-  const fetchBooks = async (showRefresh = false) => {
-    if (showRefresh) setRefreshing(true);
-    else setLoading(true);
-
-    log.info('Fetching books');
-    const userToken = enhanceedStorage.getAuthToken();
-
-    try {
-      const { status, response } = await fetchManuscripts(userToken);
-
-      if (status === 200) {
-        log.info('Books fetched successfully:', response);
-        const booksData = response.books || [];
-        setBooks(booksData);
-        setFilteredBooks(booksData);
-
-        if (showRefresh) {
-          showToast('Library refreshed successfully! 📚', 'success');
-        }
-      } else {
-        log.error('Failed to fetch books:', response);
-      }
-    } catch (error) {
-      log.error('Error fetching books:', error);
+  const loadBooks = async (showRefresh = false) => {
+    const { status } = await fetchBooks(showRefresh);
+    if (showRefresh && status === 200) {
+      showToast('Library refreshed successfully! 📚', 'success');
+    } else if (status !== 200 && status !== null) {
       showToast('Connection error. Please try again.', 'error');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
   };
 
   const onRefresh = useCallback(() => {
     showToast('Refreshing your library...', 'info');
-    fetchBooks(true);
+    loadBooks(true);
   }, []);
 
   const handleSearch = (searchResults) => {
-    setFilteredBooks(searchResults);
+    filterBooks(searchResults);
   };
 
   useEffect(() => {
@@ -106,7 +82,7 @@ const Home = ({ navigation }) => {
       navigation.navigate('Interest');
     } else {
       log.info('Existing user, fetching books');
-      fetchBooks();
+      loadBooks();
     }
   }, [user, hasShownWelcome]);
 

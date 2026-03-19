@@ -9,21 +9,13 @@ const encryptedPassword = (password) => {
   return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
 };
 
-const getBackendUrl = async (path = '') => {
-
-  //const apiUrl = `https://${Constants.expoConfig.hostUri.split(':')[0]}:3000`;
-
-  let backendUrl;
+const getBackendUrl = (path = '') => {
   try {
-
-    const ip = '192.168.1.189'; // Use Local_IP from .env, fallback for dev
-    const port = 3000; // your backend port
-    backendUrl = `http://${ip}:${port}${API_VERSION}${path}`;
-
-    return backendUrl;
-
+    const ip = Local_IP || 'localhost';
+    const port = 3000;
+    return `http://${ip}:${port}${API_VERSION}${path}`;
   } catch {
-    console.warn('⚠️ Failed to get local IP, falling back to localhost');
+    log.warn('⚠️ Failed to build backend URL, falling back to localhost');
     return `http://localhost:3000${path}`;
   }
 };

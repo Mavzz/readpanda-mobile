@@ -1,23 +1,40 @@
 // src/screens/ManuscriptScreen.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
-import Background from '../components/Background';
 import PdfViewer from '../components/PdfViewer';
 import log from '../utils/logger';
+import useReadingProgressStore from '../stores/readingProgressStore';
 
 const ManuscriptScreen = ({ route }) => {
   const { book } = route.params;
   const pdfUrl = book.manuscript_url;
+  const setCurrentBook = useReadingProgressStore((s) => s.setCurrentBook);
+  const addToRecentBooks = useReadingProgressStore((s) => s.addToRecentBooks);
+  const saveProgress = useReadingProgressStore((s) => s.saveProgress);
+
   log.info(`ManuscriptScreen loaded for book: ${book.title}`);
-  log.info('pdfDetails:',{ url:pdfUrl,
-    title: book.title });
+  log.info('pdfDetails:', {
+    url: pdfUrl,
+    title: book.title,
+  });
+
+  useEffect(() => {
+    setCurrentBook(book);
+    addToRecentBooks(book);
+
+    return () => {
+      // Save progress when leaving the screen
+      saveProgress(book.book_id, { lastReadAt: Date.now() });
+      setCurrentBook(null);
+    };
+  }, [book, setCurrentBook, addToRecentBooks, saveProgress]);
 
   return (
     <View style={styles.container}>
       {Platform.OS === 'ios' ? (
         <PdfViewer
-          pdfUrl={ pdfUrl }
-          pdfTitle = { book.title }
+          pdfUrl={pdfUrl}
+          pdfTitle={book.title}
           style={styles.pdf}
         />
       ) : (

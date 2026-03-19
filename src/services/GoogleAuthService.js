@@ -1,4 +1,5 @@
 import { authorize, refresh, revoke } from 'react-native-app-auth';
+import log from '../utils/logger';
 
 const googleAuthConfig = {
   issuer: 'https://accounts.google.com',
@@ -18,7 +19,7 @@ export class GoogleAuthService {
         },
       };
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
+      log.error('Google Sign-In Error:', error);
       return {
         success: false,
         error: error.message,
@@ -35,7 +36,7 @@ export class GoogleAuthService {
         refreshToken: result.refreshToken,
       };
     } catch (error) {
-      console.error('Token Refresh Error:', error);
+      log.error('Token Refresh Error:', error);
       return {
         success: false,
         error: error.message,
@@ -51,7 +52,7 @@ export class GoogleAuthService {
       });
       return { success: true };
     } catch (error) {
-      console.error('Sign Out Error:', error);
+      log.error('Sign Out Error:', error);
       return {
         success: false,
         error: error.message,

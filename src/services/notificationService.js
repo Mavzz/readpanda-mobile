@@ -1,14 +1,12 @@
-import { putRequest } from './usePut';
-import { getRequest } from './useGet';
+import { makeAuthenticatedGetRequest, makeAuthenticatedPutRequest } from './authenticatedRequests';
 import { getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
 
 export const NotificationService = {
   async getNotifications() {
     try {
-      const backendUrl = await getBackendUrl('/notifications');
-      const response = await getRequest(backendUrl);
-      return response.data;
+      const { response } = await makeAuthenticatedGetRequest(getBackendUrl('/notifications'));
+      return response || [];
     } catch (error) {
       log.error('Error fetching notifications:', error);
       return [];
@@ -17,8 +15,7 @@ export const NotificationService = {
 
   async markAsRead(notificationId) {
     try {
-      const backendUrl = await getBackendUrl(`/notifications/${notificationId}/read`);
-      await putRequest(backendUrl);
+      await makeAuthenticatedPutRequest(getBackendUrl(`/notifications/${notificationId}/read`), {});
       return true;
     } catch (error) {
       log.error('Error marking notification as read:', error);
@@ -28,9 +25,8 @@ export const NotificationService = {
 
   async getUnreadCount() {
     try {
-      const backendUrl = await getBackendUrl('/notifications/unread/count');
-      const response = await getRequest(backendUrl);
-      return response.data.count;
+      const { response } = await makeAuthenticatedGetRequest(getBackendUrl('/notifications/unread/count'));
+      return response?.count ?? 0;
     } catch (error) {
       log.error('Error fetching unread count:', error);
       return 0;
