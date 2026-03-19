@@ -1,13 +1,7 @@
-import CryptoJS from 'react-native-crypto-js';
-import { SECRET_KEY, Local_IP, API_VERSION } from '@env';
+import { Local_IP, API_VERSION } from '@env';
 import messaging from '@react-native-firebase/messaging';
 import log from '../utils/logger';
 import { saveNotification, NotificationType } from './notification';
-
-// Encrypt the password
-const encryptedPassword = (password) => {
-  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
-};
 
 const getBackendUrl = (path = '') => {
   try {
@@ -52,4 +46,4 @@ const checkNotificationPermission = async () => {
   return enabled;
 };
 
-export { encryptedPassword, getBackendUrl, SignUpType, checkNotificationPermission };
+export { getBackendUrl, SignUpType, checkNotificationPermission };
