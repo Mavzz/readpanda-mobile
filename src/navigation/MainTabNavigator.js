@@ -57,7 +57,7 @@ const TabNavigator = () => {
       screenOptions={{
         presentation: 'screen',
         tabBarStyle: {
-          backgroundColor: `${DS.colors.surfaceContainer}B3`,
+          backgroundColor: DS.colors.surfaceContainerGlass,
           borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,

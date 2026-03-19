@@ -148,7 +148,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: `${DS.colors.surfaceContainer}B3`, // 70% opacity
+    backgroundColor: DS.colors.surfaceContainerGlass,
     width: '100%',
   },
   headerContainer: {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    backgroundColor: `${DS.colors.surfaceContainer}B3`,
+    backgroundColor: DS.colors.surfaceContainerGlass,
     paddingHorizontal: 16,
     height: 60,
     paddingTop: Platform.OS === 'android' ? 25 : 0,

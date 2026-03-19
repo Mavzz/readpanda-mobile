@@ -28,6 +28,9 @@ export const DS = {
     // Ghost border (use at 15% opacity)
     outlineVariant: '#514537',
 
+    // Glassmorphism surface (surfaceContainer at 70% opacity = B3 in hex)
+    surfaceContainerGlass: '#171f33B3',
+
     // Error / notification
     error: '#ffb4ab',
   },
@@ -221,6 +224,7 @@ const cardStyles = StyleSheet.create({
   },
   gridPlaceholderIcon: {
     fontSize: 32,
+    color: DS.colors.onSurfaceVariant,
     marginBottom: 8,
   },
   gridPlaceholderTitle: {
