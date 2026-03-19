@@ -174,19 +174,7 @@ class ApiService {
   /**
      * Execute HTTP request with retry logic
      */
-  async executeRequest(requestConfig, attempt = 0) {
-    // Only check for tokens if this is an authenticated request
-    // (has Authorization header with Bearer token)
-    if (requestConfig.headers &&
-            requestConfig.headers.Authorization &&
-            requestConfig.headers.Authorization.startsWith('Bearer ')) {
-
-      if (!this.hasValidTokens()) {
-        await this.handleAuthenticationFailure('No valid tokens available for authenticated request');
-        return;
-      }
-    }
-
+    async executeRequest(requestConfig, attempt = 0) {
     try {
       const { url, method, headers = {}, body } = requestConfig;
 
@@ -197,7 +185,10 @@ class ApiService {
           ...headers,
         },
       };
-      log.info(`fetchOptions for ${method} ${url}:`, fetchOptions);
+      if (__DEV__) {
+        const { Authorization, ...safeHeaders } = fetchOptions.headers || {};
+        log.info(`fetchOptions for ${method} ${url}:`, { ...fetchOptions, headers: safeHeaders });
+      }
 
       if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
         fetchOptions.body = JSON.stringify(body);
