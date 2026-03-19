@@ -1,41 +1,67 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { DS } from '../styles/global';
 
-import { loginStyles } from '../styles/global';
-
-const primaryButton = (props) => (
-  <View>
-    <Pressable onPress={props.onPress} style={loginStyles.loginButton}>
-      <Text style={loginStyles.loginButtonText}>{props.title}</Text>
-    </Pressable>
-  </View>
+const primaryButton = ({ onPress, title }) => (
+  <Pressable onPress={onPress} style={styles.primaryWrapper}>
+    <LinearGradient
+      colors={[DS.colors.primary, DS.colors.primaryContainer]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.primaryGradient}
+    >
+      <Text style={styles.primaryText}>{title}</Text>
+    </LinearGradient>
+  </Pressable>
 );
 
-const ssoButton = (props) => (
-  <View>
-    <Pressable style={loginStyles.ssoButton} onPress={props.onPress}>
-      <Text style={loginStyles.ssoButtonText}>{props.title}</Text>
-    </Pressable>
-  </View>
+const ssoButton = ({ onPress, title }) => (
+  <Pressable onPress={onPress} style={styles.ssoWrapper}>
+    <Text style={styles.ssoText}>{title}</Text>
+  </Pressable>
 );
 
-const signOutButton = (props) => (
-  <View>
-    <Pressable onPress={props.onPress}>
-      <Icon name="sign-out-alt" size={24} color="#000000" />
-    </Pressable>
-  </View>
+const signOutButton = ({ onPress }) => (
+  <Pressable onPress={onPress}>
+    <Icon name="log-out-outline" size={24} color={DS.colors.primary} />
+  </Pressable>
 );
 
-const iconButton = (props) => {
-  return (
-    <View>
-      <Pressable onPress={ props.onPress } style={ loginStyles.iconButton }>
-        <Icon name={ props.name } size={ props.size } color={ props.color } />
-      </Pressable>
-    </View>
-  );
+const iconButton = ({ onPress, name, size, color, style }) => (
+  <Pressable onPress={onPress} style={style}>
+    <Icon name={name} size={size} color={color || DS.colors.onSurfaceVariant} />
+  </Pressable>
+);
 
-};
+const styles = StyleSheet.create({
+  primaryWrapper: {
+    borderRadius: DS.radius.full,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  primaryGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRadius: DS.radius.full,
+  },
+  primaryText: {
+    color: DS.colors.onPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  ssoWrapper: {
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    paddingVertical: 16,
+    borderRadius: DS.radius.full,
+    alignItems: 'center',
+  },
+  ssoText: {
+    fontSize: 15,
+    color: DS.colors.primary,
+    fontWeight: '600',
+  },
+});
 
 export { primaryButton, signOutButton, ssoButton, iconButton };

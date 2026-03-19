@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback } from 'react';
 import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from '../components/Toaster';
-import { MyTheme } from '../styles/global';
+import { DS } from '../styles/global';
 import useBooksStore from '../stores/booksStore';
 
 const { width, height } = Dimensions.get('window');
@@ -37,7 +37,7 @@ const Home = ({ navigation }) => {
     navigation.navigate('ManuscriptScreen', { book });
   };
 
-  const renderBook = ({ item, index }) => (
+  const renderBook = ({ item }) => (
     <BookCard
       book={item}
       onPress={() => openBook(item)}
@@ -68,7 +68,6 @@ const Home = ({ navigation }) => {
       return;
     }
 
-    // Show welcome toast only once
     if (!hasShownWelcome) {
       log.info('Showing welcome back toast');
       setTimeout(() => {
@@ -89,8 +88,9 @@ const Home = ({ navigation }) => {
   if (!user) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
         <View style={styles.loadingContainer}>
-          <Icon name="book" size={48} color="#667eea" />
+          <Icon name="book" size={48} color={DS.colors.primary} />
           <Text style={styles.loadingText}>Loading your library...</Text>
         </View>
       </SafeAreaView>
@@ -99,13 +99,18 @@ const Home = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={MyTheme.colors.card} />
+      <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[MyTheme.colors.primary]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[DS.colors.primary]}
+            tintColor={DS.colors.primary}
+          />
         }
       >
         {/* Library Section */}
@@ -117,7 +122,7 @@ const Home = ({ navigation }) => {
 
           {loading ? (
             <View style={styles.loadingBooks}>
-              <Icon name="hourglass-outline" size={32} color="#ccc" />
+              <Icon name="hourglass-outline" size={32} color={DS.colors.onSurfaceVariant} />
               <Text style={styles.loadingBooksText}>Loading your books...</Text>
             </View>
           ) : filteredBooks.length > 0 ? (
@@ -132,8 +137,8 @@ const Home = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="library-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyStateTitle}>No books loaded yet!!!!</Text>
+              <Icon name="library-outline" size={64} color={DS.colors.onSurfaceVariant} />
+              <Text style={styles.emptyStateTitle}>No books loaded yet</Text>
             </View>
           )}
         </View>
@@ -145,32 +150,14 @@ const Home = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: DS.colors.background,
   },
   content: {
     flex: 1,
   },
 
-  // Welcome Section
-  welcomeSection: {
-    backgroundColor: '#fff',
-    padding: 20,
-    marginBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#666',
-  },
-
   // Library Section
   librarySection: {
-    backgroundColor: MyTheme.colors.card,
     padding: 20,
     flex: 1,
   },
@@ -181,46 +168,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: MyTheme.colors.text,
+    fontSize: 22,
+    fontWeight: '700',
+    color: DS.colors.onSurface,
+    letterSpacing: -0.3,
   },
   bookCount: {
     fontSize: 14,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
   },
 
   // Books Grid
   booksGrid: {
     paddingBottom: 20,
-    paddingHorizontal: 8,
   },
   bookRow: {
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-  },
-  bookCover: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  bookInfo: {
-    flex: 1,
-  },
-  bookTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  bookAuthor: {
-    fontSize: 12,
-    color: '#666',
+    gap: 12,
   },
 
   // Loading States
@@ -231,7 +195,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     marginTop: 16,
   },
   loadingBooks: {
@@ -240,7 +204,7 @@ const styles = StyleSheet.create({
   },
   loadingBooksText: {
     fontSize: 14,
-    color: '#999',
+    color: DS.colors.onSurfaceVariant,
     marginTop: 12,
   },
 
@@ -252,31 +216,16 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateDescription: {
     fontSize: 14,
-    color: '#999',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
+    opacity: 0.7,
     marginBottom: 24,
-  },
-  addBookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#667eea',
-    backgroundColor: '#fff',
-  },
-  addBookButtonText: {
-    color: '#667eea',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
   },
 });
 

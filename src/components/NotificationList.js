@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { DS } from '../styles/global';
 
 const NotificationItem = ({ notification, onPress }) => {
   const formattedDate = new Date(notification.timestamp).toLocaleDateString('en-US', {
@@ -32,7 +33,7 @@ const NotificationItem = ({ notification, onPress }) => {
           <Icon
             name={notification.type === 'NEW_BOOK' ? 'book-outline' : 'notifications-outline'}
             size={24}
-            color="#0ea5e9"
+            color={DS.colors.primary}
           />
         </View>
         <View style={styles.textContainer}>
@@ -48,7 +49,7 @@ const NotificationItem = ({ notification, onPress }) => {
 
 const EmptyNotifications = () => (
   <View style={styles.emptyContainer}>
-    <Icon name="notifications-off-outline" size={48} color="#666" />
+    <Icon name="notifications-off-outline" size={48} color={DS.colors.onSurfaceVariant} />
     <Text style={styles.emptyText}>No notifications yet</Text>
   </View>
 );
@@ -72,7 +73,7 @@ const NotificationList = ({ notifications, onNotificationRead, onClose }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
         <Pressable onPress={onClose} style={styles.closeButton}>
-          <Icon name="close" size={24} color="#666" />
+          <Icon name="close" size={24} color={DS.colors.onSurfaceVariant} />
         </Pressable>
       </View>
             
@@ -96,7 +97,7 @@ const NotificationList = ({ notifications, onNotificationRead, onClose }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: DS.colors.surfaceContainerHigh,
   },
   header: {
     flexDirection: 'row',
@@ -104,14 +105,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: '#fff',
+    backgroundColor: DS.colors.surfaceContainerHigh,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: DS.colors.onSurface,
   },
   closeButton: {
     padding: 5,
@@ -121,13 +120,13 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   notificationItem: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.xl,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
     elevation: 2,
   },
   notificationContent: {
@@ -138,8 +137,8 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f9ff',
+    borderRadius: DS.radius.full,
+    backgroundColor: DS.colors.surfaceContainerHigh,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -148,30 +147,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unreadNotification: {
-    backgroundColor: '#f8fafc',
-    borderLeftWidth: 4,
-    borderLeftColor: '#0ea5e9',
+    backgroundColor: DS.colors.surfaceContainer,
+    borderLeftWidth: 3,
+    borderLeftColor: DS.colors.primary,
   },
   notificationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: DS.colors.onSurface,
     marginBottom: 4,
   },
   notificationMessage: {
     fontSize: 14,
-    color: '#64748b',
+    color: DS.colors.onSurfaceVariant,
     marginBottom: 6,
   },
   notificationTime: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: DS.colors.onSurfaceVariant,
+    opacity: 0.7,
   },
   unreadDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: '#0ea5e9',
+    borderRadius: DS.radius.full,
+    backgroundColor: DS.colors.primary,
     marginLeft: 8,
   },
   emptyContainer: {
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#64748b',
+    color: DS.colors.onSurfaceVariant,
     marginTop: 12,
   },
 });

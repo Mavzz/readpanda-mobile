@@ -16,6 +16,7 @@ import { NotificationBadge } from './Badge';
 import NotificationList from './NotificationList';
 import { useAuth } from '../contexts/AuthContext';
 import useNotificationStore from '../stores/notificationStore';
+import { DS } from '../styles/global';
 
 
 const CommonHeader = ({ showSearch, navigation }) => {
@@ -43,24 +44,12 @@ const CommonHeader = ({ showSearch, navigation }) => {
 
   const ringBell = () => {
     'worklet';
-    // Reset rotation to 0 before starting new animation
     rotateZ.value = 0;
-
-    // Create a ringing effect with multiple rotations
     rotateZ.value = withRepeat(
       withSequence(
-        withTiming(-0.3, {
-          duration: 200,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        }),
-        withTiming(0.3, {
-          duration: 400,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        }),
-        withTiming(0, {
-          duration: 200,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        }),
+        withTiming(-0.3, { duration: 200, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
+        withTiming(0.3, { duration: 400, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
+        withTiming(0, { duration: 200, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
       ),
       1,
     );
@@ -97,17 +86,6 @@ const CommonHeader = ({ showSearch, navigation }) => {
     await markAsRead(notificationId);
   };
 
-  /* useEffect(() => {
- 
-         // Set up polling for new notifications
-         const pollInterval = setInterval(async () => {
-             const unreadCount = await NotificationService.getUnreadCount();
-             setNotificationCount(unreadCount);
-         }, 30000); // Poll every 30 seconds
- 
-         return () => clearInterval(pollInterval);
-     }, []);*/
-
   return (
     <>
       <SafeAreaView style={styles.safeArea}>
@@ -116,7 +94,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
           <Pressable onPress={handleProfilePress}>
             <Animated.View style={[styles.profileContainer, profileAnimatedStyle]}>
               <ProfilePicture
-                size={42}
+                size={38}
                 editable={false}
                 user={user}
               />
@@ -130,15 +108,11 @@ const CommonHeader = ({ showSearch, navigation }) => {
 
           {/* Notification Icon */}
           <Pressable onPress={handleNotificationPress}>
-            <Animated.View
-              style={[
-                styles.iconContainer,
-                notificationAnimatedStyle,
-              ]}>
+            <Animated.View style={[styles.iconContainer, notificationAnimatedStyle]}>
               <Icon
                 name="notifications-outline"
-                size={28}
-                color="#666"
+                size={24}
+                color={DS.colors.onSurfaceVariant}
               />
               {unreadCount > 0 && (
                 <NotificationBadge count={unreadCount} />
@@ -157,7 +131,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             {loading ? (
-              <ActivityIndicator size="large" color="#0000ff" />
+              <ActivityIndicator size="large" color={DS.colors.primary} />
             ) : (
               <NotificationList
                 notifications={notifications}
@@ -165,19 +139,16 @@ const CommonHeader = ({ showSearch, navigation }) => {
                 onClose={() => setIsModalVisible(false)}
               />
             )}
-
           </View>
         </View>
-
       </Modal>
     </>
-
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#fff',
+    backgroundColor: `${DS.colors.surfaceContainer}B3`, // 70% opacity
     width: '100%',
   },
   headerContainer: {
@@ -185,14 +156,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    paddingHorizontal: 10,
+    backgroundColor: `${DS.colors.surfaceContainer}B3`,
+    paddingHorizontal: 16,
     height: 60,
     paddingTop: Platform.OS === 'android' ? 25 : 0,
-    marginTop: Platform.OS === 'android' ? 0 : 0,
-
   },
   iconContainer: {
     width: 40,
@@ -206,7 +173,6 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
   searchContainer: {
     flex: 1,
@@ -214,13 +180,13 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(6, 13, 32, 0.7)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    borderTopLeftRadius: DS.radius.xl,
+    borderTopRightRadius: DS.radius.xl,
     maxHeight: '80%',
     paddingTop: 20,
   },

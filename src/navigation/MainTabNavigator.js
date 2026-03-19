@@ -11,7 +11,7 @@ import InterestScreen from '../screens/InterestScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
 import CommonHeader from '../components/CommonHeader';
-import { MyTheme } from '../styles/global';
+import { DS } from '../styles/global';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -27,7 +27,7 @@ const HomeStackNavigator = () => {
         headerShown: false,
         presentation: 'card',
         animationEnabled: true,
-        cardStyle: { backgroundColor: MyTheme.colors.background },
+        cardStyle: { backgroundColor: DS.colors.background },
       }}
     >
       <Stack.Screen
@@ -56,6 +56,24 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenOptions={{
         presentation: 'screen',
+        tabBarStyle: {
+          backgroundColor: `${DS.colors.surfaceContainer}B3`,
+          borderTopWidth: 0,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 25 : 10,
+          paddingTop: 8,
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          elevation: 0,
+        },
+        tabBarActiveTintColor: DS.colors.primary,
+        tabBarInactiveTintColor: DS.colors.onSurfaceVariant,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+        },
         header: ({ navigation, route }) => {
           const showSearch = route.name === 'Explore Books';
           return (
@@ -111,7 +129,12 @@ const TabNavigator = () => {
 // Main Stack Navigator that wraps the Tab Navigator
 const MainStackNavigator = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: DS.colors.background },
+      }}
+    >
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen
         name="Profile"
@@ -119,6 +142,13 @@ const MainStackNavigator = () => {
         options={{
           headerShown: true,
           title: 'Profile',
+          headerStyle: {
+            backgroundColor: DS.colors.surfaceContainerLow,
+          },
+          headerTintColor: DS.colors.onSurface,
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
         }}
       />
       <Stack.Screen
@@ -127,6 +157,13 @@ const MainStackNavigator = () => {
         options={{
           headerShown: true,
           title: 'Select Interests',
+          headerStyle: {
+            backgroundColor: DS.colors.surfaceContainerLow,
+          },
+          headerTintColor: DS.colors.onSurface,
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
         }}
       />
     </Stack.Navigator>

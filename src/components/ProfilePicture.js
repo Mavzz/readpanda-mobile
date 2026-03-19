@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Image, TouchableOpacity, StyleSheet, Alert, Platform, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import enhanceedStorage from '../utils/enhanceedStorage';
-import { MyTheme } from '../styles/global';
+import { DS } from '../styles/global';
 import log from '../utils/logger';
 
 // Fallback for when react-native-image-picker is not available
@@ -174,7 +174,7 @@ const ProfilePicture = ({
             styles.initialsText,
             {
               fontSize: size * 0.35,
-              color: MyTheme.colors.primary,
+              color: DS.colors.primary,
             },
           ]}>
             {initials}
@@ -183,7 +183,7 @@ const ProfilePicture = ({
           <Icon
             name="person"
             size={size * 0.5}
-            color={MyTheme.colors.primary}
+            color={DS.colors.primary}
           />
         )}
       </View>
@@ -245,14 +245,14 @@ const styles = StyleSheet.create({
   profileImage: {
     borderRadius: 40, // Will be overridden by dynamic sizing
     borderWidth: 3,
-    borderColor: MyTheme.colors.card,
+    borderColor: DS.colors.surfaceContainerHigh,
   },
   defaultProfileContainer: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: DS.colors.surfaceContainerHigh,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: MyTheme.colors.card,
+    borderColor: DS.colors.surfaceContainerHigh,
   },
   initialsText: {
     fontWeight: 'bold',
@@ -260,11 +260,11 @@ const styles = StyleSheet.create({
   },
   editIndicator: {
     position: 'absolute',
-    backgroundColor: MyTheme.colors.primary,
+    backgroundColor: DS.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: DS.colors.background,
   },
   loadingOverlay: {
     position: 'absolute',

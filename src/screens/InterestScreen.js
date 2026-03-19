@@ -6,15 +6,16 @@ import {
   SafeAreaView,
   Pressable,
   Text,
+  StatusBar,
 } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
-import Background from '../components/Background';
 import { primaryButton as PrimaryButton } from '../components/Button';
 import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
 import { PreferenceService } from '../services/user_PreferencesService';
+import { DS } from '../styles/global';
 
 const InterestScreen = () => {
   const { user, updateUser } = useAuth();
@@ -26,7 +27,6 @@ const InterestScreen = () => {
   const [isUpdated, setIsUpdated] = useState(false);
   let status, response;
   const { previousScreen, currentScreen } = useScreenTracking();
-
 
   const toggleSelection = (category, preference_id) => {
     setIsUpdated(true);
@@ -45,14 +45,9 @@ const InterestScreen = () => {
     <Pressable
       key={item.preference_id}
       onPress={() => toggleSelection(category, item.preference_id)}
-      style={[styles.tag, item.preference_value && styles.tagSelected]}
+      style={[styles.chip, item.preference_value && styles.chipSelected]}
     >
-      <Text
-        style={[
-          styles.tagText,
-          item.preference_value && styles.tagTextSelected,
-        ]}
-      >
+      <Text style={[styles.chipText, item.preference_value && styles.chipTextSelected]}>
         {item.preference_subgenre}
       </Text>
     </Pressable>
@@ -61,7 +56,7 @@ const InterestScreen = () => {
   const renderCategory = ({ item: category }) => (
     <View style={styles.category} key={category}>
       <Text style={styles.categoryTitle}>{category}</Text>
-      <View style={styles.tagContainer}>
+      <View style={styles.chipContainer}>
         <FlatList
           data={interests[category]}
           renderItem={(item) => renderTag(item, category)}
@@ -75,11 +70,8 @@ const InterestScreen = () => {
   const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
     log.info('Updating user preferences');
     try {
-
       if (isUpdated) {
-        // Handle first time user experience
         ({ status, response } = await PreferenceService.updateUserPreferences(username, interests));
-
         if (status === 200 || status === 201) {
           log.info('User preferences updated successfully');
         } else {
@@ -88,18 +80,11 @@ const InterestScreen = () => {
         }
         updateUser({ preferences: interests });
         log.info('First time user experience completed');
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'HomeMain' }],
-        });
+        navigation.reset({ index: 0, routes: [{ name: 'HomeMain' }] });
       } else {
         log.info('No changes made to preferences, navigating to Home');
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'HomeMain' }],
-        });
+        navigation.reset({ index: 0, routes: [{ name: 'HomeMain' }] });
       }
-
     } catch (error) {
       log.error('Error updating preferences:', error);
     } finally {
@@ -108,109 +93,95 @@ const InterestScreen = () => {
   };
 
   return (
-    <Background>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <View style={styles.container}>
-        <SafeAreaView>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 10 }}>
-            <Text
-              style={{
-                fontSize: 24,
-                //marginBottom: 20,
-                textAlign: 'center',
-                color: '#0A210F',
-              }}
-            >
-              What's your
-            </Text>
-            <Text
-              style={{
-                fontSize: 24,
-                //marginBottom: 20,
-                color: '#E34A6F',
-                fontWeight: '400',
-                paddingLeft: 5,
-              }}
-            >
-              flavour?
-            </Text>
-          </View>
-          <FlatList
-            data={Object.keys(interests)}
-            renderItem={renderCategory}
-            keyExtractor={(item) => item}
-            contentContainerStyle={styles.flatListContent}
-            ListFooterComponent={
-              <PrimaryButton onPress={() => updateUserPreferences(username, interests, isUpdated, navigation,
-              )} title="Done!" />
-            }
-          />
-        </SafeAreaView>
+        <View style={styles.headingRow}>
+          <Text style={styles.headingPlain}>What's your</Text>
+          <Text style={styles.headingAccent}> flavour?</Text>
+        </View>
+        <FlatList
+          data={Object.keys(interests)}
+          renderItem={renderCategory}
+          keyExtractor={(item) => item}
+          contentContainerStyle={styles.flatListContent}
+          ListFooterComponent={
+            <PrimaryButton
+              onPress={() => updateUserPreferences(username, interests, isUpdated, navigation)}
+              title="Done!"
+            />
+          }
+        />
       </View>
-    </Background>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: DS.colors.background,
+  },
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 80,
+    paddingTop: 40,
+  },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 24,
+  },
+  headingPlain: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: DS.colors.onSurface,
+    letterSpacing: -0.3,
+  },
+  headingAccent: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: DS.colors.primary,
+    letterSpacing: -0.3,
   },
   flatListContent: {
     paddingBottom: 40,
   },
-  header: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginVertical: 20,
-    textAlign: 'center',
-  },
   category: {
-    marginBottom: 30,
+    marginBottom: 28,
   },
   categoryTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 10,
+    marginBottom: 12,
+    color: DS.colors.onSurface,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  tagContainer: {
+  chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
-  tag: {
+  chip: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderColor: '#D0D0D0',
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    borderRadius: DS.radius.full,
+    backgroundColor: DS.colors.surfaceContainerHigh,
     marginRight: 8,
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  tagSelected: {
-    backgroundColor: '#DDE8FF',
-    borderColor: '#3366FF',
+  chipSelected: {
+    backgroundColor: DS.colors.primary,
   },
-  tagText: {
-    color: '#333',
-    fontSize: 14,
+  chipText: {
+    color: DS.colors.onSurfaceVariant,
+    fontSize: 13,
+    fontWeight: '500',
   },
-  tagTextSelected: {
-    color: '#3366FF',
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#3366FF',
-    paddingVertical: 14,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  chipTextSelected: {
+    color: DS.colors.onPrimary,
+    fontWeight: '700',
   },
 });
 

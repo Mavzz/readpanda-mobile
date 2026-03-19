@@ -1,120 +1,133 @@
 import { Platform, StyleSheet } from 'react-native';
 
-const WEB_FONT_STACK =
-  'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
+// ─── Nocturnal Sanctuary Design Tokens ──────────────────────────────────────
+
+export const DS = {
+  colors: {
+    // Surface hierarchy (Level 0 → highest)
+    background:                '#0b1326',
+    surface:                   '#0b1326',
+    surfaceContainerLowest:    '#060d20',
+    surfaceContainerLow:       '#131b2e',
+    surfaceContainer:          '#171f33',
+    surfaceContainerHigh:      '#222a3e',
+    surfaceContainerHighest:   '#2d3654',
+
+    // Brand / accent
+    primary:          '#ffddb8',
+    primaryContainer: '#ffb95f',
+    onPrimary:        '#472a00',
+
+    // Secondary (gradient partner)
+    secondary:        '#e8c49a',
+
+    // Text hierarchy
+    onSurface:        '#dae2fd',   // tertiary – main/display text
+    onSurfaceVariant: '#d6c3b2',   // metadata, labels
+
+    // Ghost border (use at 15% opacity)
+    outlineVariant: '#514537',
+
+    // Error / notification
+    error: '#ffb4ab',
+  },
+
+  radius: {
+    sm:   12,
+    md:   24,
+    lg:   32,
+    xl:   48,
+    full: 9999,
+  },
+
+  spacing: {
+    4:  4,
+    8:  8,
+    12: 12,
+    16: 16,
+    20: 20,
+    24: 24,
+    32: 32,
+    40: 40,
+    48: 48,
+    64: 64,
+  },
+};
+
+// ─── React Navigation theme ──────────────────────────────────────────────────
 
 const MyTheme = {
-  dark: false,
+  dark: true,
   colors: {
-    primary: 'rgb(17, 214, 145)',
-    background: 'rgb(242, 242, 242)',
-    card: 'rgb(255, 255, 255)',
-    text: 'rgb(28, 28, 30)',
-    border: 'rgb(199, 199, 204)',
-    notification: 'rgb(255, 69, 58)',
+    primary:      DS.colors.primary,
+    background:   DS.colors.background,
+    card:         DS.colors.surfaceContainerLow,
+    text:         DS.colors.onSurface,
+    border:       'transparent',
+    notification: DS.colors.error,
   },
   fonts: Platform.select({
-    web: {
-      regular: {
-        fontFamily: WEB_FONT_STACK,
-        fontWeight: '400',
-      },
-      medium: {
-        fontFamily: WEB_FONT_STACK,
-        fontWeight: '500',
-      },
-      bold: {
-        fontFamily: WEB_FONT_STACK,
-        fontWeight: '600',
-      },
-      heavy: {
-        fontFamily: WEB_FONT_STACK,
-        fontWeight: '700',
-      },
-    },
     ios: {
-      regular: {
-        fontFamily: 'System',
-        fontWeight: '200',
-      },
-      medium: {
-        fontFamily: 'System',
-        fontWeight: '300',
-      },
-      bold: {
-        fontFamily: 'System',
-        fontWeight: '400',
-      },
-      heavy: {
-        fontFamily: 'System',
-        fontWeight: '500',
-      },
+      regular: { fontFamily: 'System', fontWeight: '400' },
+      medium:  { fontFamily: 'System', fontWeight: '500' },
+      bold:    { fontFamily: 'System', fontWeight: '600' },
+      heavy:   { fontFamily: 'System', fontWeight: '700' },
     },
     default: {
-      regular: {
-        fontFamily: 'sans-serif',
-        fontWeight: 'normal',
-      },
-      medium: {
-        fontFamily: 'sans-serif-medium',
-        fontWeight: 'normal',
-      },
-      bold: {
-        fontFamily: 'sans-serif',
-        fontWeight: '600',
-      },
-      heavy: {
-        fontFamily: 'sans-serif',
-        fontWeight: '700',
-      },
+      regular: { fontFamily: 'sans-serif',        fontWeight: 'normal' },
+      medium:  { fontFamily: 'sans-serif-medium',  fontWeight: 'normal' },
+      bold:    { fontFamily: 'sans-serif',         fontWeight: '600'    },
+      heavy:   { fontFamily: 'sans-serif',         fontWeight: '700'    },
     },
   }),
 };
+
+// ─── Login / Auth screen styles ───────────────────────────────────────────────
 
 const loginStyles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: 50,
+    padding: 32,
   },
   mainTitletext: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
-    color: '#8B0000',
-    marginBottom: 10,
+    color: DS.colors.onSurface,
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
   signUpText: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: '#2e7d32',
-    //marginTop: 10,
+    fontSize: 15,
+    color: DS.colors.primary,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 16,
-    color: '#333',
-    //marginBottom: 20,
+    fontSize: 15,
+    color: DS.colors.onSurfaceVariant,
   },
+  // Sunken input fields
   input: {
-    backgroundColor: '#fff',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    backgroundColor: DS.colors.surfaceContainerLowest,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: DS.radius.md,
     fontSize: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    marginBottom: 16,
+    color: DS.colors.onSurface,
   },
+  // Primary button placeholder (real gradient lives in Button.js)
   loginButton: {
-    backgroundColor: '#6a1b1a',
-    paddingVertical: 14,
-    borderRadius: 25,
+    paddingVertical: 16,
+    borderRadius: DS.radius.full,
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
+    overflow: 'hidden',
   },
   loginButtonText: {
-    color: '#fff',
+    color: DS.colors.onPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -124,60 +137,58 @@ const loginStyles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#ccc',
+    backgroundColor: DS.colors.outlineVariant,
+    opacity: 0.3,
   },
   orText: {
-    marginHorizontal: 10,
-    color: '#555',
+    marginHorizontal: 12,
+    color: DS.colors.onSurfaceVariant,
+    fontSize: 14,
   },
   ssoButton: {
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    paddingVertical: 16,
+    borderRadius: DS.radius.full,
     alignItems: 'center',
   },
   ssoButtonText: {
-    fontSize: 16,
-    color: '#111',
+    fontSize: 15,
+    color: DS.colors.primary,
+    fontWeight: '600',
   },
 });
 
+// ─── Card styles ──────────────────────────────────────────────────────────────
+
 const cardStyles = StyleSheet.create({
-  // Grid Book Card styles (for Home Screen grid layout)
+  // Grid Book Card
   gridBookCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.xl,
     padding: 16,
     marginBottom: 16,
     marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    height: 280, // Fixed height for uniformity
-    flex: 1, // Takes equal width in 2-column layout
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 6,
+    height: 280,
+    flex: 1,
     justifyContent: 'space-between',
   },
   gridBookCover: {
     width: '100%',
-    height: 180, // Fixed height
-    borderRadius: 12,
+    height: 180,
+    borderRadius: DS.radius.lg,
     overflow: 'hidden',
-    marginBottom: 16,
-    backgroundColor: '#f8f9fa',
+    marginBottom: 12,
+    backgroundColor: DS.colors.surfaceContainerHigh,
   },
   gridCoverImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover', // Ensures uniform scaling
+    resizeMode: 'cover',
   },
   gridBookInfo: {
     alignItems: 'center',
@@ -187,65 +198,61 @@ const cardStyles = StyleSheet.create({
   gridBookTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: DS.colors.onSurface,
     textAlign: 'center',
     marginBottom: 4,
     lineHeight: 18,
-    minHeight: 36, // Space for 2 lines
+    minHeight: 36,
   },
   gridBookAuthor: {
     fontSize: 12,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     marginBottom: 8,
-    minHeight: 16, // Fixed height for author
+    minHeight: 16,
   },
   gridImagePlaceholder: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: DS.colors.surfaceContainerHigh,
     padding: 16,
   },
   gridPlaceholderIcon: {
     fontSize: 32,
-    color: '#999',
     marginBottom: 8,
   },
   gridPlaceholderTitle: {
     fontSize: 12,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     fontWeight: '500',
     lineHeight: 16,
   },
 
-  // List Book Card styles (for other layouts)
+  // List Book Card
   bookCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.md,
     padding: 16,
     marginVertical: 6,
     marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 4,
     alignItems: 'center',
   },
   bookCover: {
     width: 60,
     height: 80,
-    borderRadius: 8,
+    borderRadius: DS.radius.sm,
     overflow: 'hidden',
     marginRight: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: DS.colors.surfaceContainerHigh,
   },
   bookInfo: {
     flex: 1,
@@ -254,34 +261,31 @@ const cardStyles = StyleSheet.create({
   bookTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: DS.colors.onSurface,
     marginBottom: 4,
     lineHeight: 20,
   },
   bookAuthor: {
     fontSize: 14,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     marginBottom: 8,
   },
 
-  // Generic styles
+  // Generic card
   container: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.md,
     padding: 12,
     margin: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
     elevation: 3,
     minWidth: 120,
   },
   imageContainer: {
-    borderRadius: 8,
+    borderRadius: DS.radius.sm,
     overflow: 'hidden',
     marginBottom: 8,
     aspectRatio: 3 / 4,
@@ -294,21 +298,21 @@ const cardStyles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: DS.colors.onSurface,
     textAlign: 'center',
     lineHeight: 18,
   },
 
-  // Error states (no loading states)
+  // Error / placeholder states
   imagePlaceholder: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: DS.colors.surfaceContainerHigh,
     padding: 8,
   },
   bookCoverPlaceholder: {
-    backgroundColor: '#e8e8e8',
+    backgroundColor: DS.colors.surfaceContainerHigh,
   },
   placeholderText: {
     fontSize: 24,
@@ -316,16 +320,16 @@ const cardStyles = StyleSheet.create({
   },
   placeholderIcon: {
     fontSize: 20,
-    color: '#999',
+    color: DS.colors.onSurfaceVariant,
   },
   placeholderTitle: {
     fontSize: 10,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     fontWeight: '500',
   },
 
-  // Progress indicator
+  // Progress bar
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -334,31 +338,31 @@ const cardStyles = StyleSheet.create({
   },
   progressBar: {
     flex: 1,
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
+    height: 3,
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    borderRadius: DS.radius.full,
     marginRight: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#007AFF',
-    borderRadius: 2,
+    backgroundColor: DS.colors.primary,
+    borderRadius: DS.radius.full,
   },
   progressText: {
     fontSize: 11,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     minWidth: 28,
     textAlign: 'center',
     fontWeight: '500',
   },
 });
 
-// Uniform screen styles for consistency across the app
+// ─── Shared screen styles ─────────────────────────────────────────────────────
+
 const screenStyles = StyleSheet.create({
-  // Screen containers
   screenContainer: {
     flex: 1,
-    backgroundColor: MyTheme.colors.background,
+    backgroundColor: DS.colors.background,
   },
   contentContainer: {
     flex: 1,
@@ -369,72 +373,64 @@ const screenStyles = StyleSheet.create({
     padding: 20,
   },
 
-  // Typography hierarchy
+  // Typography
   screenTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: MyTheme.colors.text,
+    fontWeight: '700',
+    color: DS.colors.onSurface,
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: MyTheme.colors.text,
+    color: DS.colors.onSurface,
     marginBottom: 16,
     marginTop: 24,
+    letterSpacing: -0.2,
   },
   subsectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: MyTheme.colors.text,
+    color: DS.colors.onSurface,
     marginBottom: 12,
   },
   bodyText: {
     fontSize: 16,
-    color: MyTheme.colors.text,
+    color: DS.colors.onSurfaceVariant,
     lineHeight: 24,
     marginBottom: 12,
   },
   captionText: {
     fontSize: 14,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     lineHeight: 20,
     marginBottom: 24,
   },
 
-  // Common UI elements
+  // Section card (no border – tonal layering only)
   section: {
-    backgroundColor: MyTheme.colors.card,
-    borderRadius: 16,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.xl,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: MyTheme.colors.border,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: MyTheme.colors.border,
-    marginVertical: 20,
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 4,
   },
 
-  // Loading states
+  // Loading
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: MyTheme.colors.background,
+    backgroundColor: DS.colors.background,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     marginTop: 16,
     textAlign: 'center',
   },
@@ -449,7 +445,7 @@ const screenStyles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
@@ -458,10 +454,11 @@ const screenStyles = StyleSheet.create({
     flexWrap: 'wrap',
     flexDirection: 'column',
     fontSize: 16,
-    color: '#999',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
+    opacity: 0.7,
   },
 
   // Error states
@@ -474,45 +471,43 @@ const screenStyles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: MyTheme.colors.notification,
+    color: DS.colors.error,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   errorDescription: {
     fontSize: 16,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
   },
 
-  // Buttons
+  // Buttons (gradient lives in Button.js; these are fallback plain styles)
   primaryButton: {
-    backgroundColor: MyTheme.colors.primary,
+    backgroundColor: DS.colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: DS.radius.full,
     alignItems: 'center',
     marginVertical: 8,
   },
   primaryButtonText: {
-    color: '#fff',
+    color: DS.colors.onPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   secondaryButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: DS.colors.surfaceContainerHigh,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: DS.radius.full,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: MyTheme.colors.primary,
     marginVertical: 8,
   },
   secondaryButtonText: {
-    color: MyTheme.colors.primary,
+    color: DS.colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
