@@ -1,7 +1,7 @@
 import { Alert, Platform, NativeModules } from 'react-native';
 import { postRequest } from './usePost';
 import { GoogleAuthService } from './GoogleAuthService';
-import { encryptedPassword, getBackendUrl } from '../utils/Helper';
+import { getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
 
 
@@ -68,7 +68,7 @@ const emailLogin = async (username, password) => {
     getBackendUrl('/auth/login'),
     {
       username,
-      password: encryptedPassword(password),
+      password: password,
     },
   );
 
@@ -86,7 +86,7 @@ const emailSignUp = async (username, password, email) => {
 
   const { status, response } = await postRequest(getBackendUrl('/signup'), {
     username,
-    password: encryptedPassword(password),
+    password: password,
     email,
   });
 
