@@ -57,15 +57,11 @@ const TabNavigator = () => {
       screenOptions={{
         presentation: 'screen',
         tabBarStyle: {
-          backgroundColor: DS.colors.surfaceContainerGlass,
+          backgroundColor: DS.colors.surfaceContainerLow,
           borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,
           paddingTop: 8,
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
           elevation: 0,
         },
         tabBarActiveTintColor: DS.colors.primary,

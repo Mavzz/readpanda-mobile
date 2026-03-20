@@ -10,9 +10,8 @@ const primaryButton = ({ onPress, title }) => (
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.primaryGradient}
-    >
-      <Text style={styles.primaryText}>{title}</Text>
-    </LinearGradient>
+    />
+    <Text style={styles.primaryText}>{title}</Text>
   </Pressable>
 );
 
@@ -38,10 +37,12 @@ const styles = StyleSheet.create({
   primaryWrapper: {
     borderRadius: DS.radius.full,
     marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
   primaryGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
+    ...StyleSheet.absoluteFillObject,
     borderRadius: DS.radius.full,
   },
   primaryText: {
