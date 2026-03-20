@@ -37,7 +37,6 @@ const iconButton = ({ onPress, name, size, color, style }) => (
 const styles = StyleSheet.create({
   primaryWrapper: {
     borderRadius: DS.radius.full,
-    overflow: 'hidden',
     marginBottom: 16,
   },
   primaryGradient: {
