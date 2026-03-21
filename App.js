@@ -2,6 +2,8 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import SplashScreen from 'react-native-splash-screen';
 import { useEffect, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
+import ReadPandaLogo from "./src/components/ReadPandaLogo";
+import { DS } from "./src/styles/global";
 
 const App = () => {
   const [splashVisible, setSplashVisible] = useState(true);
@@ -33,12 +35,9 @@ const App = () => {
           pointerEvents="none"
         >
           <View style={styles.splashContent}>
-            <Animated.Image
-              source={require('./src/assets/splash.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            <ReadPandaLogo size={160} />
             <Animated.Text style={styles.title}>ReadPanda</Animated.Text>
+            <Animated.Text style={styles.tagline}>Your reading sanctuary</Animated.Text>
           </View>
         </Animated.View>
       )}
@@ -52,7 +51,7 @@ const styles = StyleSheet.create({
   },
   splash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E8FFC8',
+    backgroundColor: DS.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
@@ -61,15 +60,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: -40,
   },
-  logo: {
-    width: 160,
-    height: 160,
-  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 20,
+    fontSize: 32,
+    fontWeight: '700',
+    color: DS.colors.primary,
+    marginTop: 24,
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: DS.colors.onSurfaceVariant,
+    marginTop: 8,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
 });
 
