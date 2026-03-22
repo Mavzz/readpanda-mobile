@@ -1,0 +1,65 @@
+name: Xcode - Build and Analyze
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-analyze:
+    name: Build and Analyze
+    runs-on: macos-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "yarn"
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Create .env file
+        env:
+          LOCAL_IP: ${{ secrets.LOCAL_IP || '127.0.0.1' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'ci-placeholder-secret' }}
+          API_VERSION: ${{ secrets.API_VERSION || '/api/v1' }}
+        run: |
+          echo "Local_IP=${LOCAL_IP}" > .env
+          echo "SECRET_KEY=${SECRET_KEY}" >> .env
+          echo "API_VERSION=${API_VERSION}" >> .env
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install
+
+      - name: Install xcpretty
+        run: gem install xcpretty
+
+      - name: Build and Analyze
+        run: |
+          set -o pipefail
+          xcodebuild clean analyze \
+            -workspace ios/ReadPanda.xcworkspace \
+            -scheme ReadPanda \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcpretty
