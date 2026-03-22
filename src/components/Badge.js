@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { DS } from '../styles/global';
 
-
-const NotificationBadge = ({ notificationCount }) => {
-  if (!notificationCount) return null;
+const NotificationBadge = ({ count }) => {
+  if (!count) return null;
 
   return (
     <View style={styles.badge}>
       <Text style={styles.badgeText}>
-        {notificationCount > 99 ? '99+' : notificationCount}
+        {count > 99 ? '99+' : count}
       </Text>
     </View>
   );
@@ -19,22 +19,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -6,
     top: -3,
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
+    backgroundColor: DS.colors.error,
+    borderRadius: DS.radius.full,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    borderColor: DS.colors.surfaceContainer,
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: DS.colors.onPrimary,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
     paddingHorizontal: 4,
   },
 });
 
-export  { NotificationBadge };
+export { NotificationBadge };

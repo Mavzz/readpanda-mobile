@@ -1,6 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
-import Background from '../components/Background';
 import { primaryButton as PrimaryButton } from '../components/Button';
 import ProfilePicture from '../components/ProfilePicture';
 import log from '../utils/logger';
@@ -8,6 +7,7 @@ import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../services/auth';
 import enhanceedStorage from '../utils/enhanceedStorage';
+import { DS } from '../styles/global';
 
 const ProfileSection = ({ title, children }) => (
   <View style={styles.section}>
@@ -30,7 +30,6 @@ const ProfileScreen = () => {
 
   const handleSignOut = async () => {
     log.info('Signing out...');
-    // Clear the token from storage
     log.info('refreshToken:', refreshToken);
     await logout(username, refreshToken);
     signOut();
@@ -39,14 +38,14 @@ const ProfileScreen = () => {
 
   const handleProfilePictureChange = (newImageUri) => {
     log.info('Profile picture changed:', newImageUri);
-    // Update the user context with new profile picture
     if (updateUser) {
       updateUser({ profilePicture: newImageUri });
     }
   };
 
   return (
-    <Background>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
           <View style={styles.header}>
@@ -83,7 +82,7 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.settingItem}>
               <Text style={styles.settingText}>Notification Preferences</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem}>
+            <TouchableOpacity style={[styles.settingItem, styles.settingItemLast]}>
               <Text style={styles.settingText}>Privacy Settings</Text>
             </TouchableOpacity>
           </ProfileSection>
@@ -95,20 +94,24 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.settingItem}>
               <Text style={styles.settingText}>Terms of Service</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem}>
+            <TouchableOpacity style={[styles.settingItem, styles.settingItemLast]}>
               <Text style={styles.settingText}>Privacy Policy</Text>
             </TouchableOpacity>
           </ProfileSection>
         </View>
       </ScrollView>
-      <View style={{ padding: 20, width: '100%' }} >
+      <View style={styles.signOutContainer}>
         <PrimaryButton title="Sign Out" onPress={handleSignOut} />
       </View>
-    </Background>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: DS.colors.background,
+  },
   scrollView: {
     flex: 1,
     width: '100%',
@@ -116,80 +119,77 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 32,
   },
   profilePicture: {
     marginBottom: 16,
   },
   welcome: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: DS.colors.onSurface,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 15,
-    color: '#333',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 10,
+    color: DS.colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   sectionContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.xl,
+    paddingHorizontal: 20,
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 4,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 10,
+    paddingVertical: 20,
   },
   statItem: {
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#444',
+    fontSize: 28,
+    fontWeight: '700',
+    color: DS.colors.primary,
   },
   statLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
+    fontSize: 13,
+    color: DS.colors.onSurfaceVariant,
+    marginTop: 4,
   },
   settingItem: {
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: `${DS.colors.outlineVariant}26`,
+  },
+  settingItemLast: {
+    borderBottomWidth: 0,
   },
   settingText: {
     fontSize: 16,
-    color: '#444',
+    color: DS.colors.onSurface,
   },
-  logoutButton: {
-    backgroundColor: '#ff4444',
-    paddingVertical: 15,
-    borderRadius: 8,
-    marginTop: 30,
+  signOutContainer: {
+    padding: 20,
     width: '100%',
-    alignSelf: 'center',
-  },
-  logoutText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
 });
 

@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { screenStyles, MyTheme } from '../styles/global';
+import { screenStyles, DS } from '../styles/global';
 import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -25,7 +25,7 @@ const MyRooms = ({ route }) => {
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor={MyTheme.colors.background} />
+      <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <SafeAreaView style={styles.container}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={screenStyles.screenTitle}>My Rooms</Text>
@@ -101,7 +101,7 @@ const MyRooms = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MyTheme.colors.background,
+    backgroundColor: DS.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     marginBottom: 0,
-    color: MyTheme.colors.primary,
+    color: DS.colors.primary,
   },
 });
 

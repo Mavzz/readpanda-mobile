@@ -1,40 +1,31 @@
 import React, { useState, useCallback } from 'react';
-import { TextInput, StyleSheet, View, Dimensions, Keyboard, Pressable } from 'react-native';
+import { TextInput, StyleSheet, View, Keyboard } from 'react-native';
 import { iconButton as IconButton } from '../components/Button';
 import log from '../utils/logger';
 import Animated, {
   useAnimatedStyle,
-  withTiming,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { DS } from '../styles/global';
 
 const SearchBar = () => {
-
   const [isFocused, setIsFocused] = useState(false);
   const [searchText, setSearchText] = useState('');
 
-  // Animation values
   const containerWidth = useSharedValue('95%');
-  const containerOpacity = useSharedValue(1);
   const inputScale = useSharedValue(1);
 
   const searchBooks = () => {
     log.info(`Searching for book: ${searchText}`);
     setSearchText('');
     Keyboard.dismiss();
-    // Implement search functionality here
-    // For example, you might want to call a function passed via props
-    // props.onSearch(searchText);
-    // Placeholder for actual search logic
     log.info('Search functionality is not yet implemented.');
     alert('Search functionality is not yet implemented.');
-
   };
 
   const clearSearch = () => {
     setSearchText('');
-    // Implement clear functionality here
     log.info('Cleared search input.');
   };
 
@@ -50,28 +41,23 @@ const SearchBar = () => {
     inputScale.value = withSpring(1);
   };
 
-  const handleOutsidePress = useCallback(() => {
-    if (isFocused) {
-      Keyboard.dismiss();
-      setIsFocused(false);
-    }
-  }, [isFocused]);
-
-  // Animated styles
   const animatedContainerStyle = useAnimatedStyle(() => ({
     width: containerWidth.value,
     transform: [{ scale: inputScale.value }],
-    opacity: containerOpacity.value,
   }));
 
-
   return (
-    <Animated.View style={[styles.container, isFocused && styles.containerFocused, animatedContainerStyle]}>
+    <Animated.View
+      style={[
+        styles.container,
+        isFocused && styles.containerFocused,
+        animatedContainerStyle,
+      ]}
+    >
       <IconButton
         name="search"
-        size={20}
-        color="#999"
-        style={styles.searchIcon}
+        size={18}
+        color={DS.colors.onSurfaceVariant}
         onPress={searchBooks}
       />
       <TextInput
@@ -79,7 +65,7 @@ const SearchBar = () => {
         onChangeText={setSearchText}
         placeholder="Search books..."
         style={styles.input}
-        placeholderTextColor="#999"
+        placeholderTextColor={DS.colors.onSurfaceVariant}
         onFocus={handleFocus}
         onBlur={handleBlur}
         returnKeyType="search"
@@ -88,9 +74,8 @@ const SearchBar = () => {
       {searchText.length > 0 && (
         <IconButton
           name="close-circle"
-          size={20}
-          color="#999"
-          style={styles.icon}
+          size={18}
+          color={DS.colors.onSurfaceVariant}
           onPress={clearSearch}
         />
       )}
@@ -98,50 +83,28 @@ const SearchBar = () => {
   );
 };
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-  wrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
+    backgroundColor: DS.colors.surfaceContainerLowest,
+    borderRadius: DS.radius.md,
     height: 40,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   containerFocused: {
-    backgroundColor: '#fff',
-    borderColor: '#007AFF',
+    shadowColor: DS.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  clearIcon: {
-    marginLeft: 8,
+    shadowRadius: 8,
+    elevation: 4,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: DS.colors.onSurface,
     paddingVertical: 8,
-    fontWeight: '400',
+    marginLeft: 8,
   },
 });
 

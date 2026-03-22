@@ -1,6 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { MyTheme } from '../styles/global';
+import { MyTheme, DS } from '../styles/global';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import AuthStackNavigator from './AuthStackNavigator';
 import MainTabNavigator from './MainTabNavigator';
@@ -38,10 +38,9 @@ const AppContent = () => {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
-    // You can return a loading screen or spinner here
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: MyTheme.colors.background }}>
-        <ActivityIndicator size="large" color={MyTheme.colors.primary} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DS.colors.background }}>
+        <ActivityIndicator size="large" color={DS.colors.primary} />
       </View>
     );
   }
