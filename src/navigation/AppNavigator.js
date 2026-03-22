@@ -1,10 +1,10 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { MyTheme, DS } from '../styles/global';
+import { MyTheme } from '../styles/global';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import AuthStackNavigator from './AuthStackNavigator';
 import MainTabNavigator from './MainTabNavigator';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
 
 const Stack = createStackNavigator();
@@ -35,23 +35,13 @@ const linking = {
 };
 
 const AppContent = () => {
-  const { user, isLoading, isAuthenticated } = useAuth();
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DS.colors.background }}>
-        <ActivityIndicator size="large" color={DS.colors.primary} />
-      </View>
-    );
-  }
+  const { isAuthenticated } = useAuth();
 
   return (
     <NavigationContainer theme={MyTheme} linking={linking} fallback={<Text>Loading...</Text>}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <>
-            <Stack.Screen name="Main" component={MainTabNavigator} />
-          </>
+          <Stack.Screen name="Main" component={MainTabNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthStackNavigator} />
         )}

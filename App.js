@@ -1,28 +1,45 @@
 import AppNavigator from "./src/navigation/AppNavigator";
 import SplashScreen from 'react-native-splash-screen';
-import { useEffect, useState } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Animated, Image, StyleSheet, View } from "react-native";
+import useAuthStore from './src/stores/authStore';
 
 const App = () => {
+  const isLoading = useAuthStore((state) => state.isLoading);
   const [splashVisible, setSplashVisible] = useState(true);
-  const fadeAnim = useState(new Animated.Value(1))[0];
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const minTimePassed = useRef(false);
+  const authDone = useRef(false);
 
-  useEffect(() => {
-    // Hide native splash, then fade out our overlay
-    SplashScreen.hide();
-
-    const timer = setTimeout(() => {
+  const tryFadeOut = useCallback(() => {
+    if (minTimePassed.current && authDone.current) {
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 400,
         useNativeDriver: true,
-      }).start(() => {
-        setSplashVisible(false);
-      });
-    }, 800);
+      }).start(() => setSplashVisible(false));
+    }
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    // Dismiss native splash immediately so our branded JS overlay takes over
+    SplashScreen.hide();
+
+    // Enforce a minimum display time so the splash never flickers by too fast
+    const timer = setTimeout(() => {
+      minTimePassed.current = true;
+      tryFadeOut();
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [tryFadeOut]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      authDone.current = true;
+      tryFadeOut();
+    }
+  }, [isLoading, tryFadeOut]);
 
   return (
     <View style={styles.container}>
@@ -33,8 +50,8 @@ const App = () => {
           pointerEvents="none"
         >
           <View style={styles.splashContent}>
-            <Animated.Image
-              source={require('./src/assets/splash.png')}
+            <Image
+              source={require('./src/assets/readpandaLogo_New.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -52,7 +69,7 @@ const styles = StyleSheet.create({
   },
   splash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E8FFC8',
+    backgroundColor: '#0b1326',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
@@ -68,7 +85,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#ffddb8',
     marginTop: 20,
   },
 });
