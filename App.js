@@ -51,7 +51,7 @@ const App = () => {
         >
           <View style={styles.splashContent}>
             <Image
-              source={require('./src/assets/readpandaLogo_New.png')}
+              source={require('./src/assets/splashLogo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
