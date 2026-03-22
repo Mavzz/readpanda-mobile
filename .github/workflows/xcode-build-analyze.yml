@@ -31,10 +31,12 @@ jobs:
           LOCAL_IP: ${{ secrets.LOCAL_IP || '127.0.0.1' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY || 'ci-placeholder-secret' }}
           API_VERSION: ${{ secrets.API_VERSION || '/api/v1' }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL || '' }}
         run: |
           echo "Local_IP=${LOCAL_IP}" > .env
           echo "SECRET_KEY=${SECRET_KEY}" >> .env
           echo "API_VERSION=${API_VERSION}" >> .env
+          echo "BACKEND_URL=${BACKEND_URL}" >> .env
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
