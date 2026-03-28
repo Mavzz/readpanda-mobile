@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/HomeScreen';
 import JoinRoomScreen from '../screens/JoinRoomScreen';
@@ -15,6 +15,22 @@ import { DS } from '../styles/global';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+const BackButton = ({ onPress, tintColor }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={styles.backButton}
+    accessibilityLabel="Go back"
+    accessibilityRole="button"
+    accessibilityHint="Navigates to the previous screen"
+  >
+    <Icon name="arrow-back" color={tintColor} size={24} />
+  </TouchableOpacity>
+);
+
+const headerLeftBack = ({ onPress, tintColor }) => (
+  <BackButton onPress={onPress} tintColor={tintColor} />
+);
 
 
 // Stack navigator for each tab that needs additional screens
@@ -145,6 +161,7 @@ const MainStackNavigator = () => {
           headerTitleStyle: {
             fontWeight: '600',
           },
+          headerLeft: headerLeftBack,
         }}
       />
       <Stack.Screen
@@ -160,6 +177,7 @@ const MainStackNavigator = () => {
           headerTitleStyle: {
             fontWeight: '600',
           },
+          headerLeft: headerLeftBack,
         }}
       />
     </Stack.Navigator>
@@ -167,3 +185,9 @@ const MainStackNavigator = () => {
 };
 
 export default MainStackNavigator;
+
+const styles = StyleSheet.create({
+  backButton: {
+    marginLeft: 8,
+  },
+});
