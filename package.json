@@ -72,5 +72,8 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.4.0"
   },
-  "private": true
+  "private": true,
+  "resolutions": {
+    "lodash": ">=4.18.0"
+  }
 }
