@@ -29,7 +29,19 @@ const useReadingProgressStore = create((set, get) => ({
 
   loadProgress: (manuscriptId) => {
     const { progress } = get();
-    return progress[manuscriptId] || null;
+    if (progress[manuscriptId]) {
+      return progress[manuscriptId];
+    }
+    // Try loading from persistent storage if not in memory
+    try {
+      const stored = enhanceedStorage.getCurrentReadingPosition();
+      if (stored && stored.manuscriptId === manuscriptId) {
+        return stored.progress;
+      }
+    } catch (e) {
+      log.error('Failed to load reading progress:', e);
+    }
+    return null;
   },
 
   addToRecentBooks: (book) => {

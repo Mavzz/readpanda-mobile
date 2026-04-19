@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { cardStyles } from '../styles/global';
-import { log } from '../utils/logger';
+import log from '../utils/logger';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -34,7 +34,7 @@ const NewBookCard = ({ book, onPress, style }) => {
 
   const handleImageError = () => {
     setImageError(true);
-    log('Image load failed for book:', book?.title || 'Unknown');
+    log.warn('Image load failed for book:', book?.title || 'Unknown');
 
     // Retry image loading up to 3 times with exponential backoff
     if (retryCount < 3) {
@@ -69,7 +69,7 @@ const NewBookCard = ({ book, onPress, style }) => {
 
   return (
     <AnimatedTouchableOpacity
-      style={[cardStyles.gridBookCard, animatedStyle, style]}
+      style={[cardStyles.horizontalBookCard, animatedStyle, style]}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -78,7 +78,7 @@ const NewBookCard = ({ book, onPress, style }) => {
       accessibilityLabel={`Book: ${book?.title || 'Untitled'} by ${book?.author_name || 'Unknown Author'}`}
       accessibilityRole="button"
     >
-      <View style={cardStyles.gridBookCover}>
+      <View style={cardStyles.horizontalBookCover}>
         {renderImageContent()}
       </View>
       <View style={cardStyles.gridBookInfo}>

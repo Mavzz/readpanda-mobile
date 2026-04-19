@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/HomeScreen';
 import JoinRoomScreen from '../screens/JoinRoomScreen';
@@ -10,11 +10,30 @@ import MyRoomsScreen from '../screens/MyRoomsScreen';
 import InterestScreen from '../screens/InterestScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
+import GenreBooksScreen from '../screens/GenreBooksScreen';
+import BucketBooksScreen from '../screens/BucketBooksScreen';
+import CreateBucketScreen from '../screens/CreateBucketScreen';
 import CommonHeader from '../components/CommonHeader';
 import { DS } from '../styles/global';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+const BackButton = ({ onPress, tintColor }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={styles.backButton}
+    accessibilityLabel="Go back"
+    accessibilityRole="button"
+    accessibilityHint="Navigates to the previous screen"
+  >
+    <Icon name="arrow-back" color={tintColor} size={24} />
+  </TouchableOpacity>
+);
+
+const headerLeftBack = ({ onPress, tintColor }) => (
+  <BackButton onPress={onPress} tintColor={tintColor} />
+);
 
 
 // Stack navigator for each tab that needs additional screens
@@ -43,6 +62,31 @@ const HomeStackNavigator = () => {
         options={{
           headerShown: false,
           animationEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="GenreBooksScreen"
+        component={GenreBooksScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="BucketBooksScreen"
+        component={BucketBooksScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="CreateBucketScreen"
+        component={CreateBucketScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+          presentation: 'modal',
         }}
       />
     </Stack.Navigator>
@@ -145,6 +189,7 @@ const MainStackNavigator = () => {
           headerTitleStyle: {
             fontWeight: '600',
           },
+          headerLeft: headerLeftBack,
         }}
       />
       <Stack.Screen
@@ -160,6 +205,7 @@ const MainStackNavigator = () => {
           headerTitleStyle: {
             fontWeight: '600',
           },
+          headerLeft: headerLeftBack,
         }}
       />
     </Stack.Navigator>
@@ -167,3 +213,9 @@ const MainStackNavigator = () => {
 };
 
 export default MainStackNavigator;
+
+const styles = StyleSheet.create({
+  backButton: {
+    marginLeft: 8,
+  },
+});
