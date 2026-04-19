@@ -10,6 +10,9 @@ import MyRoomsScreen from '../screens/MyRoomsScreen';
 import InterestScreen from '../screens/InterestScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
+import GenreBooksScreen from '../screens/GenreBooksScreen';
+import BucketBooksScreen from '../screens/BucketBooksScreen';
+import CreateBucketScreen from '../screens/CreateBucketScreen';
 import CommonHeader from '../components/CommonHeader';
 import { DS } from '../styles/global';
 
@@ -59,6 +62,31 @@ const HomeStackNavigator = () => {
         options={{
           headerShown: false,
           animationEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="GenreBooksScreen"
+        component={GenreBooksScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="BucketBooksScreen"
+        component={BucketBooksScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="CreateBucketScreen"
+        component={CreateBucketScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+          presentation: 'modal',
         }}
       />
     </Stack.Navigator>

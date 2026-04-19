@@ -135,13 +135,13 @@ class ApiService {
       log.error('Token refresh failed:', error);
       this.processQueue(error, null);
 
-      // If it's an authentication error, handle it appropriately
-      if (error instanceof AuthError && error.type === AUTH_ERRORS.NO_TOKENS) {
-        throw error; // Re-throw auth errors
+      // Only clear auth data for genuine auth failures (NO_TOKENS already handled above)
+      if (error instanceof AuthError) {
+        throw error; // Re-throw without clearing auth data
       }
 
-      // For other errors (network, server), clear auth data and fail
-      await this.handleAuthenticationFailure(`Token refresh error: ${error.message}`);
+      // For unexpected errors (network, wrong method, etc.), preserve tokens and throw
+      throw new AuthError(AUTH_ERRORS.REFRESH_FAILED, `Token refresh error: ${error.message}`);
     } finally {
       this.isRefreshing = false;
     }
@@ -174,7 +174,7 @@ class ApiService {
   /**
      * Execute HTTP request with retry logic
      */
-    async executeRequest(requestConfig, attempt = 0) {
+  async executeRequest(requestConfig, attempt = 0) {
     try {
       const { url, method, headers = {}, body } = requestConfig;
 
@@ -182,6 +182,7 @@ class ApiService {
         method,
         headers: {
           'Accept': 'application/json',
+          'X-Application-Type': 'mobile',
           ...headers,
         },
       };

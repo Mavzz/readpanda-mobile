@@ -197,6 +197,7 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   gridBookTitle: {
     fontSize: 14,
@@ -359,6 +360,30 @@ const cardStyles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  // Uniform card for horizontal carousel
+  horizontalBookCard: {
+    width: 160,
+    height: 260,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.xl,
+    padding: 12,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 3,
+  },
+  horizontalBookCover: {
+    width: 116,
+    height: 160,
+    borderRadius: DS.radius.lg,
+    overflow: 'hidden',
+    marginBottom: 10,
+    backgroundColor: DS.colors.surfaceContainerHigh,
+  }
 });
 
 // ─── Shared screen styles ─────────────────────────────────────────────────────
