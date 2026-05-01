@@ -2,9 +2,9 @@ name: Xcode - Build and Analyze
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
   pull_request:
-    branches: ["main"]
+    branches: ["master"]
 
 jobs:
   build-and-analyze:
@@ -61,23 +61,22 @@ jobs:
             -workspace ios/ReadPanda.xcworkspace \
             -scheme ReadPanda \
             -sdk iphonesimulator \
-            -configuration Debug \
+            -configuration Release \
             -derivedDataPath build/DerivedData \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
             | xcpretty
 
-      - name: Package Simulator IPA
+      - name: Package Simulator App
         run: |
-          APP_PATH="build/DerivedData/Build/Products/Debug-iphonesimulator/ReadPanda.app"
-          mkdir -p build/Payload
-          cp -r "$APP_PATH" build/Payload/
-          cd build && zip -r ReadPanda-Simulator.ipa Payload/
+          APP_PATH="build/DerivedData/Build/Products/Release-iphonesimulator/ReadPanda.app"
+          cd $(dirname "$APP_PATH")
+          zip -r ../../../../../ReadPanda-Simulator.app.zip ReadPanda.app
 
-      - name: Upload Simulator IPA
+      - name: Upload Simulator App
         uses: actions/upload-artifact@v4
         with:
-          name: ReadPanda-Simulator-IPA
-          path: build/ReadPanda-Simulator.ipa
+          name: ReadPanda-Simulator-App
+          path: ReadPanda-Simulator.app.zip
           retention-days: 7
