@@ -1,8 +1,9 @@
 name: Xcode - Build and Analyze
 
 on:
-  pull_request:
+  push:
     branches: ["master"]
+  workflow_dispatch:  # (Optional: lets you click a button on GitHub to run it manually)
 
 jobs:
   build-and-analyze:
