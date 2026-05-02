@@ -1,8 +1,6 @@
 name: Xcode - Build and Analyze
 
 on:
-  push:
-    branches: ["master"]
   pull_request:
     branches: ["master"]
 
@@ -51,6 +49,11 @@ jobs:
           cd ios
           pod install
 
+      - name: Create GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO: ${{ secrets.GOOGLE_SERVICE_INFO }}
+        run: echo "$GOOGLE_SERVICE_INFO" > ios/GoogleService-Info.plist
+
       - name: Install xcpretty
         run: gem install xcpretty
 
@@ -63,7 +66,7 @@ jobs:
             -sdk iphonesimulator \
             -configuration Release \
             -derivedDataPath build/DerivedData \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
             | xcpretty
