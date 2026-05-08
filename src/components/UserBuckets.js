@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
+import useBucketsStore from '../stores/bucketsStore';
 
 const BUCKET_ICONS = [
     { name: 'library', color: '#ffddb8' },
@@ -14,6 +15,7 @@ const BUCKET_ICONS = [
 const getBucketIcon = (index) => BUCKET_ICONS[index % BUCKET_ICONS.length];
 
 const UserBuckets = ({ navigation, customBuckets }) => {
+    const deleteBucket = useBucketsStore((state) => state.deleteBucket);
 
     const handleDeleteBucket = (bucket) => {
         Alert.alert(
@@ -21,16 +23,22 @@ const UserBuckets = ({ navigation, customBuckets }) => {
             `Delete "${bucket.name}"? This won't remove the books from your library.`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', },
+                { 
+                    text: 'Delete', 
+                    style: 'destructive',
+                    onPress: () => deleteBucket(bucket.id)
+                },
             ],
         );
     };
 
-    const openBucket = (booksPreview, name, bookCount) => {
+    const openBucket = (bucket) => {
         navigation.navigate('BucketBooksScreen', {
-            books_preview: booksPreview,
-            name,
-            book_count: bookCount,
+            books_preview: bucket.booksPreview,
+            name: bucket.name,
+            book_count: bucket.bookCount,
+            bucket_id: bucket.id,
+            isCustom: true,
         });
     };
 
@@ -62,7 +70,7 @@ const UserBuckets = ({ navigation, customBuckets }) => {
                         return (
                             <TouchableOpacity
                                 style={styles.bucketCard}
-                                onPress={() => openBucket(item.booksPreview, item.name, item.bookCount)}
+                                onPress={() => openBucket(item)}
                                 //onLongPress={() => handleDeleteBucket(item)}
                                 activeOpacity={0.8}
                             >
@@ -74,6 +82,13 @@ const UserBuckets = ({ navigation, customBuckets }) => {
                                         <Icon name="book-outline" size={12} color={DS.colors.onSurfaceVariant} />
                                         <Text style={styles.bookCountPillText}>{item.bookCount || 0}</Text>
                                     </View>
+                                    <TouchableOpacity
+                                        style={styles.deleteButton}
+                                        onPress={() => handleDeleteBucket(item)}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    >
+                                        <Icon name="trash" size={20} color={DS.colors.error} />
+                                    </TouchableOpacity>
                                 </View>
                                 <Text style={styles.bucketCardName} numberOfLines={2}>{item.name}</Text>
                             </TouchableOpacity>
@@ -159,6 +174,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: DS.colors.onSurface,
         textAlign: 'center',
+    },
+    deleteButton: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        zIndex: 10,
     },
 
     // Create bucket CTA

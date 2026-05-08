@@ -226,6 +226,11 @@ class ApiService {
         }
       }
 
+      if (response.status === 204) {
+        log.info('Request successful');
+        return { status: response.status, response: null };
+      }
+
       // Success - parse response
       if (!response.ok) {
         const errorText = await response.text();

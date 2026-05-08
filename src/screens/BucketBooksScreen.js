@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, FlatList, StatusBar, TouchableOpacity, Image } from 'react-native';
+import { useState } from 'react';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -7,11 +8,12 @@ import Animated, {
 import Icon from 'react-native-vector-icons/Ionicons';
 import log from '../utils/logger';
 import { DS } from '../styles/global';
+import useBucketsStore from '../stores/bucketsStore';
 
 const NUM_COLUMNS = 2;
 
 /* ── Book Card (matches CreateBucketScreen style) ─────────────────────────── */
-const BucketBookCard = ({ book, onPress }) => {
+const BucketBookCard = ({ book, onPress, onRemove, showRemove }) => {
     const scale = useSharedValue(1);
 
     const handlePressIn = () => {
@@ -48,6 +50,15 @@ const BucketBookCard = ({ book, onPress }) => {
                             </Text>
                         </View>
                     )}
+                    {showRemove && (
+                        <TouchableOpacity
+                            style={styles.removeButton}
+                            onPress={() => onRemove(book.book_id)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <Icon name="close-circle" size={24} color={DS.colors.error} />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 <Text style={styles.bookTitle} numberOfLines={2}>
@@ -63,7 +74,18 @@ const BucketBookCard = ({ book, onPress }) => {
 
 /* ── Screen ───────────────────────────────────────────────────────────────── */
 const BucketBooksScreen = ({ route, navigation }) => {
-    const { books_preview, name, book_count } = route.params;
+    const { books_preview, name, book_count, bucket_id, isCustom } = route.params;
+    const [books, setBooks] = useState(books_preview || []);
+    const [bookCount, setBookCount] = useState(book_count || 0);
+    const removeBookFromBucket = useBucketsStore(state => state.removeBookFromBucket);
+
+    const handleRemoveBook = (bookId) => {
+        setBooks(prev => prev.filter(b => b.book_id !== bookId));
+        setBookCount(prev => Math.max(0, prev - 1));
+        if (isCustom && bucket_id) {
+            removeBookFromBucket(bucket_id, bookId);
+        }
+    };
 
     const openBook = (book) => {
         log.info(`Opening book: ${book.title}`);
@@ -71,7 +93,12 @@ const BucketBooksScreen = ({ route, navigation }) => {
     };
 
     const renderBook = ({ item }) => (
-        <BucketBookCard book={item} onPress={openBook} />
+        <BucketBookCard 
+            book={item} 
+            onPress={openBook} 
+            onRemove={handleRemoveBook}
+            showRemove={isCustom}
+        />
     );
 
     return (
@@ -85,10 +112,10 @@ const BucketBooksScreen = ({ route, navigation }) => {
                 <Text style={styles.headerTitle}>
                     {name}
                 </Text>
-                <Text style={styles.bookCount}>{book_count} books</Text>
+                <Text style={styles.bookCount}>{bookCount} books</Text>
             </View>
 
-            {books_preview.length === 0 ? (
+            {books.length === 0 ? (
                 <View style={styles.emptyState}>
                     <Icon name="book-outline" size={48} color={DS.colors.onSurfaceVariant} />
                     <Text style={styles.emptyTitle}>No books yet</Text>
@@ -96,7 +123,7 @@ const BucketBooksScreen = ({ route, navigation }) => {
                 </View>
             ) : (
                 <FlatList
-                    data={books_preview}
+                    data={books}
                     keyExtractor={(item, index) => item.book_id?.toString() ?? `book-${index}`}
                     renderItem={renderBook}
                     numColumns={NUM_COLUMNS}
@@ -204,6 +231,12 @@ const styles = StyleSheet.create({
         color: DS.colors.onSurfaceVariant,
         textAlign: 'center',
         marginTop: 2,
+    },
+    removeButton: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        zIndex: 10,
     },
 
     // Empty state
