@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import { getBackendUrl } from '../utils/Helper';
-import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest } from '../services/authenticatedRequests';
+import { showToast } from '../components/Toaster';
+import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest, makeAuthenticatedDeleteRequest } from '../services/authenticatedRequests';
 
 const normalizeBucket = (bucket) => ({
     id: bucket.id,
@@ -70,8 +71,61 @@ const useBucketsStore = create((set, get) => ({
         const prev = get().customBuckets;
         set({ customBuckets: prev.filter((b) => b.id !== bucketId) });
 
-        // TODO: call DELETE /users/me/buckets/:id when API is ready
-        log.info('Bucket deleted:', bucketId);
+        try {
+            const { status, response } = await makeAuthenticatedDeleteRequest(
+                getBackendUrl(`/users/me/buckets/${bucketId}`)
+            );
+
+            if (status === 200 || status === 204) {
+                log.info('Bucket deleted:', bucketId);
+                showToast('Bucket deleted successfully');
+            } else {
+                log.error('Failed to delete bucket from server, reverting state:', response);
+                // Revert state if deletion fails
+                set({ customBuckets: prev });
+                showToast('Failed to delete bucket');
+            }
+        } catch (error) {
+            log.error('Error deleting bucket:', error);
+            // Revert state on error
+            set({ customBuckets: prev });
+            showToast('Failed to delete bucket');
+        }
+    },
+
+    removeBookFromBucket: async (bucketId, bookId) => {
+        const prev = get().customBuckets;
+        
+        set({
+            customBuckets: prev.map(bucket => {
+                if (bucket.id === bucketId) {
+                    return {
+                        ...bucket,
+                        bookCount: Math.max(0, bucket.bookCount - 1),
+                        booksPreview: bucket.booksPreview.filter(b => b.book_id !== bookId)
+                    };
+                }
+                return bucket;
+            })
+        });
+
+        try {
+            const { status } = await makeAuthenticatedDeleteRequest(
+                getBackendUrl(`/users/me/buckets/${bucketId}/books/${bookId}`)
+            );
+            
+            if (status === 200 || status === 204) {
+                log.info('Book removed from bucket:', bookId);
+            } else {
+                log.error('Failed to remove book, reverting state');
+                set({ customBuckets: prev });
+                showToast('Failed to remove book');
+            }
+        } catch (error) {
+            log.error('Error removing book from bucket:', error);
+            set({ customBuckets: prev });
+            showToast('Failed to remove book');
+        }
     },
 
     // ── Curated Buckets (editorially curated, read-only) ─────────────────

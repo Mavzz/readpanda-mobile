@@ -12,6 +12,7 @@ import Animated, {
   withSequence,
   withRepeat,
   withTiming, Easing,
+  runOnJS,
 } from 'react-native-reanimated';
 import { NotificationBadge } from './Badge';
 import NotificationList from './NotificationList';
@@ -34,17 +35,17 @@ const CommonHeader = ({ showSearch, navigation }) => {
   const profileScale = useSharedValue(1);
 
   const animateIcon = (scaleValue, onComplete) => {
-    'worklet';
     scaleValue.value = withSequence(
       withSpring(1.2, { damping: 200 }),
       withSpring(1, { damping: 200 }),
     );
-    onComplete?.();
+    if (onComplete) {
+      onComplete();
+    }
   };
   const rotateZ = useSharedValue(0);
 
   const ringBell = () => {
-    'worklet';
     rotateZ.value = 0;
     rotateZ.value = withRepeat(
       withSequence(
@@ -188,7 +189,8 @@ const styles = StyleSheet.create({
     backgroundColor: DS.colors.surfaceContainerHigh,
     borderTopLeftRadius: DS.radius.xl,
     borderTopRightRadius: DS.radius.xl,
-    maxHeight: '80%',
+    height: '80%',
+    width: '100%',
     paddingTop: 20,
   },
 });
