@@ -12,7 +12,7 @@ const getBackendUrl = (path = '') => {
     if (BACKEND_URL) {
       return `${BACKEND_URL}${API_VERSION}${path}`;
     }
-    const ip = Local_IP || 'localhost';
+    const ip = Local_IP;
     const port = 3000;
     return `http://${ip}:${port}${API_VERSION}${path}`;
   } catch {
