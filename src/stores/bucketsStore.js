@@ -1,101 +1,118 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import { getBackendUrl } from '../utils/Helper';
+import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest } from '../services/authenticatedRequests';
 
-const BUCKETS_STORAGE_KEY = 'custom_buckets';
-
-// Pre-defined bucket definitions — criteria applied against the live books list
-export const PREDEFINED_BUCKETS = [
-    {
-        id: 'recommended',
-        name: 'Recommended',
-        icon: '⭐',
-        filter: (books) =>
-            [...books]
-                .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-                .slice(0, 10),
-    },
-    {
-        id: 'new_arrivals',
-        name: 'New Arrivals',
-        icon: '🆕',
-        filter: (books) =>
-            [...books]
-                .sort((a, b) => {
-                    const dateA = a.publication_date || a.created_at || '';
-                    const dateB = b.publication_date || b.created_at || '';
-                    return new Date(dateB) - new Date(dateA);
-                })
-                .slice(0, 10),
-    },
-];
-
-const loadFromStorage = () => {
-    try {
-        const data = enhanceedStorage.getUserPreference(BUCKETS_STORAGE_KEY, []);
-        return Array.isArray(data) ? data : [];
-    } catch {
-        return [];
-    }
-};
-
-const saveToStorage = (buckets) => {
-    try {
-        enhanceedStorage.storeUserPreference(BUCKETS_STORAGE_KEY, buckets);
-    } catch (e) {
-        log.error('Failed to persist buckets:', e);
-    }
-};
+const normalizeBucket = (bucket) => ({
+    id: bucket.id,
+    name: bucket.name,
+    bookCount: bucket.book_count || 0,
+    booksPreview: bucket.books_preview || [],
+});
 
 const useBucketsStore = create((set, get) => ({
-    customBuckets: loadFromStorage(),
+    customBuckets: [],
+    curatedBuckets: [],
+    loadingCustomBuckets: false,
+    loadingCuratedBuckets: false,
+    refreshing: false,
 
-    createBucket: (name, bookIds = []) => {
-        const newBucket = {
-            id: `bucket_${Date.now()}`,
-            name: name.trim(),
-            bookIds,
-            createdAt: new Date().toISOString(),
-        };
-        const updated = [...get().customBuckets, newBucket];
-        set({ customBuckets: updated });
-        saveToStorage(updated);
-        log.info('Bucket created:', newBucket.name);
-        return newBucket;
+    // ── Custom Buckets (user-created, stored on backend) ─────────────────
+
+    fetchCustomBuckets: async () => {
+        set({ loadingCustomBuckets: true });
+        log.info('Fetching custom buckets');
+
+        try {
+            const { status, response } = await makeAuthenticatedGetRequest(
+                getBackendUrl('/users/me/buckets'),
+            );
+
+            if (status === 200) {
+                log.info('Custom buckets fetched:', response);
+                const normalized = (response.buckets || []).map(normalizeBucket);
+                set({ customBuckets: normalized });
+            } else {
+                log.error('Failed to fetch custom buckets:', response);
+            }
+            return { status };
+        } catch (error) {
+            log.error('Error fetching custom buckets:', error);
+            return { status: null, error };
+        } finally {
+            set({ loadingCustomBuckets: false });
+        }
     },
 
-    updateBucket: (id, changes) => {
-        const updated = get().customBuckets.map((b) =>
-            b.id === id ? { ...b, ...changes } : b,
+    saveBucket: async (name, bookIds = []) => {
+        const { status, response } = await makeAuthenticatedPostRequest(
+            getBackendUrl('/users/me/buckets'),
+            {
+                Name: name.trim(),
+                book_ids: bookIds,
+            }
         );
-        set({ customBuckets: updated });
-        saveToStorage(updated);
+
+        if (status === 200 || status === 201) {
+            log.info('Bucket created:', response);
+            // API returns a single bucket object, not an array
+            const newBucket = normalizeBucket(response.bucket);
+            set({ customBuckets: [...get().customBuckets, newBucket] });
+        } else {
+            log.error('Error creating bucket:', response);
+        }
+
+        return { status, response };
     },
 
-    deleteBucket: (id) => {
-        const updated = get().customBuckets.filter((b) => b.id !== id);
-        set({ customBuckets: updated });
-        saveToStorage(updated);
-        log.info('Bucket deleted:', id);
+    deleteBucket: async (bucketId) => {
+        // Optimistically remove from state
+        const prev = get().customBuckets;
+        set({ customBuckets: prev.filter((b) => b.id !== bucketId) });
+
+        // TODO: call DELETE /users/me/buckets/:id when API is ready
+        log.info('Bucket deleted:', bucketId);
     },
 
-    addBookToBucket: (bucketId, bookId) => {
-        const updated = get().customBuckets.map((b) => {
-            if (b.id !== bucketId) return b;
-            if (b.bookIds.includes(bookId)) return b;
-            return { ...b, bookIds: [...b.bookIds, bookId] };
-        });
-        set({ customBuckets: updated });
-        saveToStorage(updated);
-    },
+    // ── Curated Buckets (editorially curated, read-only) ─────────────────
 
-    removeBookFromBucket: (bucketId, bookId) => {
-        const updated = get().customBuckets.map((b) => {
-            if (b.id !== bucketId) return b;
-            return { ...b, bookIds: b.bookIds.filter((id) => id !== bookId) };
-        });
-        set({ customBuckets: updated });
-        saveToStorage(updated);
+    fetchCuratedBuckets: async (showRefresh = false) => {
+        if (showRefresh) {
+            set({ refreshing: true });
+        } else {
+            set({ loadingCuratedBuckets: true });
+        }
+        log.info('Fetching curated buckets');
+
+        try {
+            const { status, response } = await makeAuthenticatedGetRequest(
+                getBackendUrl('/home/our-picks'),
+            );
+
+            if (status === 200) {
+                log.info('Curated buckets fetched successfully:', response);
+                const normalizedBuckets = (response.buckets || []).map(bucket => ({
+                    id: bucket.id,
+                    name: bucket.title,
+                    bookIds: (bucket.books_preview || []).map(b => b.book_id),
+                    coverImageUrl: bucket.cover_image_url,
+                    bookCount: bucket.book_count,
+                    sortOrder: bucket.sort_order,
+                    isActive: bucket.is_active,
+                    isCurated: true,
+                    booksPreview: bucket.books_preview || [],
+                }));
+                set({ curatedBuckets: normalizedBuckets });
+            } else {
+                log.error('Failed to fetch curated buckets:', response);
+            }
+            return { status };
+        } catch (error) {
+            log.error('Error fetching curated buckets:', error);
+            return { status: null, error };
+        } finally {
+            set({ loadingCuratedBuckets: false, refreshing: false });
+        }
     },
 }));
 

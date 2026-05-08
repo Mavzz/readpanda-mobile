@@ -80,15 +80,7 @@ const HomeStackNavigator = () => {
           animationEnabled: true,
         }}
       />
-      <Stack.Screen
-        name="CreateBucketScreen"
-        component={CreateBucketScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-          presentation: 'modal',
-        }}
-      />
+
     </Stack.Navigator>
   );
 };
@@ -114,6 +106,7 @@ const TabNavigator = () => {
           fontSize: 11,
           fontWeight: '500',
         },
+        headerShadowVisible: false,
         header: ({ navigation, route }) => {
           const showSearch = route.name === 'Explore Books';
           return (
@@ -206,6 +199,16 @@ const MainStackNavigator = () => {
             fontWeight: '600',
           },
           headerLeft: headerLeftBack,
+        }}
+      />
+      <Stack.Screen
+        name="CreateBucketScreen"
+        component={CreateBucketScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+          presentation: 'modal',
+          cardStyle: { backgroundColor: DS.colors.background },
         }}
       />
     </Stack.Navigator>

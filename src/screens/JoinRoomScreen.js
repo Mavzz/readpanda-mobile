@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, StyleSheet } from 'react-native';
+
 import { useNavigation } from '@react-navigation/native';
 import { screenStyles, DS } from '../styles/global';
 import log from '../utils/logger';
@@ -25,7 +26,7 @@ const JoinRoom = () => {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={screenStyles.screenTitle}>Join Reading Room</Text>
           <Text style={screenStyles.captionText}>
@@ -68,7 +69,7 @@ const JoinRoom = () => {
             </View>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </>
   );
 };

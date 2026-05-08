@@ -1,6 +1,7 @@
 // src/screens/ManuscriptScreen.js
 import React, { useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform, TouchableOpacity, } from 'react-native';
+
 import Icon from 'react-native-vector-icons/Ionicons';
 import PdfViewer from '../components/PdfViewer';
 import log from '../utils/logger';
@@ -85,7 +86,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color={DS.colors.onSurface} />
@@ -96,7 +97,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
       <View style={styles.content}>
         {renderContent()}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
