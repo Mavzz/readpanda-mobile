@@ -8,8 +8,8 @@ import {
   Pressable,
   StatusBar,
   StyleSheet,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { primaryButton as PrimaryButton, ssoButton as SSOButton } from '../components/Button';
 import { SignUpType } from '../utils/Helper';
 import { googleSignUpLogin, emailLogin } from '../services/auth';

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, Platform, Pressable, Modal, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Platform, Pressable, Modal, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import SearchBar from './SearchBar';
 import ProfilePicture from './ProfilePicture';
 import log from '../utils/logger';
@@ -88,7 +89,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
 
   return (
     <>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.headerContainer}>
           {/* Profile Icon */}
           <Pressable onPress={handleProfilePress}>
@@ -148,7 +149,7 @@ const CommonHeader = ({ showSearch, navigation }) => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: DS.colors.surfaceContainerGlass,
+    backgroundColor: DS.colors.background,
     width: '100%',
   },
   headerContainer: {
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    backgroundColor: DS.colors.surfaceContainerGlass,
+    backgroundColor: DS.colors.background,
     paddingHorizontal: 16,
     height: 60,
     paddingTop: Platform.OS === 'android' ? 25 : 0,

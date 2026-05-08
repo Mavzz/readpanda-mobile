@@ -114,8 +114,10 @@ class ApiService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
         },
+        body: JSON.stringify({
+          refreshToken: refreshToken,
+        }),
       });
 
       if (tokenResponse.status === 200) {
