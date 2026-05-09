@@ -114,8 +114,10 @@ class ApiService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
         },
+        body: JSON.stringify({
+          refreshToken: refreshToken,
+        }),
       });
 
       if (tokenResponse.status === 200) {
@@ -222,6 +224,11 @@ class ApiService {
           const errorText = await response.text();
           throw new Error(`Server error ${response.status} after ${this.maxRetries} attempts: ${errorText}`);
         }
+      }
+
+      if (response.status === 204) {
+        log.info('Request successful');
+        return { status: response.status, response: null };
       }
 
       // Success - parse response

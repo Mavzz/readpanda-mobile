@@ -3,12 +3,11 @@ import {
   View,
   StyleSheet,
   FlatList,
-  SafeAreaView,
   Pressable,
   Text,
   StatusBar,
 } from 'react-native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { primaryButton as PrimaryButton } from '../components/Button';
 import log from '../utils/logger';
