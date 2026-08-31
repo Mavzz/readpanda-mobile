@@ -4,202 +4,197 @@ import { DS } from '../styles/global';
 import useBucketsStore from '../stores/bucketsStore';
 
 const BUCKET_ICONS = [
-    { name: 'library', color: '#ffddb8' },
-    { name: 'bookmark', color: '#e8c49a' },
-    { name: 'reader', color: '#ffb95f' },
-    { name: 'book', color: '#ffddb8' },
-    { name: 'albums', color: '#e8c49a' },
-    { name: 'layers', color: '#ffb95f' },
+  { name: 'library', color: '#ffddb8' },
+  { name: 'bookmark', color: '#e8c49a' },
+  { name: 'reader', color: '#ffb95f' },
+  { name: 'book', color: '#ffddb8' },
+  { name: 'albums', color: '#e8c49a' },
+  { name: 'layers', color: '#ffb95f' },
 ];
 
 const getBucketIcon = (index) => BUCKET_ICONS[index % BUCKET_ICONS.length];
 
 const UserBuckets = ({ navigation, customBuckets }) => {
-    const deleteBucket = useBucketsStore((state) => state.deleteBucket);
+  const deleteBucket = useBucketsStore((state) => state.deleteBucket);
 
-    const handleDeleteBucket = (bucket) => {
-        Alert.alert(
-            'Delete Bucket',
-            `Delete "${bucket.name}"? This won't remove the books from your library.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Delete', 
-                    style: 'destructive',
-                    onPress: () => deleteBucket(bucket.id)
-                },
-            ],
-        );
-    };
-
-    const openBucket = (bucket) => {
-        navigation.navigate('BucketBooksScreen', {
-            books_preview: bucket.booksPreview,
-            name: bucket.name,
-            book_count: bucket.bookCount,
-            bucket_id: bucket.id,
-            isCustom: true,
-        });
-    };
-
-    return (
-        <View style={styles.section}>
-
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>My Buckets</Text>
-            </View>
-
-            <TouchableOpacity
-                style={styles.createBucketCard}
-                onPress={() => navigation.navigate('CreateBucketScreen')}
-            >
-                <Icon name="add-circle-outline" size={24} color={DS.colors.primary} />
-                <Text style={styles.createBucketText}>Create your own bucket</Text>
-            </TouchableOpacity>
-
-            {customBuckets.length > 0 && (
-                <FlatList
-                    data={customBuckets}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
-                    ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-                    renderItem={({ item, index }) => {
-                        const icon = getBucketIcon(index);
-                        return (
-                            <TouchableOpacity
-                                style={styles.bucketCard}
-                                onPress={() => openBucket(item)}
-                                //onLongPress={() => handleDeleteBucket(item)}
-                                activeOpacity={0.8}
-                            >
-                                <View style={styles.bucketCardCover}>
-                                    <View style={styles.iconGlow}>
-                                        <Icon name={icon.name} size={44} color={icon.color} />
-                                    </View>
-                                    <View style={styles.bookCountPill}>
-                                        <Icon name="book-outline" size={12} color={DS.colors.onSurfaceVariant} />
-                                        <Text style={styles.bookCountPillText}>{item.bookCount || 0}</Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        style={styles.deleteButton}
-                                        onPress={() => handleDeleteBucket(item)}
-                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    >
-                                        <Icon name="trash" size={20} color={DS.colors.error} />
-                                    </TouchableOpacity>
-                                </View>
-                                <Text style={styles.bucketCardName} numberOfLines={2}>{item.name}</Text>
-                            </TouchableOpacity>
-                        );
-                    }}
-                />
-            )}
-        </View>
+  const handleDeleteBucket = (bucket) => {
+    Alert.alert(
+      'Delete Bucket',
+      `Delete "${bucket.name}"? This won't remove the books from your library.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteBucket(bucket.id),
+        },
+      ],
     );
+  };
+
+  const openBucket = (bucket) => {
+    navigation.navigate('BucketBooksScreen', {
+      books_preview: bucket.booksPreview,
+      name: bucket.name,
+      book_count: bucket.bookCount,
+      bucket_id: bucket.id,
+      isCustom: true,
+    });
+  };
+
+  return (
+    <View style={styles.section}>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>My Buckets</Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.createBucketCard}
+        onPress={() => navigation.navigate('CreateBucketScreen')}
+      >
+        <Icon name="add-circle-outline" size={24} color={DS.colors.primary} />
+        <Text style={styles.createBucketText}>Create your own bucket</Text>
+      </TouchableOpacity>
+
+      {customBuckets.length > 0 && (
+        <FlatList
+          data={customBuckets}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item, index }) => {
+            const icon = getBucketIcon(index);
+            return (
+              <TouchableOpacity
+                style={styles.bucketCard}
+                onPress={() => openBucket(item)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.topRow}>
+                  <View style={styles.iconContainer}>
+                    <Icon name={icon.name} size={28} color={icon.color} />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteBucket(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Icon name="trash-outline" size={18} color={DS.colors.error} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.bucketCardName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <View style={styles.memberInfo}>
+                  <Icon name="book-outline" size={14} color={DS.colors.onSurfaceVariant} />
+                  <Text style={styles.memberCount}>{item.bookCount || 0} {item.bookCount === 1 ? 'book' : 'books'}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    // Generic section wrapper
-    section: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 8,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 14,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: DS.colors.onSurface,
-        letterSpacing: -0.3,
-    },
+  // Generic section wrapper
+  section: {
+    paddingTop: 20,
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: DS.colors.onSurface,
+    letterSpacing: -0.3,
+  },
+  listContent: {
+    paddingHorizontal: 24,
+    gap: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
 
-    // Bucket card
-    bucketCard: {
-        width: 160,
-        backgroundColor: DS.colors.surfaceContainerLow,
-        borderRadius: DS.radius.sm,
-        padding: 12,
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        shadowColor: DS.colors.background,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-    bucketCardCover: {
-        width: '100%',
-        aspectRatio: 1,
-        borderRadius: DS.radius.sm - 2,
-        backgroundColor: DS.colors.surfaceContainerHigh,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 10,
-        overflow: 'hidden',
-    },
-    iconGlow: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: 'rgba(255, 221, 184, 0.08)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    bookCountPill: {
-        position: 'absolute',
-        bottom: 6,
-        right: 6,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: DS.colors.surfaceContainerLowest,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        gap: 3,
-    },
-    bookCountPillText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: DS.colors.onSurfaceVariant,
-    },
-    bucketCardName: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: DS.colors.onSurface,
-        textAlign: 'center',
-    },
-    deleteButton: {
-        position: 'absolute',
-        top: 6,
-        right: 6,
-        zIndex: 10,
-    },
+  // Bucket card
+  bucketCard: {
+    width: 160,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.lg,
+    padding: 20,
+    marginRight: 16,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    minHeight: 160,
+    borderWidth: 1,
+    borderColor: DS.colors.surfaceContainerHighest,
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  topRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: DS.colors.surfaceContainerHighest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  bucketCardName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: DS.colors.onSurface,
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  memberCount: {
+    fontSize: 13,
+    color: DS.colors.onSurfaceVariant,
+    fontWeight: '600',
+  },
 
-    // Create bucket CTA
-    createBucketCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        backgroundColor: DS.colors.surfaceContainerLow,
-        borderRadius: DS.radius.sm,
-        borderWidth: 1,
-        borderColor: DS.colors.outlineVariant,
-        borderStyle: 'dashed',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-    },
-    createBucketText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: DS.colors.onSurfaceVariant,
-    },
+  // Create bucket CTA
+  createBucketCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.md,
+    borderWidth: 1,
+    borderColor: DS.colors.outlineVariant + '26', // ghost border @ 15%
+    borderStyle: 'dashed',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    marginHorizontal: 24,
+  },
+  createBucketText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: DS.colors.onSurfaceVariant,
+  },
 });
 
 export default UserBuckets;

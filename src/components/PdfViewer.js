@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import log from '../utils/logger';
+import { DS } from '../styles/global';
 
 const LINKING_ERROR =
   'The native module for PDF Viewer is not available. Make sure: \n\n' +
@@ -92,7 +93,7 @@ const PdfViewer = ({ pdfUrl, pdfTitle, style, initialPage, onPageChanged, onLoad
       />
       {loading && (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#4A90D9" />
+          <ActivityIndicator size="large" color={DS.colors.primary} />
           <Text style={styles.loadingText}>Loading PDF...</Text>
         </View>
       )}
@@ -112,12 +113,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: DS.colors.background + 'D9', // surface @ 85% — was light-mode white
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
+    color: DS.colors.onSurfaceVariant,
   },
   centeredContainer: {
     justifyContent: 'center',
@@ -125,19 +126,19 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#D32F2F',
+    color: DS.colors.error,
     textAlign: 'center',
     marginBottom: 16,
     paddingHorizontal: 24,
   },
   retryButton: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: DS.colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: DS.radius.full,
   },
   retryText: {
-    color: '#fff',
+    color: DS.colors.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -145,13 +146,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: DS.colors.surfaceContainerGlass, // glass rule
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: DS.radius.full,
   },
   pageText: {
-    color: '#fff',
+    color: DS.colors.onSurface,
     fontSize: 13,
     fontWeight: '500',
   },

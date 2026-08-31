@@ -1,19 +1,19 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { Text, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
-import JoinRoomScreen from '../screens/JoinRoomScreen';
-import CurrentReadScreen from '../screens/CurrentReadScreen';
-import MyRoomsScreen from '../screens/MyRoomsScreen';
+import LibraryScreen from '../screens/LibraryScreen';
+import ReadingScreen from '../screens/ReadingScreen';
+import RoomsScreen from '../screens/RoomsScreen';
 import InterestScreen from '../screens/InterestScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
 import GenreBooksScreen from '../screens/GenreBooksScreen';
 import BucketBooksScreen from '../screens/BucketBooksScreen';
 import CreateBucketScreen from '../screens/CreateBucketScreen';
-import CommonHeader from '../components/CommonHeader';
+import CreateRoomScreen from '../screens/CreateRoomScreen';
+import RoomLobbyScreen from '../screens/RoomLobbyScreen';
 import { DS } from '../styles/global';
 
 const Tab = createBottomTabNavigator();
@@ -35,11 +35,14 @@ const headerLeftBack = ({ onPress, tintColor }) => (
   <BackButton onPress={onPress} tintColor={tintColor} />
 );
 
+const tabLabel = (label) => ({ focused, color }) => (
+  <Text style={[styles.tabLabel, { color, fontFamily: focused ? DS.font.bold : DS.font.semibold }]}>
+    {label}
+  </Text>
+);
 
-// Stack navigator for each tab that needs additional screens
+// Stack navigator for the Home tab — "Tonight" plus everything it can drill into.
 const HomeStackNavigator = () => {
-  const { user } = useAuth();
-
   return (
     <Stack.Navigator
       screenOptions={{
@@ -49,108 +52,64 @@ const HomeStackNavigator = () => {
         cardStyle: { backgroundColor: DS.colors.background },
       }}
     >
-      <Stack.Screen
-        name="HomeMain"
-        component={HomeScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="ManuscriptScreen"
-        component={ManuscriptScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-        }}
-      />
-      <Stack.Screen
-        name="GenreBooksScreen"
-        component={GenreBooksScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-        }}
-      />
-      <Stack.Screen
-        name="BucketBooksScreen"
-        component={BucketBooksScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-        }}
-      />
-
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="LibraryScreen" component={LibraryScreen} />
+      <Stack.Screen name="ManuscriptScreen" component={ManuscriptScreen} animationEnabled />
+      <Stack.Screen name="GenreBooksScreen" component={GenreBooksScreen} animationEnabled />
+      <Stack.Screen name="BucketBooksScreen" component={BucketBooksScreen} animationEnabled />
     </Stack.Navigator>
   );
 };
 
+// 3-tab IA per design_handoff_redesign § 1a/1b/1c: Home · Reading · Rooms.
+// No blur library is installed (@react-native-community/blur etc.), so the
+// glass tab bar falls back to a solid surfaceContainerHigh per the handoff's
+// explicit fallback clause.
 const TabNavigator = () => {
-  const { user } = useAuth();
-
   return (
     <Tab.Navigator
       screenOptions={{
-        presentation: 'screen',
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: DS.colors.surfaceContainerLow,
+          backgroundColor: DS.colors.surfaceContainerHigh,
           borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,
-          paddingTop: 8,
+          paddingTop: 10,
           elevation: 0,
         },
         tabBarActiveTintColor: DS.colors.primary,
         tabBarInactiveTintColor: DS.colors.onSurfaceVariant,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-        },
-        headerShadowVisible: false,
-        header: ({ navigation, route }) => {
-          const showSearch = route.name === 'Explore Books';
-          return (
-            <CommonHeader
-              showSearch={showSearch}
-              navigation={navigation}
-            />
-          );
-        },
+        tabBarIconStyle: styles.tabIcon,
       }}
     >
       <Tab.Screen
-        name="Explore Books"
+        name="Home"
         component={HomeStackNavigator}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="book" color={color} size={size} />
+          tabBarLabel: tabLabel('Home'),
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name={focused ? 'book' : 'book-outline'} color={color} size={23} />
           ),
         }}
       />
       <Tab.Screen
-        name="Join Room"
-        component={JoinRoomScreen}
+        name="Reading"
+        component={ReadingScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="chatbubbles" color={color} size={size} />
+          tabBarLabel: tabLabel('Reading'),
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name={focused ? 'bookmarks' : 'bookmarks-outline'} color={color} size={23} />
           ),
         }}
       />
       <Tab.Screen
-        name="Current Read"
-        component={CurrentReadScreen}
+        name="Rooms"
+        component={RoomsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="bookmarks" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="My Rooms"
-        component={MyRoomsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="people" color={color} size={size} />
+          tabBarLabel: tabLabel('Rooms'),
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name={focused ? 'people' : 'people-outline'} color={color} size={23} />
           ),
         }}
       />
@@ -211,6 +170,25 @@ const MainStackNavigator = () => {
           cardStyle: { backgroundColor: DS.colors.background },
         }}
       />
+      <Stack.Screen
+        name="CreateRoomScreen"
+        component={CreateRoomScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+          presentation: 'modal',
+          cardStyle: { backgroundColor: DS.colors.background },
+        }}
+      />
+      <Stack.Screen
+        name="RoomLobbyScreen"
+        component={RoomLobbyScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+          cardStyle: { backgroundColor: DS.colors.background },
+        }}
+      />
     </Stack.Navigator>
   );
 };
@@ -220,5 +198,12 @@ export default MainStackNavigator;
 const styles = StyleSheet.create({
   backButton: {
     marginLeft: 8,
+  },
+  tabLabel: {
+    fontSize: 11,
+    marginTop: 3,
+  },
+  tabIcon: {
+    marginTop: 0,
   },
 });

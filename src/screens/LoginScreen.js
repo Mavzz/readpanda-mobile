@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  Image,
   Alert,
   ActivityIndicator,
   Pressable,
@@ -17,9 +18,10 @@ import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
 import { PreferenceService } from '../services/user_PreferencesService';
 import { DS } from '../styles/global';
+import readpandaLogo from '../assets/readpandaLogo_New.png';
 
 const Login = ({ navigation }) => {
-  const { signIn, user, updateUser } = useAuth();
+  const { signIn, updateUser } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,14 +81,13 @@ const Login = ({ navigation }) => {
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Login</Text>
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Don't have an account?</Text>
-            <Pressable onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.switchLink}> Sign up!</Text>
-            </Pressable>
-          </View>
+        <View style={styles.brand}>
+          <Image
+            source={readpandaLogo}
+            style={styles.logo}
+          />
+          <Text style={styles.headline}>Your book club,{'\n'}on everyone&apos;s schedule</Text>
+          <Text style={styles.subtitle}>Read together. Comment freely. No spoilers.</Text>
         </View>
 
         <View style={styles.fields}>
@@ -113,7 +114,7 @@ const Login = ({ navigation }) => {
           <ActivityIndicator size="large" color={DS.colors.primary} />
         ) : (
           <>
-            <PrimaryButton title="Login" onPress={() => handleLogin('Email')} />
+            <PrimaryButton title="Step inside" onPress={() => handleLogin('Email')} />
 
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
@@ -121,9 +122,16 @@ const Login = ({ navigation }) => {
               <View style={styles.dividerLine} />
             </View>
 
-            <SSOButton onPress={() => handleLogin('Google')} title="Sign In with Google" />
+            <SSOButton onPress={() => handleLogin('Google')} title="Continue with Google" />
           </>
         )}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerLabel}>New here?</Text>
+          <Pressable onPress={() => navigation.navigate('SignUp')}>
+            <Text style={styles.footerLink}> Create an account</Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -139,45 +147,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
-  header: {
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: DS.colors.onSurface,
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  switchRow: {
-    flexDirection: 'row',
+  brand: {
     alignItems: 'center',
+    marginBottom: 26,
   },
-  switchLabel: {
-    fontSize: 15,
+  logo: {
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    marginBottom: 2,
+  },
+  headline: {
+    fontSize: 28,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onSurface,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    lineHeight: 34,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: DS.font.medium,
     color: DS.colors.onSurfaceVariant,
-  },
-  switchLink: {
-    fontSize: 15,
-    color: DS.colors.primary,
-    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
   },
   fields: {
     marginBottom: 8,
   },
   input: {
     backgroundColor: DS.colors.surfaceContainerLowest,
-    paddingVertical: 16,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: DS.radius.md,
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: 15,
+    fontFamily: DS.font.regular,
+    marginBottom: 12,
     color: DS.colors.onSurface,
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 18,
   },
   dividerLine: {
     flex: 1,
@@ -188,7 +199,23 @@ const styles = StyleSheet.create({
   orText: {
     marginHorizontal: 12,
     color: DS.colors.onSurfaceVariant,
+    fontFamily: DS.font.regular,
+    fontSize: 13,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 22,
+  },
+  footerLabel: {
     fontSize: 14,
+    fontFamily: DS.font.regular,
+    color: DS.colors.onSurfaceVariant,
+  },
+  footerLink: {
+    fontSize: 14,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
   },
 });
 

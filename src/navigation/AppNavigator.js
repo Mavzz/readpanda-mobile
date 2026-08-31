@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MyTheme } from '../styles/global';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -22,10 +22,9 @@ const linking = {
       },
       Main: {
         screens: {
-          'Explore Books': 'Home',
-          'Join Room': 'JoinRoom',
-          'Current Read': 'CurrentRead',
-          'My Rooms': 'MyRooms',
+          Home: 'Home',
+          Reading: 'Reading',
+          Rooms: 'Rooms',
           Profile: 'Profile',
         },
       },

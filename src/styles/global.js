@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 // ─── Nocturnal Sanctuary Design Tokens ──────────────────────────────────────
 
@@ -35,12 +35,27 @@ export const DS = {
     error: '#ffb4ab',
   },
 
+  font: {
+    regular: 'Manrope-Regular',
+    medium: 'Manrope-Medium',
+    semibold: 'Manrope-SemiBold',
+    bold: 'Manrope-Bold',
+    // Not part of PATCHES.md's mapping, but the redesign spec calls for
+    // weight 800 on headings/CTAs — added so those can go through a DS
+    // token too instead of falling back to Manrope-Bold (700).
+    extraBold: 'Manrope-ExtraBold',
+  },
+
   radius: {
     sm: 12,
     md: 24,
     lg: 32,
     xl: 48,
     full: 9999,
+    // Redesign-specific radii from design_handoff_redesign/README.md's
+    // token mapping (hero card / comment cards don't fit the generic scale).
+    hero: 28,
+    comment: 20,
   },
 
   spacing: {
@@ -54,6 +69,7 @@ export const DS = {
     40: 40,
     48: 48,
     64: 64,
+    80: 80,
   },
 };
 
@@ -69,23 +85,17 @@ const MyTheme = {
     border: 'transparent',
     notification: DS.colors.error,
   },
-  fonts: Platform.select({
-    ios: {
-      regular: { fontFamily: 'System', fontWeight: '400' },
-      medium: { fontFamily: 'System', fontWeight: '500' },
-      bold: { fontFamily: 'System', fontWeight: '600' },
-      heavy: { fontFamily: 'System', fontWeight: '700' },
-    },
-    default: {
-      regular: { fontFamily: 'sans-serif', fontWeight: 'normal' },
-      medium: { fontFamily: 'sans-serif-medium', fontWeight: 'normal' },
-      bold: { fontFamily: 'sans-serif', fontWeight: '600' },
-      heavy: { fontFamily: 'sans-serif', fontWeight: '700' },
-    },
-  }),
+  fonts: {
+    regular: { fontFamily: 'Manrope-Regular', fontWeight: '400' },
+    medium: { fontFamily: 'Manrope-Medium', fontWeight: '500' },
+    bold: { fontFamily: 'Manrope-SemiBold', fontWeight: '600' },
+    heavy: { fontFamily: 'Manrope-Bold', fontWeight: '700' },
+  },
 };
 
 // ─── Login / Auth screen styles ───────────────────────────────────────────────
+// Note: LoginScreen.js keeps its own local StyleSheet (see that file) — these
+// are kept for FavoritesScreen/legacy screens that still reference them.
 
 const loginStyles = StyleSheet.create({
   container: {
@@ -95,7 +105,7 @@ const loginStyles = StyleSheet.create({
   },
   mainTitletext: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: DS.font.bold,
     color: DS.colors.onSurface,
     marginBottom: 8,
     letterSpacing: -0.3,
@@ -103,11 +113,12 @@ const loginStyles = StyleSheet.create({
   signUpText: {
     fontSize: 15,
     color: DS.colors.primary,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
   },
   title: {
     fontSize: 15,
     color: DS.colors.onSurfaceVariant,
+    fontFamily: DS.font.regular,
   },
   // Sunken input fields
   input: {
@@ -118,6 +129,7 @@ const loginStyles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     color: DS.colors.onSurface,
+    fontFamily: DS.font.regular,
   },
   // Primary button placeholder (real gradient lives in Button.js)
   loginButton: {
@@ -130,7 +142,7 @@ const loginStyles = StyleSheet.create({
   loginButtonText: {
     color: DS.colors.onPrimary,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: DS.font.bold,
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -147,6 +159,7 @@ const loginStyles = StyleSheet.create({
     marginHorizontal: 12,
     color: DS.colors.onSurfaceVariant,
     fontSize: 14,
+    fontFamily: DS.font.regular,
   },
   ssoButton: {
     backgroundColor: DS.colors.surfaceContainerHigh,
@@ -157,7 +170,7 @@ const loginStyles = StyleSheet.create({
   ssoButtonText: {
     fontSize: 15,
     color: DS.colors.primary,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
   },
 });
 
@@ -201,7 +214,7 @@ const cardStyles = StyleSheet.create({
   },
   gridBookTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurface,
     textAlign: 'center',
     marginBottom: 4,
@@ -214,6 +227,7 @@ const cardStyles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     minHeight: 16,
+    fontFamily: DS.font.regular,
   },
   gridImagePlaceholder: {
     width: '100%',
@@ -232,7 +246,7 @@ const cardStyles = StyleSheet.create({
     fontSize: 12,
     color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: DS.font.medium,
     lineHeight: 16,
   },
 
@@ -265,7 +279,7 @@ const cardStyles = StyleSheet.create({
   },
   bookTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurface,
     marginBottom: 4,
     lineHeight: 20,
@@ -274,6 +288,7 @@ const cardStyles = StyleSheet.create({
     fontSize: 14,
     color: DS.colors.onSurfaceVariant,
     marginBottom: 8,
+    fontFamily: DS.font.regular,
   },
 
   // Generic card
@@ -302,7 +317,7 @@ const cardStyles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurface,
     textAlign: 'center',
     lineHeight: 18,
@@ -331,7 +346,7 @@ const cardStyles = StyleSheet.create({
     fontSize: 10,
     color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: DS.font.medium,
   },
 
   // Progress bar
@@ -358,7 +373,7 @@ const cardStyles = StyleSheet.create({
     color: DS.colors.onSurfaceVariant,
     minWidth: 28,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: DS.font.medium,
   },
   // Uniform card for horizontal carousel
   horizontalBookCard: {
@@ -383,7 +398,7 @@ const cardStyles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 10,
     backgroundColor: DS.colors.surfaceContainerHigh,
-  }
+  },
 });
 
 // ─── Shared screen styles ─────────────────────────────────────────────────────
@@ -395,32 +410,32 @@ const screenStyles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    padding: 20,
+    padding: 24,
   },
   scrollContainer: {
     flexGrow: 1,
-    padding: 20,
+    padding: 24,
   },
 
   // Typography
   screenTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
-    marginBottom: 8,
-    letterSpacing: -0.3,
+    marginBottom: 12,
+    letterSpacing: -0.5,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontFamily: DS.font.bold,
     color: DS.colors.onSurface,
     marginBottom: 16,
-    marginTop: 24,
-    letterSpacing: -0.2,
+    marginTop: 32,
+    letterSpacing: -0.3,
   },
   subsectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurface,
     marginBottom: 12,
   },
@@ -429,24 +444,36 @@ const screenStyles = StyleSheet.create({
     color: DS.colors.onSurfaceVariant,
     lineHeight: 24,
     marginBottom: 12,
+    fontFamily: DS.font.regular,
   },
   captionText: {
     fontSize: 14,
     color: DS.colors.onSurfaceVariant,
     lineHeight: 20,
     marginBottom: 24,
+    fontFamily: DS.font.regular,
+  },
+  label: {
+    fontSize: 12,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
 
-  // Section card (no border – tonal layering only)
+  // Section card (unified border and shadow)
   section: {
     backgroundColor: DS.colors.surfaceContainerLow,
     borderRadius: DS.radius.xl,
-    padding: 20,
-    marginBottom: 16,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: DS.colors.surfaceContainerHighest,
     shadowColor: DS.colors.background,
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
     elevation: 4,
   },
 
@@ -462,6 +489,7 @@ const screenStyles = StyleSheet.create({
     color: DS.colors.onSurfaceVariant,
     marginTop: 16,
     textAlign: 'center',
+    fontFamily: DS.font.regular,
   },
 
   // Empty states
@@ -473,7 +501,7 @@ const screenStyles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurfaceVariant,
     marginTop: 16,
     marginBottom: 8,
@@ -488,6 +516,7 @@ const screenStyles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
     opacity: 0.7,
+    fontFamily: DS.font.regular,
   },
 
   // Error states
@@ -499,7 +528,7 @@ const screenStyles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
     color: DS.colors.error,
     marginTop: 16,
     marginBottom: 8,
@@ -511,6 +540,7 @@ const screenStyles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
+    fontFamily: DS.font.regular,
   },
 
   // Buttons (gradient lives in Button.js; these are fallback plain styles)
@@ -525,7 +555,7 @@ const screenStyles = StyleSheet.create({
   primaryButtonText: {
     color: DS.colors.onPrimary,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: DS.font.bold,
   },
   secondaryButton: {
     backgroundColor: DS.colors.surfaceContainerHigh,
@@ -538,7 +568,7 @@ const screenStyles = StyleSheet.create({
   secondaryButtonText: {
     color: DS.colors.primary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
   },
 });
 

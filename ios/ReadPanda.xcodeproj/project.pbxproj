@@ -11,15 +11,22 @@
 		0AC96C182E5259E800C72562 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AC96C172E5259E800C72562 /* PDFKit.framework */; };
 		0AC96C1A2E5259EF00C72562 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AC96C192E5259EF00C72562 /* UIKit.framework */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		2A1A073FC07041EC9D9E0B74 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */; };
+		5ADB9857126C454C878A00C6 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */; };
+		61C31230EE91437FBB4DDEC6 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		7EBF3813B9F44ECD9904D2F9 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0305DA42206041BAB933A98C /* Manrope-Regular.ttf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		8EFE65052F66828300B8B59F /* RNPdfViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFE65042F66828300B8B59F /* RNPdfViewer.swift */; };
 		8EFE650A2F66833100B8B59F /* RNPdfViewer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8EFE65092F66833100B8B59F /* RNPdfViewer.m */; };
+		D50827B60D074D43919567A3 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */; };
 		DBD52B6A69A0389ADA74D7EF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		ED9194F04CA0586F7A36E82D /* libPods-ReadPanda.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DE3D45B6C97600EBD3763EF /* libPods-ReadPanda.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0305DA42206041BAB933A98C /* Manrope-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Regular.ttf"; path = "../src/assets/fonts/Manrope-Regular.ttf"; sourceTree = "<group>"; };
+		035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Medium.ttf"; path = "../src/assets/fonts/Manrope-Medium.ttf"; sourceTree = "<group>"; };
 		0A4EBFD12E5E390800EAF49B /* ReadPanda.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ReadPanda.entitlements; path = ReadPanda/ReadPanda.entitlements; sourceTree = "<group>"; };
 		0A68B02E2EAFEC4900871E69 /* RNAppAuthAuthorizationFlowManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNAppAuthAuthorizationFlowManager.h; sourceTree = "<group>"; };
 		0A9C25F12E5DBFFC00F1734F /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -30,14 +37,17 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ReadPanda/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ReadPanda/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = ReadPanda/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-SemiBold.ttf"; path = "../src/assets/fonts/Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-ReadPanda.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ReadPanda.debug.xcconfig"; path = "Target Support Files/Pods-ReadPanda/Pods-ReadPanda.debug.xcconfig"; sourceTree = "<group>"; };
 		4DE3D45B6C97600EBD3763EF /* libPods-ReadPanda.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ReadPanda.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5709B34CF0A7D63546082F79 /* Pods-ReadPanda.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ReadPanda.release.xcconfig"; path = "Target Support Files/Pods-ReadPanda/Pods-ReadPanda.release.xcconfig"; sourceTree = "<group>"; };
+		57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-ExtraBold.ttf"; path = "../src/assets/fonts/Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ReadPanda/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ReadPanda/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8EFE65042F66828300B8B59F /* RNPdfViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNPdfViewer.swift; sourceTree = "<group>"; };
 		8EFE65092F66833100B8B59F /* RNPdfViewer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RNPdfViewer.m; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Bold.ttf"; path = "../src/assets/fonts/Manrope-Bold.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,6 +108,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				DBECB0865DDA4CC3963DE2CC /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -119,6 +130,19 @@
 				5709B34CF0A7D63546082F79 /* Pods-ReadPanda.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		DBECB0865DDA4CC3963DE2CC /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */,
+				20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */,
+				57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */,
+				0305DA42206041BAB933A98C /* Manrope-Regular.ttf */,
+				FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */,
+			);
+			name = Resources;
+			path = "";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -186,6 +210,11 @@
 				0A9C25F22E5DBFFC00F1734F /* GoogleService-Info.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				DBD52B6A69A0389ADA74D7EF /* PrivacyInfo.xcprivacy in Resources */,
+				5ADB9857126C454C878A00C6 /* Manrope-Medium.ttf in Resources */,
+				D50827B60D074D43919567A3 /* Manrope-SemiBold.ttf in Resources */,
+				2A1A073FC07041EC9D9E0B74 /* Manrope-ExtraBold.ttf in Resources */,
+				7EBF3813B9F44ECD9904D2F9 /* Manrope-Regular.ttf in Resources */,
+				61C31230EE91437FBB4DDEC6 /* Manrope-Bold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

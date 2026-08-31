@@ -77,7 +77,7 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.settingItem}>
               <Text style={styles.settingText}>Edit Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('InterestScreen', { username: username, preferences: JSON.parse(user.preferences) })}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Interest', { username: username, preferences: JSON.parse(user.preferences) })}>
               <Text style={styles.settingText}>Edit Preferences</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.settingItem}>

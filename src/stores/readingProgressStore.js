@@ -2,10 +2,44 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import enhanceedStorage from '../utils/enhanceedStorage';
 
+// Fixture used by the Home/Reading redesign (1a/1b) until the backend
+// exposes per-book chapter progress + room member pace. Matches the shapes
+// described in design_handoff_redesign/README.md ("State Management").
+const FIXTURE_ACTIVE_BOOK = {
+  id: 'fixture-midnight-library',
+  title: 'The Midnight Library',
+  coverUrl: null,
+  chapter: 7,
+  totalChapters: 21,
+  progressPct: 62,
+  roomName: 'Midnight Club',
+};
+
+const FIXTURE_MEMBER_PROGRESS = [
+  { userId: 'me', initials: 'ME', progressPct: 62, isMe: true },
+  { userId: 'priya', initials: 'PR', progressPct: 78 },
+  { userId: 'tom', initials: 'TO', progressPct: 91 },
+];
+
 const useReadingProgressStore = create((set, get) => ({
   currentBook: null,
   progress: {},
   recentBooks: [],
+
+  // ── "Tonight" (Home) / Reading tab fixtures ──────────────────────────
+  // TODO: replace with real endpoints once member-progress + comment-anchor
+  // APIs exist; shapes are already what those endpoints should return.
+  activeBook: null,
+  memberProgress: [],
+
+  loadFixtureActiveBook: () => {
+    const { activeBook } = get();
+    if (activeBook) {
+      return;
+    }
+    log.info('Loading fixture active book for Home/Reading redesign');
+    set({ activeBook: FIXTURE_ACTIVE_BOOK, memberProgress: FIXTURE_MEMBER_PROGRESS });
+  },
 
   setCurrentBook: (book) => {
     log.info('Setting current book:', book?.title);
@@ -57,7 +91,7 @@ const useReadingProgressStore = create((set, get) => ({
 
   clearProgress: () => {
     log.info('Clearing reading progress');
-    set({ currentBook: null, progress: {}, recentBooks: [] });
+    set({ currentBook: null, progress: {}, recentBooks: [], activeBook: null, memberProgress: [] });
   },
 }));
 

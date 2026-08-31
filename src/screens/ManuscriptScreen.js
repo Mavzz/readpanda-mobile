@@ -1,6 +1,6 @@
 // src/screens/ManuscriptScreen.js
 import React, { useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, TouchableOpacity, } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform, TouchableOpacity } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 import PdfViewer from '../components/PdfViewer';
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   platformMessage: {
     fontSize: 18,
-    color: '#555',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     marginTop: 50,
   },
