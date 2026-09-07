@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import log from '../utils/logger';
 import { DS } from '../styles/global';
 
@@ -27,6 +28,7 @@ const RNPdfViewerComponent = Platform.select({
 });
 
 const PdfViewer = ({ pdfUrl, pdfTitle, style, initialPage, onPageChanged, onLoadComplete, onError }) => {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
@@ -98,7 +100,9 @@ const PdfViewer = ({ pdfUrl, pdfTitle, style, initialPage, onPageChanged, onLoad
         </View>
       )}
       {!loading && totalPages > 0 && (
-        <View style={styles.pageIndicator}>
+        // The reader runs full-bleed to the bottom edge, so the indicator has
+        // to clear the home indicator itself.
+        <View style={[styles.pageIndicator, { bottom: insets.bottom + 20 }]}>
           <Text style={styles.pageText}>
             {currentPage + 1} / {totalPages}
           </Text>
@@ -144,7 +148,6 @@ const styles = StyleSheet.create({
   },
   pageIndicator: {
     position: 'absolute',
-    bottom: 20,
     alignSelf: 'center',
     backgroundColor: DS.colors.surfaceContainerGlass, // glass rule
     paddingHorizontal: 14,

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import enhanceedStorage from '../utils/enhanceedStorage';
+import useReadingProgressStore from './readingProgressStore';
+import useCommentsStore from './commentsStore';
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -49,6 +51,11 @@ const useAuthStore = create((set, get) => ({
     try {
       set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
       enhanceedStorage.clearAuthData();
+      // Stored reading state is keyed per account, but the in-memory copy
+      // isn't — without this the next person to sign in on this device
+      // inherits the previous reader's hero until something reloads it.
+      useReadingProgressStore.getState().clearProgress();
+      useCommentsStore.getState().clearComments();
       log.info('User signed out');
     } catch (e) {
       log.error('Failed to clear user data', e);

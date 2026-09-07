@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'react-native-linear-gradient';
-import { useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useEffect, useCallback } from 'react';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import BookCoverGradient from '../components/BookCoverGradient';
@@ -31,19 +31,25 @@ const ReadingScreen = () => {
     loadFixtureComments();
   }, []);
 
+  // This tab stays mounted once visited, so re-check on focus: a book started
+  // from a room (or finished reading) has to show up here without a restart.
+  useFocusEffect(
+    useCallback(() => {
+      loadActiveBook();
+    }, [loadActiveBook]),
+  );
+
   const handleContinue = () => {
     if (!activeBook) {
       return;
     }
     log.info('Continue chapter pressed for', activeBook.title);
-    navigation.navigate('Home', {
-      screen: 'ManuscriptScreen',
-      params: {
-        book: {
-          book_id: activeBook.id,
-          title: activeBook.title,
-          manuscript_url: activeBook.manuscriptUrl,
-        },
+    navigation.navigate('ManuscriptScreen', {
+      book: {
+        book_id: activeBook.id,
+        title: activeBook.title,
+        cover_image_url: activeBook.coverUrl,
+        manuscript_url: activeBook.manuscriptUrl,
       },
     });
   };
@@ -135,11 +141,12 @@ const ReadingScreen = () => {
             titleFontSize={10}
           />
           <View style={styles.bookHeaderText}>
-            <Text style={styles.eyebrow}>Reading now</Text>
+            <Text style={styles.eyebrow}>{activeBook.started ? 'Reading now' : 'Up next'}</Text>
             <Text style={styles.bookTitle} numberOfLines={2}>{activeBook.title}</Text>
             <Text style={styles.bookMeta}>
-              {activeBook.unit === 'page' ? 'Page' : 'Chapter'} {activeBook.chapter} of{' '}
-              {activeBook.totalChapters}
+              {activeBook.started
+                ? `${activeBook.unit === 'page' ? 'Page' : 'Chapter'} ${activeBook.chapter} of ${activeBook.totalChapters}`
+                : 'Not started yet'}
               {activeBook.roomName ? ` · with ${activeBook.roomName}` : ''}
             </Text>
           </View>
@@ -215,7 +222,9 @@ const ReadingScreen = () => {
 
         <GradientPill onPress={handleContinue} style={styles.cta}>
           <Text style={styles.ctaText}>
-            Continue {activeBook.unit === 'page' ? 'Page' : 'Chapter'} {activeBook.chapter}
+            {activeBook.started
+              ? `Continue ${activeBook.unit === 'page' ? 'Page' : 'Chapter'} ${activeBook.chapter}`
+              : 'Start reading'}
           </Text>
         </GradientPill>
       </ScrollView>

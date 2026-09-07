@@ -54,7 +54,6 @@ const HomeStackNavigator = () => {
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="LibraryScreen" component={LibraryScreen} />
-      <Stack.Screen name="ManuscriptScreen" component={ManuscriptScreen} animationEnabled />
       <Stack.Screen name="GenreBooksScreen" component={GenreBooksScreen} animationEnabled />
       <Stack.Screen name="BucketBooksScreen" component={BucketBooksScreen} animationEnabled />
     </Stack.Navigator>
@@ -128,6 +127,21 @@ const MainStackNavigator = () => {
       }}
     >
       <Stack.Screen name="Tabs" component={TabNavigator} />
+      {/* The reader is a destination, not a tab sub-page: registering it here
+          (a sibling of Tabs) puts it over the tab bar, so a book gets the
+          whole screen. It also means every caller — Home, the Reading tab, a
+          bucket, a room — reaches it with a plain
+          navigate('ManuscriptScreen'), since the name resolves upward from
+          anywhere in the tree. */}
+      <Stack.Screen
+        name="ManuscriptScreen"
+        component={ManuscriptScreen}
+        options={{
+          headerShown: false,
+          animationEnabled: true,
+          cardStyle: { backgroundColor: DS.colors.background },
+        }}
+      />
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}

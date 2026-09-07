@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from '../components/Toaster';
@@ -129,6 +130,16 @@ const Home = ({ navigation }) => {
     didInit.current = true;
   }, [user, hasShownWelcome]);
 
+  // Home stays mounted, so without this the hero would keep showing whatever
+  // was true when the tab first mounted — a book started from a room, or one
+  // just read, wouldn't appear until a pull-to-refresh or an app restart.
+  // Cheap: loadActiveBook is a no-op once activeBook is set.
+  useFocusEffect(
+    useCallback(() => {
+      loadActiveBook();
+    }, [loadActiveBook]),
+  );
+
   const handleNotificationPress = () => {
     setNotifModalVisible(true);
     fetchNotifications();
@@ -142,6 +153,7 @@ const Home = ({ navigation }) => {
       book: {
         book_id: activeBook.id,
         title: activeBook.title,
+        cover_image_url: activeBook.coverUrl,
         manuscript_url: activeBook.manuscriptUrl,
       },
     });
@@ -176,7 +188,13 @@ const Home = ({ navigation }) => {
     );
   }
 
-  const friends = memberProgress.filter((m) => !m.isMe).sort((a, b) => b.progressPct - a.progressPct);
+  // Only the people genuinely further along than me — the caption claims they
+  // are "ahead", so it must not fire for a room whose members are all sitting
+  // at 0% because no one has recorded progress yet.
+  const myPct = memberProgress.find((m) => m.isMe)?.progressPct ?? 0;
+  const friends = memberProgress
+    .filter((m) => !m.isMe && m.progressPct > myPct)
+    .sort((a, b) => b.progressPct - a.progressPct);
   const friendNames = friends.length >= 2
     ? `${friends[0].initials} & ${friends[1].initials}`
     : friends[0]?.initials;
@@ -253,11 +271,15 @@ const Home = ({ navigation }) => {
                 borderRadius={16}
                 style={styles.heroCover}
               />
-              <Text style={styles.heroEyebrow}>Continue reading</Text>
+              <Text style={styles.heroEyebrow}>
+                {activeBook.started ? 'Continue reading' : 'Start reading'}
+              </Text>
               <Text style={styles.heroTitle} numberOfLines={2}>{activeBook.title}</Text>
               <Text style={styles.heroMeta}>
-                {activeBook.unit === 'page' ? 'Page' : 'Chapter'} {activeBook.chapter} of{' '}
-                {activeBook.totalChapters} · {activeBook.progressPct}%
+                {activeBook.started
+                  ? `${activeBook.unit === 'page' ? 'Page' : 'Chapter'} ${activeBook.chapter} of ${activeBook.totalChapters} · ${activeBook.progressPct}%`
+                  : 'Not started yet'}
+                {activeBook.roomName ? ` · with ${activeBook.roomName}` : ''}
               </Text>
               <View style={styles.heroTrack}>
                 <LinearGradient
@@ -286,7 +308,9 @@ const Home = ({ navigation }) => {
               )}
             </View>
             <GradientPill onPress={handleContinueReading} style={styles.cta}>
-              <Text style={styles.ctaText}>Pick up where you left off</Text>
+              <Text style={styles.ctaText}>
+                {activeBook.started ? 'Pick up where you left off' : 'Start reading'}
+              </Text>
             </GradientPill>
           </View>
         )}

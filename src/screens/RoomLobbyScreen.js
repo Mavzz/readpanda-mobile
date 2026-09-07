@@ -24,6 +24,7 @@ import { useAuth } from '../contexts/AuthContext';
 import useRoomStore from '../stores/roomStore';
 import useBooksStore from '../stores/booksStore';
 import useBucketsStore from '../stores/bucketsStore';
+import useReadingProgressStore from '../stores/readingProgressStore';
 import log from '../utils/logger';
 
 // Room Detail (ROOM_DETAIL_2a-2.md): an ordered setup flow — decide what to
@@ -86,6 +87,7 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   const curatedBuckets = useBucketsStore((s) => s.curatedBuckets);
   const fetchCustomBuckets = useBucketsStore((s) => s.fetchCustomBuckets);
   const fetchCuratedBuckets = useBucketsStore((s) => s.fetchCuratedBuckets);
+  const startBook = useReadingProgressStore((s) => s.startBook);
 
   const selfName = user?.username || 'You';
   const inviteCode = room?.inviteCode || room?.invite_code || null;
@@ -155,6 +157,37 @@ const RoomLobbyScreen = ({ navigation, route }) => {
     } catch (error) {
       log.error('Failed to share invite:', error);
     }
+  };
+
+  // The room's book is where reading actually begins: make it the active book
+  // (so the Home hero and Reading tab pick it up, tagged with this room) and
+  // open the reader. Without this the room's choice was a dead end — see the
+  // reading-journey audit.
+  const startReadingRoomBook = () => {
+    const book = currentBook || (room?.currentBookId
+      ? {
+        book_id: room.currentBookId,
+        title: bookTitle,
+        cover_image_url: room.coverUrl,
+      }
+      : null);
+
+    const stored = book && startBook(book, {
+      roomName: room?.name,
+      // Real members, so the Reading tab's pace card shows this room's people
+      // rather than the 1b demo fixture.
+      roomMembers: members.map((m) => ({
+        userId: m.id,
+        initials: m.initials,
+        isMe: m.isSelf,
+      })),
+    });
+    if (!stored) {
+      showToast('Could not open that book', 'error');
+      return;
+    }
+
+    navigation.navigate('ManuscriptScreen', { book: stored });
   };
 
   const applyReading = async ({ bucket: nextBucket, currentBook: nextBook }, successText) => {
@@ -291,8 +324,14 @@ const RoomLobbyScreen = ({ navigation, route }) => {
         <Text style={[styles.eyebrow, styles.firstSection]}>First, decide what to read</Text>
         {bookTitle ? (
           <>
-            {/* STATE B / C — the cover-led progress hero from § 1b */}
-            <View style={styles.bookHero}>
+            {/* STATE B / C — the cover-led progress hero from § 1b. Tapping it
+                starts (or resumes) the book in the reader. */}
+            <Pressable
+              onPress={startReadingRoomBook}
+              style={({ pressed }) => [styles.bookHero, pressed && styles.pressed]}
+              accessibilityLabel={`Start reading ${bookTitle}`}
+              accessibilityRole="button"
+            >
               <BookCoverGradient
                 coverUrl={currentBook?.cover_image_url || room?.coverUrl}
                 title={bookTitle}
@@ -312,7 +351,8 @@ const RoomLobbyScreen = ({ navigation, route }) => {
                   <View style={[styles.progressFill, { width: `${room?.groupProgressPct || 0}%` }]} />
                 </View>
               </View>
-            </View>
+              <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
+            </Pressable>
 
             {bucket ? (
               /* STATE B — reading through a bucket: what's queued after this */
@@ -711,6 +751,8 @@ const styles = StyleSheet.create({
   // Book — set (cover-led hero, per § 1b)
   bookHero: {
     flexDirection: 'row',
+    // Centred so the "start reading" chevron lines up with the cover.
+    alignItems: 'center',
     gap: 16,
     backgroundColor: DS.colors.surfaceContainer,
     borderRadius: DS.radius.md,
