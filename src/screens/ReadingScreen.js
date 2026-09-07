@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'react-native-linear-gradient';
 import { useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -8,6 +9,7 @@ import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
+import { duotoneFor, COVER_SHADOW } from '../utils/covers';
 import log from '../utils/logger';
 
 // Replaces the old (empty) Current Read tab — the async book-club core made
@@ -16,15 +18,16 @@ import log from '../utils/logger';
 const ReadingScreen = () => {
   const navigation = useNavigation();
   const activeBook = useReadingProgressStore((s) => s.activeBook);
+  const activeBookLoaded = useReadingProgressStore((s) => s.activeBookLoaded);
   const memberProgress = useReadingProgressStore((s) => s.memberProgress);
-  const loadFixtureActiveBook = useReadingProgressStore((s) => s.loadFixtureActiveBook);
+  const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
 
   const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
   const unlockedComments = useCommentsStore((s) => s.unlockedComments);
   const nextLockedBatch = useCommentsStore((s) => s.nextLockedBatch);
 
   useEffect(() => {
-    loadFixtureActiveBook();
+    loadActiveBook();
     loadFixtureComments();
   }, []);
 
@@ -45,16 +48,56 @@ const ReadingScreen = () => {
     });
   };
 
+  const pickABook = () => navigation.navigate('Home', { screen: 'LibraryScreen' });
+  const joinByCode = () => navigation.navigate('Rooms', { focusCode: true });
+
+  // ── 3b: first run ─────────────────────────────────────────────────────
+  // No reading progress yet, so there is no top progress bar and no data on
+  // the screen at all — just the first step of the flow this tab will become.
+  // Rendered only once the last-read position has actually been read back, so
+  // a reader mid-book never sees this flash past.
   if (!activeBook) {
+    if (!activeBookLoaded) {
+      return <View style={styles.container} />;
+    }
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
         <View style={styles.emptyContainer}>
-          <Icon name="bookmarks-outline" size={64} color={DS.colors.onSurfaceVariant} />
-          <Text style={styles.emptyTitle}>Nothing in progress</Text>
-          <Text style={styles.emptyDescription}>
-            Pick up a book from Home to see where your room is reading.
+          {/* Pure decoration — two tilted covers, no book behind them. */}
+          <View style={styles.illustration}>
+            <LinearGradient
+              colors={duotoneFor('nightstand-left')}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.illustrationCover, styles.illustrationLeft]}
+            />
+            <LinearGradient
+              colors={duotoneFor('nightstand-right')}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.illustrationCover, styles.illustrationRight]}
+            >
+              <Icon name="moon-outline" size={26} color={DS.colors.primary} />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.firstRunTitle}>Nothing on your nightstand yet</Text>
+          <Text style={styles.firstRunBody}>
+            Pick a book and this tab becomes your reading home — your progress, your friends&apos;
+            pace, and their comments unlocking as you go.
           </Text>
+
+          <GradientPill onPress={pickABook} style={styles.firstRunCta}>
+            <Text style={styles.ctaText}>Pick a book</Text>
+          </GradientPill>
+
+          <Pressable
+            onPress={joinByCode}
+            style={({ pressed }) => [styles.firstRunLink, pressed && styles.pressed]}
+          >
+            <Text style={styles.firstRunLinkText}>Have an invite code? Join a room</Text>
+          </Pressable>
         </View>
       </View>
     );
@@ -95,7 +138,8 @@ const ReadingScreen = () => {
             <Text style={styles.eyebrow}>Reading now</Text>
             <Text style={styles.bookTitle} numberOfLines={2}>{activeBook.title}</Text>
             <Text style={styles.bookMeta}>
-              Chapter {activeBook.chapter} of {activeBook.totalChapters}
+              {activeBook.unit === 'page' ? 'Page' : 'Chapter'} {activeBook.chapter} of{' '}
+              {activeBook.totalChapters}
               {activeBook.roomName ? ` · with ${activeBook.roomName}` : ''}
             </Text>
           </View>
@@ -170,7 +214,9 @@ const ReadingScreen = () => {
         )}
 
         <GradientPill onPress={handleContinue} style={styles.cta}>
-          <Text style={styles.ctaText}>Continue Chapter {activeBook.chapter}</Text>
+          <Text style={styles.ctaText}>
+            Continue {activeBook.unit === 'page' ? 'Page' : 'Chapter'} {activeBook.chapter}
+          </Text>
         </GradientPill>
       </ScrollView>
     </View>
@@ -411,27 +457,63 @@ const styles = StyleSheet.create({
     color: DS.colors.onPrimary,
   },
 
-  // Empty state
+  // First run (3b)
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: 32,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontFamily: DS.font.semibold,
-    color: DS.colors.onSurfaceVariant,
-    marginTop: 16,
-    marginBottom: 8,
+  illustration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
   },
-  emptyDescription: {
-    fontSize: 15,
-    fontFamily: DS.font.regular,
+  illustrationCover: {
+    width: 78,
+    height: 110,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...COVER_SHADOW,
+  },
+  illustrationLeft: {
+    transform: [{ rotate: '-7deg' }],
+  },
+  illustrationRight: {
+    marginLeft: -14,
+    transform: [{ rotate: '5deg' }],
+  },
+  firstRunTitle: {
+    fontSize: 22,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onSurface,
+    textAlign: 'center',
+    lineHeight: 28,
+    marginBottom: 10,
+  },
+  firstRunBody: {
+    fontSize: 13,
+    fontFamily: DS.font.medium,
     color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
-    lineHeight: 22,
-    opacity: 0.7,
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  firstRunCta: {
+    alignSelf: 'stretch',
+  },
+  firstRunLink: {
+    marginTop: 16,
+  },
+  firstRunLinkText: {
+    fontSize: 12,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
+  },
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
 });
 

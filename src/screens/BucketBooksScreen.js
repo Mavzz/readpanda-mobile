@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, FlatList, StatusBar, TouchableOpacity, Image } from 'react-native';
-import { useState } from 'react';
+import { LinearGradient } from 'react-native-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useEffect } from 'react';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -8,6 +10,7 @@ import Animated, {
 import Icon from 'react-native-vector-icons/Ionicons';
 import log from '../utils/logger';
 import { DS } from '../styles/global';
+import { duotoneFor } from '../utils/covers';
 import useBucketsStore from '../stores/bucketsStore';
 
 const NUM_COLUMNS = 2;
@@ -43,12 +46,16 @@ const BucketBookCard = ({ book, onPress, onRemove, showRemove }) => {
           {coverUrl ? (
             <Image source={{ uri: coverUrl }} style={styles.coverImage} />
           ) : (
-            <View style={styles.coverPlaceholder}>
-              <Text style={styles.placeholderEmoji}>📚</Text>
-              <Text style={styles.placeholderTitle} numberOfLines={2}>
+            <LinearGradient
+              colors={duotoneFor(book?.title)}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.coverPlaceholder}
+            >
+              <Text style={styles.placeholderTitle} numberOfLines={3}>
                 {book?.title || 'Book'}
               </Text>
-            </View>
+            </LinearGradient>
           )}
           {showRemove && (
             <TouchableOpacity
@@ -75,9 +82,28 @@ const BucketBookCard = ({ book, onPress, onRemove, showRemove }) => {
 /* ── Screen ───────────────────────────────────────────────────────────────── */
 const BucketBooksScreen = ({ route, navigation }) => {
   const { books_preview, name, book_count, bucket_id, isCustom } = route.params;
+  // Seeded from the (2-book-capped) preview so something renders immediately;
+  // replaced below with the bucket's real full book list once it loads.
   const [books, setBooks] = useState(books_preview || []);
   const [bookCount, setBookCount] = useState(book_count || 0);
   const removeBookFromBucket = useBucketsStore(state => state.removeBookFromBucket);
+  const fetchBucketBooks = useBucketsStore(state => state.fetchBucketBooks);
+  const fetchCuratedBucketBooks = useBucketsStore(state => state.fetchCuratedBucketBooks);
+
+  useEffect(() => {
+    if (!bucket_id) return undefined;
+    let cancelled = false;
+    const load = isCustom ? fetchBucketBooks(bucket_id) : fetchCuratedBucketBooks(bucket_id);
+    load.then(({ status, response }) => {
+      if (!cancelled && status === 200) {
+        setBooks(response);
+        setBookCount(response.length);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bucket_id, isCustom, fetchBucketBooks, fetchCuratedBucketBooks]);
 
   const handleRemoveBook = (bookId) => {
     setBooks(prev => prev.filter(b => b.book_id !== bookId));
@@ -102,17 +128,17 @@ const BucketBooksScreen = ({ route, navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={22} color={DS.colors.onSurfaceVariant} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
           {name}
         </Text>
-        <Text style={styles.bookCount}>{bookCount} books</Text>
+        <Text style={styles.bookCount}>{bookCount} {bookCount === 1 ? 'book' : 'books'}</Text>
       </View>
 
       {books.length === 0 ? (
@@ -132,7 +158,7 @@ const BucketBooksScreen = ({ route, navigation }) => {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -196,28 +222,24 @@ const styles = StyleSheet.create({
     borderRadius: DS.radius.sm - 2,
     overflow: 'hidden',
     marginBottom: 10,
-    backgroundColor: DS.colors.surfaceContainerHigh,
   },
   coverImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  // Cover fallback per FIRST_RUN_3a_3b.md § "Cover fallback": duotone hashed
+  // off the title with the title bottom-aligned in a serif — never a gray box.
   coverPlaceholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 12,
-  },
-  placeholderEmoji: {
-    fontSize: 28,
-    marginBottom: 6,
+    justifyContent: 'flex-end',
+    padding: 10,
   },
   placeholderTitle: {
-    fontSize: 11,
-    color: DS.colors.onSurfaceVariant,
-    textAlign: 'center',
-    fontWeight: '500',
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: 'Georgia',
+    color: DS.colors.onSurface + 'D9',
   },
   bookTitle: {
     fontSize: 13,

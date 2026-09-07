@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import { getBackendUrl } from '../utils/Helper';
-import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest, makeAuthenticatedDeleteRequest } from '../services/authenticatedRequests';
+import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest, makeAuthenticatedPatchRequest, makeAuthenticatedDeleteRequest } from '../services/authenticatedRequests';
 
 const normalizeRoom = (room) => ({
   id: room.id,
@@ -14,11 +14,25 @@ const normalizeRoom = (room) => ({
   adminId: room.admin_id,
   currentBookId: room.current_book_id,
   currentBucketId: room.current_bucket_id,
-  // Not yet returned by the API — the Home ("Tonight") and Rooms (1a/1c)
-  // redesigns need these; default to safe fallbacks so real rooms render
-  // fine (just without a badge/progress bar) until the backend adds them.
   currentBookTitle: room.current_book?.title || room.current_book_title || null,
-  members: room.members || [],
+  coverUrl: room.current_book?.cover_image_url || room.current_book_cover_url || null,
+  // A room reads EITHER a standalone book OR a bucket (a shared reading list)
+  // with a current book chosen from it — ROOM_DETAIL_2a-2.md. Invariant:
+  // bucket set ⇒ currentBook ∈ bucket; progress/comments key on currentBook.
+  // GET /room/{id} returns bucket as { id, name, type, books[] }.
+  bucket: room.bucket || null,
+  currentBook: room.current_book || null,
+  // GET /room/{id} returns members as { user_id, username, role, joined_at }.
+  members: (room.members || []).map((m) => ({
+    userId: m.user_id ?? m.userId,
+    name: m.username ?? m.name,
+    initials: m.initials || null,
+    isCreator: (m.role ?? m.roleName) === 'admin' || !!m.isCreator,
+    joinedAt: m.joined_at ?? m.joinedAt ?? null,
+    isMe: !!m.isMe,
+  })),
+  // Still not returned by the API — the Home/Rooms cards degrade gracefully
+  // (no badge, empty progress bar) until unread counts and group progress exist.
   unreadCount: room.unread_count || 0,
   groupProgressPct: room.group_progress_pct ?? 0,
   status: room.status || null,
@@ -27,41 +41,16 @@ const normalizeRoom = (room) => ({
 // Fixture used by the Home/Rooms redesign (1a/1c) so the screens have
 // something meaningful to show before a user has joined a real room, or
 // while the backend doesn't yet return members/unreadCount/groupProgressPct.
-// TODO: remove once every room the API returns carries those fields.
-const FIXTURE_ROOMS = [
-  {
-    id: 'fixture-midnight-club',
-    name: 'Midnight Club',
-    currentBookTitle: 'The Midnight Library',
-    members: [
-      { userId: 'me', initials: 'ME', isMe: true },
-      { userId: 'priya', initials: 'PR' },
-      { userId: 'tom', initials: 'TO' },
-    ],
-    unreadCount: 3,
-    groupProgressPct: 62,
-    status: '3 new comments',
-  },
-  {
-    id: 'fixture-scifi-pals',
-    name: 'Sci-fi Pals',
-    currentBookTitle: 'Sea of Tranquility',
-    members: [
-      { userId: 'me', initials: 'ME', isMe: true },
-      { userId: 'sam', initials: 'SA' },
-      { userId: 'jj', initials: 'JJ' },
-    ],
-    unreadCount: 0,
-    groupProgressPct: 0,
-    status: 'starting Sept 1',
-  },
-];
 
-const useRoomStore = create((set) => ({
+const useRoomStore = create((set, get) => ({
   rooms: [],
   activeRoom: null,
   participants: [],
   loading: false,
+  // Set once the first fetch has settled (success or not) so Home can tell
+  // "this reader has no rooms" — which is a state it renders, see
+  // FIRST_RUN_3a_3b.md § 3a — from "we haven't asked yet".
+  roomsLoaded: false,
 
   fetchRooms: async () => {
     set({ loading: true });
@@ -85,7 +74,7 @@ const useRoomStore = create((set) => ({
       log.error('Error fetching rooms:', error);
       return { status: 500, error: error.message || 'Network error' };
     } finally {
-      set({ loading: false });
+      set({ loading: false, roomsLoaded: true });
     }
   },
 
@@ -120,10 +109,118 @@ const useRoomStore = create((set) => ({
     }
   },
 
-  // Called after fetchRooms() resolves with an empty list — seeds the fixture
-  // rooms so Home/Rooms have something to render. No-ops once real rooms exist.
-  loadFixtureRoomsIfEmpty: () => {
-    set((state) => (state.rooms.length === 0 ? { rooms: FIXTURE_ROOMS } : state));
+  // GET /room/{id} — the whole Room Detail payload (members, current book,
+  // bucket). Merged into `rooms` so every screen sees the richer record.
+  fetchRoomDetail: async (roomId) => {
+    try {
+      const { status, response } = await makeAuthenticatedGetRequest(
+        getBackendUrl(`/room/${roomId}`),
+      );
+
+      if (status === 200) {
+        const detail = normalizeRoom(response);
+        set((state) => ({
+          rooms: state.rooms.some((r) => r.id === detail.id)
+            ? state.rooms.map((r) => (r.id === detail.id ? { ...r, ...detail } : r))
+            : [...state.rooms, detail],
+          activeRoom: detail,
+        }));
+        return { status: 200, response: detail };
+      }
+      log.error('Failed to fetch room detail:', response);
+      return { status: status || 500, error: response?.error || 'Failed to load room' };
+    } catch (error) {
+      log.error('Error fetching room detail:', error);
+      return { status: 500, error: error.message || 'Network error' };
+    }
+  },
+
+  // POST /room/join — join by invite code.
+  joinRoomByCode: async (inviteCode) => {
+    const code = (inviteCode || '').trim().toUpperCase();
+    if (!code) {
+      return { status: 400, error: 'Enter an invite code' };
+    }
+
+    try {
+      const { status, response } = await makeAuthenticatedPostRequest(
+        getBackendUrl('/room/join'),
+        { invite_code: code },
+      );
+
+      if (status === 200 || status === 201) {
+        const joined = normalizeRoom(response);
+        log.info('Joined room:', joined.name);
+        set((state) => ({
+          rooms: state.rooms.some((r) => r.id === joined.id)
+            ? state.rooms.map((r) => (r.id === joined.id ? { ...r, ...joined } : r))
+            : [...state.rooms, joined],
+        }));
+        return { status: 200, response: joined };
+      }
+
+      // The API distinguishes these, so the UI can say something useful.
+      const message = status === 404
+        ? 'No room found for that code'
+        : status === 409
+          ? 'You\'re already in this room'
+          : response?.error || 'Could not join that room';
+      return { status: status || 500, error: message };
+    } catch (error) {
+      log.error('Error joining room:', error);
+      return { status: 500, error: error.message || 'Network error' };
+    }
+  },
+
+  // PATCH /room/{id}/reading — set what the room reads (a standalone book, or
+  // a book from a bucket). Creator-only, and the API enforces the invariant
+  // that a current book belongs to the bucket. Applied optimistically, then
+  // reconciled with the room the API returns.
+  setRoomReading: async (roomId, { bucket = null, currentBook = null }) => {
+    log.info('Setting room reading:', { roomId, bucket: bucket?.name, book: currentBook?.title });
+
+    const previous = get().rooms;
+    set((state) => ({
+      rooms: state.rooms.map((room) =>
+        room.id === roomId
+          ? {
+            ...room,
+            bucket,
+            currentBook,
+            currentBookTitle: currentBook?.title || null,
+            coverUrl: currentBook?.cover_image_url || null,
+          }
+          : room,
+      ),
+    }));
+
+    try {
+      const { status, response } = await makeAuthenticatedPatchRequest(
+        getBackendUrl(`/room/${roomId}/reading`),
+        {
+          current_book_id: currentBook?.book_id ?? currentBook?.id ?? null,
+          bucket_id: bucket?.id ?? null,
+          bucket_type: bucket?.type ?? (bucket ? 'user' : null),
+        },
+      );
+
+      if (status === 200) {
+        const detail = normalizeRoom(response);
+        set((state) => ({
+          rooms: state.rooms.map((r) => (r.id === detail.id ? { ...r, ...detail } : r)),
+          activeRoom: state.activeRoom?.id === detail.id ? detail : state.activeRoom,
+        }));
+        return { status: 200, response: detail };
+      }
+
+      log.error('Failed to set room reading, reverting:', response);
+      set({ rooms: previous });
+      return { status: status || 500, error: response?.error || 'Could not update the room' };
+    } catch (error) {
+      log.error('Error setting room reading, reverting:', error);
+      set({ rooms: previous });
+      return { status: 500, error: error.message || 'Network error' };
+    }
   },
 
   setActiveRoom: (room) => {
@@ -151,9 +248,72 @@ const useRoomStore = create((set) => ({
     }));
   },
 
-  leaveRoom: () => {
-    log.info('Leaving active room');
-    set({ activeRoom: null, participants: [] });
+  // DELETE /room/{id} — creator only. Members cascade with the room.
+  deleteRoom: async (roomId) => {
+    const previous = get().rooms;
+    // Optimistic: the screen navigates away as soon as this resolves.
+    set((state) => ({
+      rooms: state.rooms.filter((r) => r.id !== roomId),
+      activeRoom: state.activeRoom?.id === roomId ? null : state.activeRoom,
+    }));
+
+    try {
+      const { status, response } = await makeAuthenticatedDeleteRequest(
+        getBackendUrl(`/room/${roomId}`),
+      );
+
+      if (status === 200 || status === 204) {
+        log.info('Room deleted:', roomId);
+        return { status: 204 };
+      }
+
+      log.error('Failed to delete room, reverting:', response);
+      set({ rooms: previous });
+      return {
+        status: status || 500,
+        error: status === 403
+          ? 'Only the room creator can delete this room'
+          : response?.error || 'Could not delete the room',
+      };
+    } catch (error) {
+      log.error('Error deleting room, reverting:', error);
+      set({ rooms: previous });
+      return { status: 500, error: error.message || 'Network error' };
+    }
+  },
+
+  // DELETE /room/{id}/members/me — for members who aren't the creator.
+  leaveRoom: async (roomId) => {
+    const previous = get().rooms;
+    set((state) => ({
+      rooms: state.rooms.filter((r) => r.id !== roomId),
+      activeRoom: state.activeRoom?.id === roomId ? null : state.activeRoom,
+      participants: [],
+    }));
+
+    try {
+      const { status, response } = await makeAuthenticatedDeleteRequest(
+        getBackendUrl(`/room/${roomId}/members/me`),
+      );
+
+      if (status === 200 || status === 204) {
+        log.info('Left room:', roomId);
+        return { status: 204 };
+      }
+
+      log.error('Failed to leave room, reverting:', response);
+      set({ rooms: previous });
+      return {
+        status: status || 500,
+        error: status === 403
+          ? 'Delete the room instead — you created it'
+          : response?.error || 'Could not leave the room',
+      };
+    } catch (error) {
+      log.error('Error leaving room, reverting:', error);
+      set({ rooms: previous });
+      return { status: 500, error: error.message || 'Network error' };
+    }
   },
 
   clearRooms: () => {

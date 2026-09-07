@@ -2,19 +2,13 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import enhanceedStorage from '../utils/enhanceedStorage';
 
-// Fixture used by the Home/Reading redesign (1a/1b) until the backend
-// exposes per-book chapter progress + room member pace. Matches the shapes
-// described in design_handoff_redesign/README.md ("State Management").
-const FIXTURE_ACTIVE_BOOK = {
-  id: 'fixture-midnight-library',
-  title: 'The Midnight Library',
-  coverUrl: null,
-  chapter: 7,
-  totalChapters: 21,
-  progressPct: 62,
-  roomName: 'Midnight Club',
-};
-
+// Fixture used by the Home/Reading redesign (1a/1b) until the backend exposes
+// room member pace. Matches the shape described in
+// design_handoff_redesign/README.md ("State Management").
+//
+// There is deliberately no fixture *active book*: "no activeBook" is a real
+// state the app has to render (FIRST_RUN_3a_3b.md § 3a/3b), so a reader who
+// hasn't opened anything yet gets the first-run screens, not a phantom book.
 const FIXTURE_MEMBER_PROGRESS = [
   { userId: 'me', initials: 'ME', progressPct: 62, isMe: true },
   { userId: 'priya', initials: 'PR', progressPct: 78 },
@@ -31,14 +25,53 @@ const useReadingProgressStore = create((set, get) => ({
   // APIs exist; shapes are already what those endpoints should return.
   activeBook: null,
   memberProgress: [],
+  // Distinguishes "nothing read yet" from "haven't looked yet" so Home and
+  // the Reading tab don't flash their first-run state before the last-read
+  // position has been read back out of storage.
+  activeBookLoaded: false,
 
-  loadFixtureActiveBook: () => {
+  // Hydrates the Home hero / Reading tab from the real book the user last
+  // opened (persisted with its cover_image_url by saveProgress). Leaves
+  // activeBook null when nothing has been read — that's the 3a/3b first run.
+  loadActiveBook: () => {
     const { activeBook } = get();
     if (activeBook) {
+      set({ activeBookLoaded: true });
       return;
     }
-    log.info('Loading fixture active book for Home/Reading redesign');
-    set({ activeBook: FIXTURE_ACTIVE_BOOK, memberProgress: FIXTURE_MEMBER_PROGRESS });
+
+    try {
+      const lastRead = enhanceedStorage.getCurrentReadingPosition();
+      const book = lastRead?.book;
+      if (book?.title) {
+        const currentPage = lastRead.progress?.currentPage || 0;
+        const totalPages = lastRead.progress?.totalPages || 0;
+        log.info('Restoring last-read book for Home/Reading:', book.title);
+        set({
+          activeBook: {
+            id: book.book_id,
+            title: book.title,
+            coverUrl: book.cover_image_url,
+            manuscriptUrl: book.manuscript_url,
+            // The PDF reader knows pages, not chapters — say so rather than
+            // presenting page counts as chapter counts.
+            unit: 'page',
+            chapter: currentPage + 1,
+            totalChapters: totalPages,
+            progressPct: totalPages ? Math.round(((currentPage + 1) / totalPages) * 100) : 0,
+            roomName: null,
+          },
+          memberProgress: FIXTURE_MEMBER_PROGRESS,
+          activeBookLoaded: true,
+        });
+        return;
+      }
+    } catch (e) {
+      log.error('Failed to restore last-read book:', e);
+    }
+
+    log.info('No book read yet — Home/Reading render their first-run state');
+    set({ activeBook: null, memberProgress: [], activeBookLoaded: true });
   },
 
   setCurrentBook: (book) => {
@@ -46,10 +79,10 @@ const useReadingProgressStore = create((set, get) => ({
     set({ currentBook: book });
   },
 
-  saveProgress: (manuscriptId, progressData) => {
+  saveProgress: (manuscriptId, progressData, book = null) => {
     log.info('Saving reading progress for:', manuscriptId);
     try {
-      enhanceedStorage.saveReadingProgress(manuscriptId, progressData);
+      enhanceedStorage.saveReadingProgress(manuscriptId, progressData, book);
       set((state) => ({
         progress: {
           ...state.progress,
@@ -91,7 +124,14 @@ const useReadingProgressStore = create((set, get) => ({
 
   clearProgress: () => {
     log.info('Clearing reading progress');
-    set({ currentBook: null, progress: {}, recentBooks: [], activeBook: null, memberProgress: [] });
+    set({
+      currentBook: null,
+      progress: {},
+      recentBooks: [],
+      activeBook: null,
+      memberProgress: [],
+      activeBookLoaded: false,
+    });
   },
 }));
 

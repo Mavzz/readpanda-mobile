@@ -1,4 +1,4 @@
-import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MyTheme } from '../styles/global';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -6,8 +6,12 @@ import AuthStackNavigator from './AuthStackNavigator';
 import MainTabNavigator from './MainTabNavigator';
 import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
+import useInviteDeepLink from '../hooks/useInviteDeepLink';
 
 const Stack = createStackNavigator();
+
+// Needed so the invite deep link can navigate from outside a screen.
+const navigationRef = createNavigationContainerRef();
 
 const linking = {
   prefixes: ['readpanda://'],
@@ -36,8 +40,17 @@ const linking = {
 const AppContent = () => {
   const { isAuthenticated } = useAuth();
 
+  // readpanda://join/{CODE} — from the Room Detail QR. Not in `linking` above
+  // because joining is an API call, not just a route.
+  useInviteDeepLink({ isAuthenticated, navigationRef });
+
   return (
-    <NavigationContainer theme={MyTheme} linking={linking} fallback={<Text>Loading...</Text>}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={MyTheme}
+      linking={linking}
+      fallback={<Text>Loading...</Text>}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <Stack.Screen name="Main" component={MainTabNavigator} />

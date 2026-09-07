@@ -26,6 +26,7 @@ const googleSignUpLogin = async () => {
         getBackendUrl('/auth/google'),
         {},
         { Authorization: `Bearer ${token}` },
+        { skipAuthRetry: true },
       ));
 
     } else {
@@ -40,6 +41,7 @@ const googleSignUpLogin = async () => {
           getBackendUrl('/auth/google'),
           {},
           { Authorization: `Bearer ${token}` },
+          { skipAuthRetry: true },
         ));
 
         log.info('Google sign-in response received');
@@ -70,6 +72,8 @@ const emailLogin = async (username, password) => {
       username,
       password: password,
     },
+    {},
+    { skipAuthRetry: true },
   );
 
   if (status === 200) {
@@ -88,7 +92,7 @@ const emailSignUp = async (username, password, email) => {
     username,
     password: password,
     email,
-  });
+  }, {}, { skipAuthRetry: true });
 
   if (status === 201) {
     log.info('Sign Up successful with status:', status);
@@ -104,6 +108,7 @@ const logout = async (username, refreshToken) => {
     getBackendUrl(`/auth/logout?username=${username}`),
     {},
     { Authorization: `Bearer ${refreshToken}` },
+    { skipAuthRetry: true },
   );
   log.info(`User logged out: ${username}`, status);
 };

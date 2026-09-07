@@ -28,6 +28,8 @@ import useRoomStore from '../stores/roomStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import useNotificationStore from '../stores/notificationStore';
+import useFirstRunRecommendation from '../hooks/useFirstRunRecommendation';
+import { seedCollection, topInterest } from '../utils/interests';
 
 // "Curated for you" cards are a fixed 58%/42% split of the section width.
 // LinearGradient (the cover placeholder) needs a hard pixel height here —
@@ -39,22 +41,6 @@ const CURATED_GAP = 12;
 const CURATED_CARD_PADDING = 12;
 const CURATED_COVER_ASPECT = 0.78; // width / height
 
-// RoomLobbyScreen still expects the older snake_case room shape — bridge our
-// normalized (camelCase) store room into what it reads until that screen is
-// updated to the same normalizeRoom() shape.
-const toRoomLobbyParams = (room) => ({
-  room: {
-    ...room,
-    invite_code: room.inviteCode,
-    current_book: room.currentBookTitle ? { title: room.currentBookTitle } : null,
-    members: (room.members || []).map((m) => ({
-      user_id: m.userId,
-      username: m.initials,
-      role: m.isMe ? 'admin' : undefined,
-    })),
-  },
-});
-
 const Home = ({ navigation }) => {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -64,12 +50,13 @@ const Home = ({ navigation }) => {
   const curatedBuckets = useBucketsStore((s) => s.curatedBuckets);
 
   const rooms = useRoomStore((s) => s.rooms);
+  const roomsLoaded = useRoomStore((s) => s.roomsLoaded);
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
-  const loadFixtureRoomsIfEmpty = useRoomStore((s) => s.loadFixtureRoomsIfEmpty);
 
   const activeBook = useReadingProgressStore((s) => s.activeBook);
+  const activeBookLoaded = useReadingProgressStore((s) => s.activeBookLoaded);
   const memberProgress = useReadingProgressStore((s) => s.memberProgress);
-  const loadFixtureActiveBook = useReadingProgressStore((s) => s.loadFixtureActiveBook);
+  const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
 
   const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
   const commentsWaiting = useCommentsStore((s) => s.comments.length + s.lockedComments.length);
@@ -87,12 +74,23 @@ const Home = ({ navigation }) => {
   const username = user?.username || 'Reader';
   const initials = getInitials(username);
 
+  // ── First-run state (FIRST_RUN_3a_3b.md § 3a) ──────────────────────────
+  // isFirstRun-Home: no activeBook AND no rooms. The two mixed states —
+  // a room but no book, a book but no rooms — are handled inline below.
+  const ready = activeBookLoaded && roomsLoaded;
+  const hasRooms = rooms.length > 0;
+  const isFirstRun = ready && !activeBook && !hasRooms;
+  const recommendation = useFirstRunRecommendation(curatedBuckets, user?.preferences);
+  const interest = recommendation?.interest || topInterest(user?.preferences);
+  // The room whose book still has to be chosen — the hero nudge for a reader
+  // who joined a room before picking anything up.
+  const roomAwaitingBook = rooms.find((r) => !r.currentBookTitle) || rooms[0];
+
   const loadHome = async (showRefresh = false) => {
-    const { status: curatedStatus } = await fetchCuratedBuckets();
+    const { status: curatedStatus } = await fetchCuratedBuckets(showRefresh);
     const { status: customStatus } = await fetchCustomBuckets();
     const { status: roomsStatus } = await fetchRooms();
-    loadFixtureRoomsIfEmpty();
-    loadFixtureActiveBook();
+    loadActiveBook();
     loadFixtureComments();
     if (showRefresh && curatedStatus === 200 && customStatus === 200) {
       showToast('Refreshed! 📚', 'success');
@@ -111,6 +109,11 @@ const Home = ({ navigation }) => {
       return;
     }
 
+    // Reading the last-read position out of storage is synchronous, so do it
+    // before any await: it decides between the 1a hero and the 3a first run,
+    // and waiting on the network first would flash the wrong one.
+    loadActiveBook();
+
     if (!hasShownWelcome) {
       setTimeout(() => {
         showToast(`Welcome back, ${username}! 👋`, 'success', 4000);
@@ -121,9 +124,8 @@ const Home = ({ navigation }) => {
     if (user.isNewUser) {
       log.info('Navigating new user to InterestScreen');
       navigation.navigate('Interest');
-    } else {
-      loadHome();
     }
+    loadHome();
     didInit.current = true;
   }, [user, hasShownWelcome]);
 
@@ -146,7 +148,7 @@ const Home = ({ navigation }) => {
   };
 
   const openRoom = (room) => {
-    navigation.navigate('RoomLobbyScreen', toRoomLobbyParams(room));
+    navigation.navigate('RoomLobbyScreen', { room });
   };
 
   const openBucket = (bucket) => {
@@ -156,6 +158,11 @@ const Home = ({ navigation }) => {
       book_count: bucket.bookCount,
     });
   };
+
+  const browseBooks = () => navigation.navigate('LibraryScreen');
+  const createRoom = () => navigation.navigate('CreateRoomScreen');
+  // Rooms tab with the invite-code field already focused.
+  const joinByCode = () => navigation.navigate('Rooms', { focusCode: true });
 
   if (!user) {
     return (
@@ -184,6 +191,13 @@ const Home = ({ navigation }) => {
     return { width: coverWidth, height: coverWidth / CURATED_COVER_ASPECT };
   };
 
+  // On first run the first collection is interest-seeded and says so.
+  const seededBucket = isFirstRun ? seedCollection(curatedBuckets, user?.preferences).bucket : null;
+  const curatedCards = (seededBucket
+    ? [seededBucket, ...curatedBuckets.filter((b) => b.id !== seededBucket.id)]
+    : curatedBuckets
+  ).slice(0, 2);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
@@ -195,14 +209,17 @@ const Home = ({ navigation }) => {
             <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">{username}</Text>
           </View>
           <View style={styles.headerRight}>
-            <Pressable onPress={handleNotificationPress} style={styles.bellWrap}>
-              <Icon name="notifications-outline" size={24} color={DS.colors.onSurfaceVariant} />
-              {unreadCount > 0 && (
-                <View style={styles.notifBadge}>
-                  <Text style={styles.notifBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                </View>
-              )}
-            </Pressable>
+            {/* No bell on first run — nothing can notify you yet. */}
+            {!isFirstRun && (
+              <Pressable onPress={handleNotificationPress} style={styles.bellWrap}>
+                <Icon name="notifications-outline" size={24} color={DS.colors.onSurfaceVariant} />
+                {unreadCount > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                  </View>
+                )}
+              </Pressable>
+            )}
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initials}</Text>
@@ -239,7 +256,8 @@ const Home = ({ navigation }) => {
               <Text style={styles.heroEyebrow}>Continue reading</Text>
               <Text style={styles.heroTitle} numberOfLines={2}>{activeBook.title}</Text>
               <Text style={styles.heroMeta}>
-                Chapter {activeBook.chapter} of {activeBook.totalChapters} · {activeBook.progressPct}%
+                {activeBook.unit === 'page' ? 'Page' : 'Chapter'} {activeBook.chapter} of{' '}
+                {activeBook.totalChapters} · {activeBook.progressPct}%
               </Text>
               <View style={styles.heroTrack}>
                 <LinearGradient
@@ -273,8 +291,75 @@ const Home = ({ navigation }) => {
           </View>
         )}
 
+        {/* ── Room nudge hero (mixed state: a room, but no book yet) ─ */}
+        {ready && !activeBook && hasRooms && roomAwaitingBook && (
+          <View style={styles.heroSection}>
+            <View style={styles.heroCard}>
+              <BookCoverGradient
+                coverUrl={roomAwaitingBook.coverUrl}
+                title={roomAwaitingBook.currentBookTitle || roomAwaitingBook.name}
+                width={112}
+                height={156}
+                borderRadius={16}
+                style={styles.heroCover}
+              />
+              <Text style={styles.heroEyebrow}>Your room is waiting</Text>
+              <Text style={styles.heroTitle} numberOfLines={2}>{roomAwaitingBook.name}</Text>
+              <Text style={styles.heroSubtitle} numberOfLines={1}>
+                {roomAwaitingBook.members?.length
+                  ? `${roomAwaitingBook.members.length} member${roomAwaitingBook.members.length > 1 ? 's' : ''}, no book yet`
+                  : 'No book yet'}
+              </Text>
+              <Text style={styles.heroBody}>
+                Choose the book your room reads together — everyone&apos;s pace and comments start
+                from there.
+              </Text>
+            </View>
+            <GradientPill onPress={() => openRoom(roomAwaitingBook)} style={styles.cta}>
+              <Text style={styles.ctaText}>Choose the book</Text>
+            </GradientPill>
+          </View>
+        )}
+
+        {/* ── First run hero (3a) ────────────────────────────────── */}
+        {isFirstRun && (
+          <View style={styles.heroSection}>
+            <View style={styles.heroCard}>
+              <BookCoverGradient
+                coverUrl={recommendation?.coverUrl}
+                title={recommendation?.title || 'Your first book'}
+                width={112}
+                height={156}
+                borderRadius={16}
+                style={styles.heroCover}
+              />
+              <Text style={styles.heroEyebrow}>Start your first book</Text>
+              <Text style={styles.heroTitle} numberOfLines={2}>
+                {recommendation?.title || 'Find your first book'}
+              </Text>
+              <Text style={styles.heroSubtitle} numberOfLines={1}>
+                {interest ? `Because you chose ${interest}` : 'A good place to start'}
+              </Text>
+              <Text style={styles.heroBody}>
+                Your nightstand is empty. This one&apos;s a good place to start — or browse for your
+                own pick.
+              </Text>
+            </View>
+            <GradientPill onPress={browseBooks} style={styles.cta}>
+              <Text style={styles.ctaText}>Browse books</Text>
+            </GradientPill>
+            <Pressable
+              onPress={createRoom}
+              style={({ pressed }) => [styles.secondaryPill, pressed && styles.pressed]}
+            >
+              <Icon name="people-outline" size={16} color={DS.colors.primary} />
+              <Text style={styles.secondaryPillText}>Start a room with friends</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── Your rooms tonight ─────────────────────────────────── */}
-        {rooms.length > 0 && (
+        {hasRooms && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your rooms tonight</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -300,18 +385,37 @@ const Home = ({ navigation }) => {
           </View>
         )}
 
+        {/* ── Join by code — replaces "Your rooms tonight" until there
+             is a room to show, and stays put for a reader who has a book
+             but no rooms yet. ─────────────────────────────────────── */}
+        {ready && !hasRooms && (
+          <View style={styles.joinRowWrap}>
+            <Pressable
+              onPress={joinByCode}
+              style={({ pressed }) => [styles.joinRow, pressed && styles.pressed]}
+            >
+              <View style={styles.joinIcon}>
+                <Icon name="key-outline" size={15} color={DS.colors.primary} />
+              </View>
+              <Text style={styles.joinText}>Got an invite code from a friend?</Text>
+              <Text style={styles.joinAction}>Join a room</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── Curated for you ────────────────────────────────────── */}
-        {curatedBuckets.length > 0 && (
+        {curatedCards.length > 0 && (
           <View style={[styles.section, styles.lastSection]}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Curated for you</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('LibraryScreen')}>
+              <TouchableOpacity onPress={browseBooks}>
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.curatedRow}>
-              {curatedBuckets.slice(0, 2).map((bucket, i) => {
+              {curatedCards.map((bucket, i) => {
                 const cover = curatedCoverSize(i === 0);
+                const label = seededBucket && i === 0 ? 'From your interests' : bucket.name;
                 return (
                   <TouchableOpacity
                     key={bucket.id}
@@ -320,7 +424,7 @@ const Home = ({ navigation }) => {
                     onPress={() => openBucket(bucket)}
                   >
                     <BookCoverGradient
-                      coverUrl={bucket.coverImageUrl}
+                      coverUrl={bucket.coverImageUrl || bucket.booksPreview?.[0]?.cover_image_url}
                       title={bucket.name}
                       width={cover.width}
                       height={cover.height}
@@ -328,7 +432,7 @@ const Home = ({ navigation }) => {
                       titleFontSize={i === 0 ? 15 : 13}
                       style={styles.curatedCover}
                     />
-                    <Text style={styles.curatedLabel} numberOfLines={1}>{bucket.name}</Text>
+                    <Text style={styles.curatedLabel} numberOfLines={1}>{label}</Text>
                     <Text style={styles.curatedCount}>
                       {bucket.bookCount || 0} {bucket.bookCount === 1 ? 'book' : 'books'}
                     </Text>
@@ -491,6 +595,20 @@ const styles = StyleSheet.create({
     color: DS.colors.onSurfaceVariant,
     marginBottom: 12,
   },
+  // First-run / room-nudge hero: the subtitle and body copy that take the
+  // place of the progress bar and friends row.
+  heroSubtitle: {
+    fontSize: 13,
+    fontFamily: DS.font.medium,
+    color: DS.colors.onSurfaceVariant,
+    marginBottom: 10,
+  },
+  heroBody: {
+    fontSize: 12,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
+    lineHeight: 17,
+  },
   heroTrack: {
     height: 4,
     backgroundColor: DS.colors.surfaceContainerHighest,
@@ -548,6 +666,60 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: DS.font.extraBold,
     color: DS.colors.onPrimary,
+  },
+  secondaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: DS.radius.full,
+    backgroundColor: DS.colors.surfaceContainerHighest,
+  },
+  secondaryPillText: {
+    fontSize: 13,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
+  },
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+
+  // Join by code
+  joinRowWrap: {
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+  joinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: DS.colors.surfaceContainerLow,
+    borderRadius: DS.radius.comment,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  joinIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  joinText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
+  },
+  joinAction: {
+    fontSize: 12,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
   },
 
   // Sections

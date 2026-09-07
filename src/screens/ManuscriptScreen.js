@@ -1,6 +1,7 @@
 // src/screens/ManuscriptScreen.js
 import React, { useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 import PdfViewer from '../components/PdfViewer';
@@ -34,11 +35,15 @@ const ManuscriptScreen = ({ route, navigation }) => {
     addToRecentBooks(book);
 
     return () => {
-      saveProgress(book.book_id, {
-        currentPage: currentPageRef.current,
-        totalPages: totalPagesRef.current,
-        lastReadAt: Date.now(),
-      });
+      saveProgress(
+        book.book_id,
+        {
+          currentPage: currentPageRef.current,
+          totalPages: totalPagesRef.current,
+          lastReadAt: Date.now(),
+        },
+        book,
+      );
       setCurrentBook(null);
     };
   }, [book, setCurrentBook, addToRecentBooks, saveProgress]);
@@ -86,7 +91,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color={DS.colors.onSurface} />
@@ -97,7 +102,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
       <View style={styles.content}>
         {renderContent()}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -37,6 +37,10 @@ class EnhancedStorage {
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN, newToken);
   }
 
+  updateRefreshToken(newRefreshToken) {
+    StorageService.setItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN, newRefreshToken);
+  }
+
   updateUserProfile(updates) {
     const currentProfile = this.getUserProfile();
     if (!currentProfile) return;
@@ -74,14 +78,25 @@ class EnhancedStorage {
   }
 
   // Reading progress (Hybrid approach)
-  saveReadingProgress(manuscriptId, progress) {
+  saveReadingProgress(manuscriptId, progress, book = null) {
     // Store in SQLite for persistence
     StorageService.updateReadingProgress(manuscriptId, progress);
 
-    // Store current position in MMKV for quick access
+    // Store current position in MMKV for quick access. `book` carries just
+    // enough of the manuscript (title/cover/url) for Home's "Continue
+    // reading" hero and the Reading tab to show the real book — including
+    // its real cover image — after a cold start.
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION, {
       manuscriptId,
       progress,
+      book: book
+        ? {
+          book_id: book.book_id,
+          title: book.title,
+          cover_image_url: book.cover_image_url || null,
+          manuscript_url: book.manuscript_url || null,
+        }
+        : null,
       timestamp: Date.now(),
     });
   }

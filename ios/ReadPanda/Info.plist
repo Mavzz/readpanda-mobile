@@ -32,7 +32,19 @@
 				<string>readpanda</string>
 			</array>
 		</dict>
-		<dict/>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google-signin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Required for react-native-app-auth's Google OAuth redirect
+				     (GoogleAuthService.js) to route back into the app; must match
+				     REVERSED_CLIENT_ID in GoogleService-Info.plist. -->
+				<string>com.googleusercontent.apps.439290157125-49ieeb2p2hcrbv0vdaq4qfqchg9i9v8i</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>

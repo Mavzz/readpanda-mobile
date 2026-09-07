@@ -4,121 +4,178 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
+import GradientPill from '../components/GradientPill';
 import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
+
+// Creating a room is one decision (the name) plus one setting (privacy).
+// Invite-only is pre-selected — this is a private-friends product. The
+// description is deferred to the room's page. See design_handoff § 2b.
+const PRIVACY = {
+  invite: {
+    key: 'invite',
+    icon: 'lock-closed',
+    label: 'Invite only',
+    body: 'Only people with your code can join.',
+  },
+  open: {
+    key: 'open',
+    icon: 'globe-outline',
+    label: 'Open',
+    body: 'Anyone on ReadPanda can find it.',
+  },
+};
+
+const STEPS = [
+  { numeral: '1', label: 'Name' },
+  { numeral: '2', label: 'Pick the book' },
+  { numeral: '3', label: 'Invite' },
+];
+
+const PrivacyCard = ({ option, selected, onPress }) => (
+  <Pressable
+    onPress={onPress}
+    style={({ pressed }) => [
+      styles.privacyCard,
+      selected ? styles.privacyCardSelected : styles.privacyCardIdle,
+      pressed && styles.pressed,
+    ]}
+  >
+    <View style={styles.privacyHeader}>
+      <Icon
+        name={option.icon}
+        size={15}
+        color={selected ? DS.colors.primary : DS.colors.onSurfaceVariant}
+      />
+      <Text style={[styles.privacyLabel, selected ? styles.privacyLabelSelected : styles.privacyLabelIdle]}>
+        {option.label}
+      </Text>
+    </View>
+    <Text style={styles.privacyBody}>{option.body}</Text>
+  </Pressable>
+);
+
+const StepsStrip = () => (
+  <View style={[styles.steps, styles.stepsStrip]}>
+    {STEPS.map((step, index) => (
+      <View key={step.numeral} style={styles.steps}>
+        {index > 0 && <View style={styles.stepLine} />}
+        <View style={styles.stepItem}>
+          <View style={[styles.stepCircle, index === 0 && styles.stepCircleActive]}>
+            <Text style={[styles.stepNumeral, index === 0 && styles.stepNumeralActive]}>
+              {step.numeral}
+            </Text>
+          </View>
+          <Text style={styles.stepLabel}>{step.label}</Text>
+        </View>
+      </View>
+    ))}
+  </View>
+);
 
 const CreateRoomScreen = ({ navigation }) => {
   const saveRoom = useRoomStore((state) => state.saveRoom);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [privacy, setPrivacy] = useState(PRIVACY.invite.key);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      showToast('Please enter a room name.', 'error');
+  const trimmedName = name.trim();
+  const canCreate = trimmedName.length > 0 && !saving;
+
+  const handleCreate = async () => {
+    if (!canCreate) return;
+    setSaving(true);
+
+    const isPrivate = privacy === PRIVACY.invite.key;
+    log.info('Creating room:', { name: trimmedName, isPrivate });
+
+    // The API still requires a description — it's collected on the room's
+    // page now, so send an empty one.
+    const { status, response, error } = await saveRoom({
+      name: trimmedName,
+      description: '',
+      isPrivate,
+    });
+
+    if (status === 201 || status === 200) {
+      showToast('Room created', 'success');
+      navigation.replace('RoomLobbyScreen', { room: response });
       return;
     }
 
-    log.info('Creating room:', { name, description, isPrivate });
-
-    const { status, error } = await saveRoom({
-      name: name.trim(),
-      description: description.trim(),
-      isPrivate,
-    });
-    if (status === 201 || status === 200) {
-      showToast(`Room "${name.trim()}" created!`, 'success');
-      navigation.goBack();
-    }
-    else {
-      showToast(error || 'Failed to create room', 'error');
-    }
+    setSaving(false);
+    showToast(error || 'Failed to create room', 'error');
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Icon name="close" size={22} color={DS.colors.onSurfaceVariant} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Room</Text>
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.saveButton, !name.trim() && styles.saveButtonDisabled]}
-            disabled={!name.trim()}
-          >
-            <Text style={styles.saveButtonText}>Create</Text>
-          </TouchableOpacity>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+            >
+              <Icon name="close" size={19} color={DS.colors.onSurface} />
+            </Pressable>
+            <Text style={styles.headerTitle}>New room</Text>
+          </View>
+
+          {/* Name */}
+          <Text style={styles.eyebrow}>NAME YOUR ROOM</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Midnight Club"
+            placeholderTextColor={DS.colors.onSurfaceVariant}
+            selectionColor={DS.colors.primary}
+            maxLength={50}
+            autoFocus
+          />
+          <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
+
+          {/* Privacy */}
+          <Text style={[styles.eyebrow, styles.privacyEyebrow]}>WHO CAN JOIN</Text>
+          <View style={styles.privacyRow}>
+            <PrivacyCard
+              option={PRIVACY.invite}
+              selected={privacy === PRIVACY.invite.key}
+              onPress={() => setPrivacy(PRIVACY.invite.key)}
+            />
+            <PrivacyCard
+              option={PRIVACY.open}
+              selected={privacy === PRIVACY.open.key}
+              onPress={() => setPrivacy(PRIVACY.open.key)}
+            />
+          </View>
+          <Text style={styles.helper}>Add a description later from the room&apos;s page.</Text>
+
+          <View style={styles.spacer} />
+
+          <StepsStrip />
+
+          <GradientPill onPress={handleCreate} disabled={!canCreate} style={styles.cta}>
+            <Text style={styles.ctaText}>Create room</Text>
+          </GradientPill>
         </View>
-
-        {/* Form Content */}
-        <View style={styles.formContent}>
-          {/* Name Input */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Room Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g. Fantasy Book Club"
-              placeholderTextColor={DS.colors.onSurfaceVariant}
-              maxLength={50}
-              autoFocus
-            />
-          </View>
-
-          {/* Description Input */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Description (Optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="What will this room be about?"
-              placeholderTextColor={DS.colors.onSurfaceVariant}
-              multiline
-              numberOfLines={4}
-              maxLength={200}
-            />
-          </View>
-
-          {/* Privacy Toggle */}
-          <View style={styles.privacySection}>
-            <View style={styles.privacyInfo}>
-              <Text style={styles.privacyTitle}>Invite-Only Room</Text>
-              <Text style={styles.privacyDescription}>
-                {isPrivate
-                  ? 'Only people you invite can join this room.'
-                  : 'Anyone can find and join this room.'}
-              </Text>
-            </View>
-            <Switch
-              value={isPrivate}
-              onValueChange={setIsPrivate}
-              trackColor={{ false: DS.colors.surfaceContainerHigh, true: DS.colors.primary }}
-              thumbColor={isPrivate ? DS.colors.onPrimary : DS.colors.onSurfaceVariant}
-            />
-          </View>
-        </View>
-
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -130,102 +187,171 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS.colors.background,
   },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    gap: 14,
+    marginBottom: 26,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: DS.colors.surfaceContainerHigh,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
-    flex: 1,
-  },
-  saveButton: {
-    backgroundColor: DS.colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: DS.radius.full,
-  },
-  saveButtonDisabled: {
-    opacity: 0.3,
-  },
-  saveButtonText: {
-    color: DS.colors.onPrimary,
-    fontWeight: '700',
-    fontSize: 14,
+    letterSpacing: -0.5,
   },
 
-  // Form
-  formContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  inputSection: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 13,
+  // Section eyebrows
+  eyebrow: {
+    fontSize: 11,
+    fontFamily: DS.font.bold,
     color: DS.colors.onSurfaceVariant,
-    marginBottom: 8,
-    fontWeight: '500',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: DS.colors.surfaceContainerHigh,
-    borderRadius: DS.radius.sm,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: DS.colors.onSurface,
-    borderWidth: 1,
-    borderColor: DS.colors.outlineVariant,
-  },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-    paddingTop: 14,
+    letterSpacing: 1,
+    marginBottom: 10,
   },
 
-  // Privacy Section
-  privacySection: {
+  // Name field
+  input: {
+    backgroundColor: DS.colors.surfaceContainerLowest,
+    borderRadius: DS.radius.md,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurface,
+  },
+  helper: {
+    fontSize: 11,
+    fontFamily: DS.font.medium,
+    color: DS.colors.onSurfaceVariant,
+    marginTop: 8,
+    marginHorizontal: 6,
+  },
+
+  // Privacy picker
+  privacyEyebrow: {
+    marginTop: 24,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  privacyCard: {
+    flex: 1,
+    borderRadius: DS.radius.comment,
+  },
+  // The selection ring is the one sanctioned stroke — it's a state, not a
+  // divider. Padding drops to 12 so the 2px border doesn't shift content.
+  privacyCardSelected: {
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    borderWidth: 2,
+    borderColor: DS.colors.primary,
+    padding: 12,
+  },
+  privacyCardIdle: {
+    backgroundColor: DS.colors.surfaceContainerLow,
+    padding: 14,
+  },
+  privacyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: DS.colors.surfaceContainerLow,
-    padding: 16,
-    borderRadius: DS.radius.sm,
-    borderWidth: 1,
-    borderColor: DS.colors.outlineVariant,
-    marginTop: 8,
+    gap: 7,
   },
-  privacyInfo: {
-    flex: 1,
-    paddingRight: 16,
-  },
-  privacyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DS.colors.onSurface,
-    marginBottom: 4,
-  },
-  privacyDescription: {
+  privacyLabel: {
     fontSize: 13,
+  },
+  privacyLabelSelected: {
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.primary,
+  },
+  privacyLabelIdle: {
+    fontFamily: DS.font.bold,
     color: DS.colors.onSurfaceVariant,
-    lineHeight: 18,
+  },
+  privacyBody: {
+    fontSize: 11,
+    fontFamily: DS.font.medium,
+    color: DS.colors.onSurfaceVariant,
+    lineHeight: 15,
+    marginTop: 6,
+  },
+
+  spacer: {
+    flex: 1,
+  },
+
+  // Steps strip
+  steps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  stepsStrip: {
+    marginBottom: 12,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepLine: {
+    width: 14,
+    height: 1,
+    backgroundColor: DS.colors.surfaceContainerHighest,
+  },
+  stepCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: DS.colors.surfaceContainerHighest,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: DS.colors.primary,
+  },
+  stepNumeral: {
+    fontSize: 10,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onSurfaceVariant,
+  },
+  stepNumeralActive: {
+    color: DS.colors.onPrimary,
+  },
+  stepLabel: {
+    fontSize: 12,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
+  },
+
+  // CTA
+  cta: {
+    marginBottom: 28,
+    paddingVertical: 16,
+  },
+  ctaText: {
+    fontSize: 15,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onPrimary,
   },
 });
 

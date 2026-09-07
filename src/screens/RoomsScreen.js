@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
@@ -19,35 +19,39 @@ import useRoomStore from '../stores/roomStore';
 import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
 
-// RoomLobbyScreen still expects the older snake_case room shape — bridge our
-// normalized (camelCase) store room into what it reads until that screen is
-// updated to the same normalizeRoom() shape.
-const toRoomLobbyParams = (room) => ({
-  room: {
-    ...room,
-    invite_code: room.inviteCode,
-    current_book: room.currentBookTitle ? { title: room.currentBookTitle } : null,
-    members: (room.members || []).map((m) => ({
-      user_id: m.userId,
-      username: m.initials,
-      role: m.isMe ? 'admin' : undefined,
-    })),
-  },
-});
-
 // Merges the old Join Room + My Rooms tabs — invite-only clubs, one place.
 // See design_handoff_redesign § 1c.
 const RoomsScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const rooms = useRoomStore((s) => s.rooms);
   const loading = useRoomStore((s) => s.loading);
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
-  const loadFixtureRoomsIfEmpty = useRoomStore((s) => s.loadFixtureRoomsIfEmpty);
+  const joinRoomByCode = useRoomStore((s) => s.joinRoomByCode);
   const [inviteCode, setInviteCode] = useState('');
+  const codeInputRef = useRef(null);
+
+  // The first-run nudges on Home and the Reading tab (FIRST_RUN_3a_3b.md
+  // § 3a/3b) send the reader here with the code field already focused. The
+  // field isn't mounted yet at the moment the tab takes focus, hence the
+  // short delay; the param is cleared afterwards — not before, or clearing it
+  // would re-run this effect and cancel its own timer — so coming back to the
+  // tab later doesn't pop the keyboard again.
+  useFocusEffect(
+    useCallback(() => {
+      if (!route.params?.focusCode) {
+        return undefined;
+      }
+      const timer = setTimeout(() => {
+        codeInputRef.current?.focus();
+        navigation.setParams({ focusCode: undefined });
+      }, 250);
+      return () => clearTimeout(timer);
+    }, [route.params?.focusCode, navigation]),
+  );
 
   const loadRooms = async (showRefresh = false) => {
     const { status } = await fetchRooms();
-    loadFixtureRoomsIfEmpty();
     if (showRefresh) {
       if (status === 200) {
         showToast('Rooms refreshed', 'success');
@@ -65,13 +69,25 @@ const RoomsScreen = () => {
     navigation.navigate('CreateRoomScreen');
   };
 
-  const handleJoinRoom = () => {
-    log.info('Join room pressed with code:', inviteCode.trim());
-    // TODO: wire to the existing join-by-code API call once available on roomStore.
+  const handleJoinRoom = async () => {
+    const code = inviteCode.trim();
+    if (!code) {
+      return;
+    }
+    log.info('Join room pressed with code:', code);
+
+    const { status, response, error } = await joinRoomByCode(code);
+    if (status === 200) {
+      setInviteCode('');
+      showToast(`Joined ${response.name}`, 'success');
+      navigation.navigate('RoomLobbyScreen', { room: response });
+    } else {
+      showToast(error || 'Could not join that room', 'error');
+    }
   };
 
   const openRoom = (room) => {
-    navigation.navigate('RoomLobbyScreen', toRoomLobbyParams(room));
+    navigation.navigate('RoomLobbyScreen', { room });
   };
 
   return (
@@ -102,6 +118,7 @@ const RoomsScreen = () => {
           <View style={styles.inviteField}>
             <Icon name="key-outline" size={16} color={DS.colors.onSurfaceVariant} />
             <TextInput
+              ref={codeInputRef}
               style={styles.inviteInput}
               value={inviteCode}
               onChangeText={(t) => setInviteCode(t.toUpperCase())}

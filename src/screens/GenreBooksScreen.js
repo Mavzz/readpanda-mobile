@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, FlatList, StatusBar, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 import { newBookCard as BookCard } from '../components/Card';
@@ -22,7 +23,7 @@ const GenreBooksScreen = ({ route, navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
       <View style={styles.header}>
@@ -42,7 +43,7 @@ const GenreBooksScreen = ({ route, navigation }) => {
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

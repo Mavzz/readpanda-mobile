@@ -1,17 +1,12 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
+import BookCoverGradient from './BookCoverGradient';
 
-const BUCKET_ICONS = [
-  { name: 'sparkles', color: '#ffddb8' },
-  { name: 'diamond', color: '#e8c49a' },
-  { name: 'star', color: '#ffb95f' },
-  { name: 'trophy', color: '#ffddb8' },
-  { name: 'ribbon', color: '#e8c49a' },
-  { name: 'flame', color: '#ffb95f' },
-];
-
-const getBucketIcon = (index) => BUCKET_ICONS[index % BUCKET_ICONS.length];
+// Curated collection tiles: the collection's best-known cover, full-bleed,
+// with a bottom scrim so the label reads over it (FIRST_RUN_3a_3b.md
+// § "Curated/genre tiles"). No decorative icons — the cover is the artwork.
+const TILE_WIDTH = 150;
+const TILE_HEIGHT = 196;
 
 const CuratedBuckets = ({ navigation, curatedBuckets }) => {
 
@@ -35,27 +30,32 @@ const CuratedBuckets = ({ navigation, curatedBuckets }) => {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item, index }) => {
-          const icon = getBucketIcon(index);
-          return (
-            <TouchableOpacity
-              style={styles.bucketCard}
-              onPress={() => openBucket(item.booksPreview, item.name, item.bookCount)}
-              activeOpacity={0.85}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => openBucket(item.booksPreview, item.name, item.bookCount)}
+            activeOpacity={0.85}
+          >
+            <BookCoverGradient
+              coverUrl={item.coverImageUrl || item.booksPreview?.[0]?.cover_image_url}
+              title={item.name}
+              width={TILE_WIDTH}
+              height={TILE_HEIGHT}
+              borderRadius={DS.radius.md}
+              titleFontSize={14}
+              elevated
+              scrim
             >
-              <View style={styles.iconContainer}>
-                <Icon name={icon.name} size={28} color={icon.color} />
+              <View style={styles.label}>
+                <Text style={styles.bucketCardName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <Text style={styles.bookCount}>
+                  {item.bookCount || 0} {item.bookCount === 1 ? 'book' : 'books'}
+                </Text>
               </View>
-              <Text style={styles.bucketCardName} numberOfLines={2}>
-                {item.name}
-              </Text>
-              <View style={styles.memberInfo}>
-                <Icon name="book-outline" size={14} color={DS.colors.onSurfaceVariant} />
-                <Text style={styles.memberCount}>{item.bookCount || 0} {item.bookCount === 1 ? 'book' : 'books'}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
+            </BookCoverGradient>
+          </TouchableOpacity>
+        )}
       />
     </View>
   );
@@ -74,63 +74,34 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
     letterSpacing: -0.3,
   },
   seeAllText: {
     fontSize: 14,
+    fontFamily: DS.font.semibold,
     color: DS.colors.primary,
-    fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: 24,
     gap: 16,
+    paddingVertical: 4,
   },
-
-  // Bucket card
-  bucketCard: {
-    width: 160,
-    backgroundColor: DS.colors.surfaceContainerLow,
-    borderRadius: DS.radius.lg,
-    padding: 20,
-    marginRight: 16,
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minHeight: 160,
-    borderWidth: 1,
-    borderColor: DS.colors.surfaceContainerHighest,
-    shadowColor: DS.colors.background,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: DS.colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+  label: {
+    padding: 12,
   },
   bucketCardName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
-    marginBottom: 12,
-    lineHeight: 22,
+    lineHeight: 19,
   },
-  memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  memberCount: {
-    fontSize: 13,
+  bookCount: {
+    fontSize: 11,
+    fontFamily: DS.font.medium,
     color: DS.colors.onSurfaceVariant,
-    fontWeight: '600',
+    marginTop: 2,
   },
 });
 

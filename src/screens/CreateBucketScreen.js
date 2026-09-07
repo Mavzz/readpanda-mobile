@@ -229,10 +229,10 @@ const CreateBucketScreen = ({ navigation }) => {
         {/* Book selection header */}
         <View style={styles.selectionHeader}>
           <Text style={styles.selectionTitle}>Pick Books</Text>
-          {selectedIds.size > 0 ? (
+          {selectedIds.length > 0 ? (
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>
-                {selectedIds.size}
+                {selectedIds.length}
               </Text>
             </View>
           ) : (

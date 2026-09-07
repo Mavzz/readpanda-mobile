@@ -12,7 +12,6 @@ import Animated, {
   withSequence,
   withRepeat,
   withTiming, Easing,
-  runOnJS,
 } from 'react-native-reanimated';
 import { NotificationBadge } from './Badge';
 import NotificationList from './NotificationList';

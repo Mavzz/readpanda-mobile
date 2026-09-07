@@ -2,17 +2,13 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import useBucketsStore from '../stores/bucketsStore';
+import BucketTile from './BucketTile';
 
-const BUCKET_ICONS = [
-  { name: 'library', color: '#ffddb8' },
-  { name: 'bookmark', color: '#e8c49a' },
-  { name: 'reader', color: '#ffb95f' },
-  { name: 'book', color: '#ffddb8' },
-  { name: 'albums', color: '#e8c49a' },
-  { name: 'layers', color: '#ffb95f' },
-];
-
-const getBucketIcon = (index) => BUCKET_ICONS[index % BUCKET_ICONS.length];
+// Bucket tiles are composited from the covers the bucket holds — see
+// BucketTile and FIRST_RUN_3a_3b.md § "Tile imagery". The decorative icon
+// per card this used to draw is gone: covers carry the visual interest.
+const TILE_WIDTH = 160;
+const TILE_HEIGHT = 148;
 
 const UserBuckets = ({ navigation, customBuckets }) => {
   const deleteBucket = useBucketsStore((state) => state.deleteBucket);
@@ -64,35 +60,37 @@ const UserBuckets = ({ navigation, customBuckets }) => {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item, index }) => {
-            const icon = getBucketIcon(index);
-            return (
-              <TouchableOpacity
-                style={styles.bucketCard}
-                onPress={() => openBucket(item)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.topRow}>
-                  <View style={styles.iconContainer}>
-                    <Icon name={icon.name} size={28} color={icon.color} />
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteBucket(item)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Icon name="trash-outline" size={18} color={DS.colors.error} />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.bucketCardName} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <View style={styles.memberInfo}>
-                  <Icon name="book-outline" size={14} color={DS.colors.onSurfaceVariant} />
-                  <Text style={styles.memberCount}>{item.bookCount || 0} {item.bookCount === 1 ? 'book' : 'books'}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.bucketCard}
+              onPress={() => openBucket(item)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.tileWrap}>
+                <BucketTile
+                  books={item.booksPreview}
+                  bookCount={item.bookCount}
+                  name={item.name}
+                  width={TILE_WIDTH}
+                  height={TILE_HEIGHT}
+                  borderRadius={DS.radius.sm + 4}
+                />
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteBucket(item)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="trash-outline" size={16} color={DS.colors.error} />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.bucketCardName} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <Text style={styles.memberCount}>
+                {item.bookCount || 0} {item.bookCount === 1 ? 'book' : 'books'}
+              </Text>
+            </TouchableOpacity>
+          )}
         />
       )}
     </View>
@@ -114,7 +112,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
     letterSpacing: -0.3,
   },
@@ -127,53 +125,42 @@ const styles = StyleSheet.create({
 
   // Bucket card
   bucketCard: {
-    width: 160,
+    // The tile is TILE_WIDTH wide and the card pads 12 around it.
+    width: TILE_WIDTH + 24,
     backgroundColor: DS.colors.surfaceContainerLow,
-    borderRadius: DS.radius.lg,
-    padding: 20,
-    marginRight: 16,
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minHeight: 160,
-    borderWidth: 1,
-    borderColor: DS.colors.surfaceContainerHighest,
+    borderRadius: DS.radius.md,
+    padding: 12,
     shadowColor: DS.colors.background,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.3,
     shadowRadius: 24,
     elevation: 4,
   },
-  topRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  tileWrap: {
+    marginBottom: 10,
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: DS.colors.surfaceContainerHighest,
+  deleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: DS.colors.surfaceContainerLowest + 'CC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
   bucketCardName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: DS.font.bold,
     color: DS.colors.onSurface,
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    lineHeight: 19,
   },
   memberCount: {
-    fontSize: 13,
+    fontSize: 12,
+    fontFamily: DS.font.medium,
     color: DS.colors.onSurfaceVariant,
-    fontWeight: '600',
+    marginTop: 2,
   },
 
   // Create bucket CTA
@@ -183,16 +170,13 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: DS.colors.surfaceContainerLow,
     borderRadius: DS.radius.md,
-    borderWidth: 1,
-    borderColor: DS.colors.outlineVariant + '26', // ghost border @ 15%
-    borderStyle: 'dashed',
     paddingHorizontal: 24,
     paddingVertical: 16,
     marginHorizontal: 24,
   },
   createBucketText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurfaceVariant,
   },
 });

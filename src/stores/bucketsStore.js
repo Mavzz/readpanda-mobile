@@ -128,6 +128,24 @@ const useBucketsStore = create((set, get) => ({
     }
   },
 
+  // The list endpoints only ever return a 2-book books_preview — this fetches
+  // the full book list for a single bucket's detail screen.
+  fetchBucketBooks: async (bucketId) => {
+    try {
+      const { status, response } = await makeAuthenticatedGetRequest(
+        getBackendUrl(`/users/me/buckets/${bucketId}/books`),
+      );
+      if (status === 200) {
+        return { status, response: response.books || [] };
+      }
+      log.error('Failed to fetch bucket books:', response);
+      return { status, response: [] };
+    } catch (error) {
+      log.error('Error fetching bucket books:', error);
+      return { status: null, response: [] };
+    }
+  },
+
   // ── Curated Buckets (editorially curated, read-only) ─────────────────
 
   fetchCuratedBuckets: async (showRefresh = false) => {
@@ -166,6 +184,23 @@ const useBucketsStore = create((set, get) => ({
       return { status: null, error };
     } finally {
       set({ loadingCuratedBuckets: false, refreshing: false });
+    }
+  },
+
+  // Same idea as fetchBucketBooks but for a curated bucket's full book list.
+  fetchCuratedBucketBooks: async (bucketId) => {
+    try {
+      const { status, response } = await makeAuthenticatedGetRequest(
+        getBackendUrl(`/home/our-picks/${bucketId}/books`),
+      );
+      if (status === 200) {
+        return { status, response: response.books || [] };
+      }
+      log.error('Failed to fetch curated bucket books:', response);
+      return { status, response: [] };
+    } catch (error) {
+      log.error('Error fetching curated bucket books:', error);
+      return { status: null, response: [] };
     }
   },
 }));
