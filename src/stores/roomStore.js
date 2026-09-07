@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import { getBackendUrl } from '../utils/Helper';
 import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest, makeAuthenticatedPatchRequest, makeAuthenticatedDeleteRequest } from '../services/authenticatedRequests';
+import useReadingProgressStore from './readingProgressStore';
 
 const normalizeRoom = (room) => ({
   id: room.id,
@@ -65,6 +66,10 @@ const useRoomStore = create((set, get) => ({
         // rooms, since Go encodes a nil slice as null), not { rooms: [...] }.
         const normalizedRooms = (response || []).map(normalizeRoom);
         set({ rooms: normalizedRooms });
+        // A room one of the tracked books was attached to may have disappeared
+        // while this device wasn't looking. This is the catch-all the
+        // delete/leave hooks below can't cover.
+        useReadingProgressStore.getState().reconcileRooms(normalizedRooms);
         return { status: 200, response: normalizedRooms };
       } else {
         log.error('Failed to fetch rooms:', response);
@@ -125,6 +130,10 @@ const useRoomStore = create((set, get) => ({
             : [...state.rooms, detail],
           activeRoom: detail,
         }));
+        // Re-attach only (no adopt): opening a room's page shouldn't put its
+        // book on your nightstand, but if you're already reading that book on
+        // your own, this is where the room's pace and comments come back.
+        useReadingProgressStore.getState().attachRoom(detail);
         return { status: 200, response: detail };
       }
       log.error('Failed to fetch room detail:', response);
@@ -156,6 +165,10 @@ const useRoomStore = create((set, get) => ({
             ? state.rooms.map((r) => (r.id === joined.id ? { ...r, ...joined } : r))
             : [...state.rooms, joined],
         }));
+        // Joining a room that is already reading something is an unambiguous
+        // signal: adopt its book if the reader has none, or pick the room's
+        // social layer back up if they're already reading it on their own.
+        useReadingProgressStore.getState().attachRoom(joined, { adopt: true });
         return { status: 200, response: joined };
       }
 
@@ -251,6 +264,9 @@ const useRoomStore = create((set, get) => ({
   // DELETE /room/{id} — creator only. Members cascade with the room.
   deleteRoom: async (roomId) => {
     const previous = get().rooms;
+    // Captured before the optimistic removal below — detachRoom needs the name
+    // to match reading positions persisted before rooms carried an id.
+    const goneName = previous.find((r) => r.id === roomId)?.name || null;
     // Optimistic: the screen navigates away as soon as this resolves.
     set((state) => ({
       rooms: state.rooms.filter((r) => r.id !== roomId),
@@ -264,6 +280,10 @@ const useRoomStore = create((set, get) => ({
 
       if (status === 200 || status === 204) {
         log.info('Room deleted:', roomId);
+        // The reader may be part-way through this room's book. Keep the book
+        // and the progress, drop the room around it — see detachRoom. Done
+        // only on success, since a failed delete reverts below.
+        useReadingProgressStore.getState().detachRoom(roomId, goneName);
         return { status: 204 };
       }
 
@@ -285,6 +305,7 @@ const useRoomStore = create((set, get) => ({
   // DELETE /room/{id}/members/me — for members who aren't the creator.
   leaveRoom: async (roomId) => {
     const previous = get().rooms;
+    const goneName = previous.find((r) => r.id === roomId)?.name || null;
     set((state) => ({
       rooms: state.rooms.filter((r) => r.id !== roomId),
       activeRoom: state.activeRoom?.id === roomId ? null : state.activeRoom,
@@ -298,6 +319,8 @@ const useRoomStore = create((set, get) => ({
 
       if (status === 200 || status === 204) {
         log.info('Left room:', roomId);
+        // Leaving costs you the room, not your place in its book.
+        useReadingProgressStore.getState().detachRoom(roomId, goneName);
         return { status: 204 };
       }
 

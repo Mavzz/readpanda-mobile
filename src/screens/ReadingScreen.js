@@ -9,60 +9,71 @@ import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
+import { showToast } from '../components/Toaster';
 import { duotoneFor, COVER_SHADOW } from '../utils/covers';
+import relativeTime from '../utils/relativeTime';
 import log from '../utils/logger';
 
-// Replaces the old (empty) Current Read tab — the async book-club core made
-// visible: where everyone in the room is, and comments unlocked/locked by
-// chapter. See design_handoff_redesign § 1b.
+// § 4a — the Reading shelf. Every book with a position, grouped by whether a
+// room is behind it: "Reading = my books, Rooms = ours". Tapping a room book
+// opens the pace/comments view (1b); a solo book opens the lighter 4b detail.
 const ReadingScreen = () => {
   const navigation = useNavigation();
-  const activeBook = useReadingProgressStore((s) => s.activeBook);
+  const shelf = useReadingProgressStore((s) => s.shelf);
   const activeBookLoaded = useReadingProgressStore((s) => s.activeBookLoaded);
-  const memberProgress = useReadingProgressStore((s) => s.memberProgress);
   const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
+  const loadShelf = useReadingProgressStore((s) => s.loadShelf);
 
   const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
   const unlockedComments = useCommentsStore((s) => s.unlockedComments);
-  const nextLockedBatch = useCommentsStore((s) => s.nextLockedBatch);
 
   useEffect(() => {
     loadActiveBook();
     loadFixtureComments();
   }, []);
 
-  // This tab stays mounted once visited, so re-check on focus: a book started
-  // from a room (or finished reading) has to show up here without a restart.
+  // This tab stays mounted once visited, so re-read on focus: a book just put
+  // down, or one a room picked, has to appear here without a restart.
   useFocusEffect(
     useCallback(() => {
       loadActiveBook();
-    }, [loadActiveBook]),
+      loadShelf();
+    }, [loadActiveBook, loadShelf]),
   );
-
-  const handleContinue = () => {
-    if (!activeBook) {
-      return;
-    }
-    log.info('Continue chapter pressed for', activeBook.title);
-    navigation.navigate('ManuscriptScreen', {
-      book: {
-        book_id: activeBook.id,
-        title: activeBook.title,
-        cover_image_url: activeBook.coverUrl,
-        manuscript_url: activeBook.manuscriptUrl,
-      },
-    });
-  };
 
   const pickABook = () => navigation.navigate('Home', { screen: 'LibraryScreen' });
   const joinByCode = () => navigation.navigate('Rooms', { focusCode: true });
 
+  const openBook = (book) => {
+    log.info('Opening shelf row:', book.title);
+    navigation.navigate(book.roomName ? 'RoomBookScreen' : 'SoloBookScreen', { bookId: book.id });
+  };
+
+  const readNow = (book) => {
+    navigation.navigate('ManuscriptScreen', {
+      book: {
+        book_id: book.id,
+        title: book.title,
+        cover_image_url: book.coverUrl,
+        manuscript_url: book.manuscriptUrl,
+      },
+    });
+  };
+
+  // A book at 100% has left the shelf — it's counted in the footer instead.
+  const inProgress = shelf.filter((b) => !b.started || b.progressPct < 100);
+  const finishedCount = shelf.length - inProgress.length;
+  const roomBooks = inProgress.filter((b) => b.roomName);
+  const soloBooks = inProgress.filter((b) => !b.roomName);
+  // shelf is already sorted most-recently-read first, so the head of it is the
+  // one row that gets the elevation and the play control.
+  const mostRecentId = inProgress[0]?.id;
+
   // ── 3b: first run ─────────────────────────────────────────────────────
-  // No reading progress yet, so there is no top progress bar and no data on
-  // the screen at all — just the first step of the flow this tab will become.
-  // Rendered only once the last-read position has actually been read back, so
-  // a reader mid-book never sees this flash past.
-  if (!activeBook) {
+  // Nothing read yet, so there is no data on the screen at all — just the
+  // first step of the flow this tab will become. Rendered only once the stored
+  // positions have been read back, so a reader mid-book never sees this flash.
+  if (inProgress.length === 0) {
     if (!activeBookLoaded) {
       return <View style={styles.container} />;
     }
@@ -109,124 +120,147 @@ const ReadingScreen = () => {
     );
   }
 
-  const me = memberProgress.find((m) => m.isMe);
-  const behindOf = memberProgress
-    .filter((m) => !m.isMe && m.progressPct > (me?.progressPct || 0))
-    .sort((a, b) => b.progressPct - a.progressPct)[0];
-  const chaptersBehind = behindOf
-    ? Math.max(1, Math.round(((behindOf.progressPct - (me?.progressPct || 0)) / 100) * activeBook.totalChapters))
-    : 0;
+  const metaFor = (book) => {
+    const position = book.started
+      ? `Page ${book.chapter} of ${book.totalChapters}`
+      : 'Not started yet';
+    return `${position} · ${relativeTime(book.lastReadAt)}`;
+  };
 
-  const unlocked = unlockedComments(activeBook.chapter);
-  const lockedBatch = nextLockedBatch(activeBook.chapter);
+  // Room rows carry the social tail: comments waiting where there are any,
+  // otherwise how the reader stands against the room's pace.
+  const socialTailFor = (book) => {
+    const waiting = unlockedComments(book.chapter).length;
+    if (waiting > 0) {
+      return `${waiting} comment${waiting > 1 ? 's' : ''} waiting`;
+    }
+    const members = book.memberProgress || [];
+    const me = members.find((m) => m.isMe);
+    const ahead = members
+      .filter((m) => !m.isMe && m.progressPct > (me?.progressPct || 0))
+      .sort((a, b) => b.progressPct - a.progressPct)[0];
+    if (!ahead) {
+      return 'Caught up';
+    }
+    const behind = Math.max(
+      1,
+      Math.round(((ahead.progressPct - (me?.progressPct || 0)) / 100) * book.totalChapters),
+    );
+    return `${behind} ch. behind`;
+  };
+
+  const renderRow = (book) => {
+    const isMostRecent = book.id === mostRecentId;
+    return (
+      <Pressable
+        key={book.id}
+        onPress={() => openBook(book)}
+        style={({ pressed }) => [
+          styles.row,
+          isMostRecent && styles.rowElevated,
+          pressed && styles.pressed,
+        ]}
+        accessibilityLabel={`${book.title}, ${metaFor(book)}`}
+        accessibilityRole="button"
+      >
+        <BookCoverGradient
+          coverUrl={book.coverUrl}
+          title={book.title}
+          width={52}
+          height={74}
+          borderRadius={10}
+          titleFontSize={8}
+        />
+        <View style={styles.rowContent}>
+          <View style={styles.rowTitleLine}>
+            <Text style={styles.rowTitle} numberOfLines={1}>{book.title}</Text>
+            {book.roomName ? (
+              <View style={styles.roomChip}>
+                <Icon name="people" size={11} color={DS.colors.primary} />
+                <Text style={styles.roomChipText} numberOfLines={1}>{book.roomName}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.rowTrack}>
+            <LinearGradient
+              colors={[DS.colors.primary, DS.colors.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.rowFill, { width: `${book.progressPct}%` }]}
+            />
+          </View>
+
+          <Text style={styles.rowMeta} numberOfLines={1}>
+            {metaFor(book)}
+            {book.roomName ? ' · ' : ''}
+            {book.roomName ? (
+              <Text style={styles.rowMetaAccent}>{socialTailFor(book)}</Text>
+            ) : null}
+          </Text>
+        </View>
+
+        {/* Only the book you were last in gets a one-tap way back into it. */}
+        {isMostRecent && (
+          <Pressable
+            onPress={() => readNow(book)}
+            style={({ pressed }) => pressed && styles.pressed}
+            accessibilityLabel={`Continue reading ${book.title}`}
+            accessibilityRole="button"
+          >
+            <LinearGradient
+              colors={[DS.colors.primary, DS.colors.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.playButton}
+            >
+              <Icon name="play" size={15} color={DS.colors.onPrimary} />
+            </LinearGradient>
+          </Pressable>
+        )}
+      </Pressable>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <SafeAreaView style={styles.safeTop} edges={['top']}>
-        <View style={styles.topTrack}>
-          <View style={[styles.topFill, { width: `${activeBook.progressPct}%` }]} />
+      <SafeAreaView edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Reading</Text>
+          <Text style={styles.headerSubtitle}>
+            {inProgress.length} in progress
+          </Text>
         </View>
       </SafeAreaView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* ── Book header ─────────────────────────────────────── */}
-        <View style={styles.bookHeader}>
-          <BookCoverGradient
-            coverUrl={activeBook.coverUrl}
-            title={activeBook.title}
-            width={72}
-            height={100}
-            borderRadius={14}
-            titleFontSize={10}
-          />
-          <View style={styles.bookHeaderText}>
-            <Text style={styles.eyebrow}>{activeBook.started ? 'Reading now' : 'Up next'}</Text>
-            <Text style={styles.bookTitle} numberOfLines={2}>{activeBook.title}</Text>
-            <Text style={styles.bookMeta}>
-              {activeBook.started
-                ? `${activeBook.unit === 'page' ? 'Page' : 'Chapter'} ${activeBook.chapter} of ${activeBook.totalChapters}`
-                : 'Not started yet'}
-              {activeBook.roomName ? ` · with ${activeBook.roomName}` : ''}
-            </Text>
-          </View>
-        </View>
-
-        {/* ── Where everyone is ──────────────────────────────── */}
-        <View style={styles.paceCard}>
-          <Text style={styles.paceTitle}>Where everyone is</Text>
-          <View style={styles.paceTrackWrap}>
-            <View style={styles.paceTrack}>
-              <View style={[styles.paceFill, { width: `${activeBook.progressPct}%` }]} />
-            </View>
-            {memberProgress.map((m) => (
-              <View
-                key={m.userId}
-                style={[
-                  styles.paceAvatar,
-                  { left: `${m.progressPct}%` },
-                  m.isMe ? styles.paceAvatarMe : styles.paceAvatarOther,
-                ]}
-              >
-                <Text style={m.isMe ? styles.paceAvatarTextMe : styles.paceAvatarText}>{m.initials}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.paceCaption}>
-            {chaptersBehind > 0
-              ? `You're ${chaptersBehind} chapter${chaptersBehind > 1 ? 's' : ''} behind ${behindOf.initials}. No spoilers — comments unlock as you read.`
-              : 'You\'re caught up with everyone. No spoilers — comments unlock as you read.'}
-          </Text>
-        </View>
-
-        {/* ── Unlocked comments ──────────────────────────────── */}
-        {(unlocked.length > 0 || lockedBatch) && (
-          <View style={styles.commentsSection}>
-            {unlocked.length > 0 && (
-              <Text style={styles.commentsSectionTitle}>
-                Unlocked at Chapter {Math.max(...unlocked.map((c) => c.anchor.chapter))}
-              </Text>
-            )}
-
-            {unlocked.map((c) => (
-              <View key={c.id} style={styles.commentCard}>
-                <View style={styles.commentHeader}>
-                  <View style={styles.commentAvatar}>
-                    <Text style={styles.commentAvatarText}>{c.userInitials}</Text>
-                  </View>
-                  <Text style={styles.commentName}>{c.userName}</Text>
-                  <Text style={styles.commentPage}>· p. {c.anchor.page}</Text>
-                </View>
-                <View style={styles.quoteBlock}>
-                  <Text style={styles.quoteText}>&ldquo;{c.quote}&rdquo;</Text>
-                </View>
-                <Text style={styles.commentBody}>{c.body}</Text>
-              </View>
-            ))}
-
-            {lockedBatch && (
-              <View style={styles.lockedCard}>
-                <View style={styles.lockedIcon}>
-                  <Icon name="lock-closed" size={16} color={DS.colors.onSurfaceVariant} />
-                </View>
-                <View style={styles.lockedText}>
-                  <Text style={styles.lockedTitle}>
-                    {lockedBatch.count} comment{lockedBatch.count > 1 ? 's' : ''} waiting at Chapter {lockedBatch.chapter}
-                  </Text>
-                  <Text style={styles.lockedSubtitle}>Keep reading to unlock them</Text>
-                </View>
-              </View>
-            )}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {roomBooks.length > 0 && (
+          <View style={styles.group}>
+            <Text style={styles.groupEyebrow}>In a room</Text>
+            {roomBooks.map(renderRow)}
           </View>
         )}
 
-        <GradientPill onPress={handleContinue} style={styles.cta}>
-          <Text style={styles.ctaText}>
-            {activeBook.started
-              ? `Continue ${activeBook.unit === 'page' ? 'Page' : 'Chapter'} ${activeBook.chapter}`
-              : 'Start reading'}
-          </Text>
-        </GradientPill>
+        {soloBooks.length > 0 && (
+          <View style={styles.group}>
+            <Text style={styles.groupEyebrow}>Reading solo</Text>
+            {soloBooks.map(renderRow)}
+          </View>
+        )}
+
+        {finishedCount > 0 && (
+          <Pressable
+            onPress={() => showToast('Your finished books are coming soon', 'info')}
+            style={({ pressed }) => [styles.finishedLink, pressed && styles.pressed]}
+            accessibilityRole="button"
+          >
+            <Icon name="checkmark-done" size={15} color={DS.colors.primary} />
+            <Text style={styles.finishedText}>
+              Finished · {finishedCount} book{finishedCount > 1 ? 's' : ''}
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -237,236 +271,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS.colors.background,
   },
-  safeTop: {
-    backgroundColor: DS.colors.background,
-  },
-  content: {
-    flex: 1,
-  },
-
-  // Top glow progress bar (the signature bar from DESIGN.md, previously unused)
-  topTrack: {
-    height: 4,
-    backgroundColor: DS.colors.surfaceContainer,
-  },
-  topFill: {
-    height: '100%',
-    backgroundColor: DS.colors.primary,
-    shadowColor: DS.colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-  },
-
-  // Book header
-  bookHeader: {
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 22,
-  },
-  bookHeaderText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontFamily: DS.font.bold,
-    color: DS.colors.onSurfaceVariant,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  bookTitle: {
-    fontSize: 22,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onSurface,
-    letterSpacing: -0.4,
-    lineHeight: 26,
-  },
-  bookMeta: {
-    fontSize: 13,
-    fontFamily: DS.font.medium,
-    color: DS.colors.onSurfaceVariant,
-    marginTop: 4,
-  },
-
-  // Where everyone is
-  paceCard: {
-    margin: 24,
-    marginBottom: 0,
-    backgroundColor: DS.colors.surfaceContainerLow,
-    borderRadius: DS.radius.md,
-    padding: 20,
-    paddingTop: 18,
-  },
-  paceTitle: {
-    fontSize: 13,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onSurface,
-    marginBottom: 14,
-  },
-  paceTrackWrap: {
-    position: 'relative',
-    marginHorizontal: 6,
-    marginBottom: 26,
-    paddingTop: 12,
-  },
-  paceTrack: {
-    height: 6,
-    backgroundColor: DS.colors.surfaceContainerHighest,
-    borderRadius: DS.radius.full,
-    overflow: 'hidden',
-  },
-  paceFill: {
-    height: '100%',
-    borderRadius: DS.radius.full,
-    backgroundColor: DS.colors.primary,
-  },
-  paceAvatar: {
-    position: 'absolute',
-    top: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginLeft: -12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: DS.colors.surfaceContainerLow,
-  },
-  paceAvatarMe: {
-    backgroundColor: DS.colors.primary,
-  },
-  paceAvatarOther: {
-    backgroundColor: DS.colors.surfaceContainerHighest,
-  },
-  paceAvatarText: {
-    fontSize: 9,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onSurface,
-  },
-  paceAvatarTextMe: {
-    fontSize: 9,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onPrimary,
-  },
-  paceCaption: {
-    fontSize: 12,
-    fontFamily: DS.font.semibold,
-    color: DS.colors.onSurfaceVariant,
-  },
-
-  // Comments
-  commentsSection: {
-    margin: 24,
-    marginBottom: 0,
-  },
-  commentsSectionTitle: {
-    fontSize: 13,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onSurface,
-    marginBottom: 12,
-  },
-  commentCard: {
-    backgroundColor: DS.colors.surfaceContainerGlass,
-    borderRadius: DS.radius.comment,
-    padding: 16,
-    marginBottom: 10,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  commentAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: DS.colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentAvatarText: {
-    fontSize: 9,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onSurface,
-  },
-  commentName: {
-    fontSize: 12,
-    fontFamily: DS.font.bold,
-    color: DS.colors.onSurface,
-  },
-  commentPage: {
-    fontSize: 11,
-    fontFamily: DS.font.regular,
-    color: DS.colors.onSurfaceVariant,
-  },
-  quoteBlock: {
-    borderRadius: DS.radius.sm,
-    backgroundColor: DS.colors.background,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  quoteText: {
-    fontFamily: 'Georgia',
-    fontStyle: 'italic',
-    fontSize: 12,
-    color: DS.colors.onSurfaceVariant,
-  },
-  commentBody: {
-    fontSize: 13,
-    fontFamily: DS.font.regular,
-    color: DS.colors.onSurface,
-    lineHeight: 19,
-  },
-  lockedCard: {
-    borderRadius: DS.radius.comment,
-    backgroundColor: DS.colors.surfaceContainerLow,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  lockedIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: DS.colors.surfaceContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lockedText: {
-    flex: 1,
-  },
-  lockedTitle: {
-    fontSize: 13,
-    fontFamily: DS.font.bold,
-    color: DS.colors.onSurface,
-  },
-  lockedSubtitle: {
-    fontSize: 12,
-    fontFamily: DS.font.medium,
-    color: DS.colors.onSurfaceVariant,
-    marginTop: 2,
-  },
-
-  // CTA
-  cta: {
-    margin: 24,
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  ctaText: {
-    fontSize: 15,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onPrimary,
-  },
-
-  // First run (3b)
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -520,9 +324,143 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.bold,
     color: DS.colors.primary,
   },
+  ctaText: {
+    fontSize: 15,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onPrimary,
+  },
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+
+  // Header (tab root — no back button)
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onSurface,
+    letterSpacing: -0.6,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: DS.font.medium,
+    color: DS.colors.onSurfaceVariant,
+    marginTop: 3,
+  },
+  content: {
+    paddingBottom: 32,
+  },
+
+  // Groups
+  group: {
+    paddingHorizontal: 24,
+    paddingTop: 22,
+  },
+  groupEyebrow: {
+    fontSize: 11,
+    fontFamily: DS.font.bold,
+    color: DS.colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+
+  // Rows
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: DS.colors.surfaceContainer,
+    borderRadius: 22,
+    padding: 14,
+    marginBottom: 10,
+  },
+  rowElevated: {
+    shadowColor: DS.colors.background,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 8,
+  },
+  rowContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowTitleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  rowTitle: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onSurface,
+  },
+  roomChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 130,
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+    borderRadius: DS.radius.full,
+    backgroundColor: DS.colors.surfaceContainerHighest,
+  },
+  roomChipText: {
+    flexShrink: 1,
+    fontSize: 10,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
+  },
+  rowTrack: {
+    height: 5,
+    borderRadius: DS.radius.full,
+    backgroundColor: DS.colors.surfaceContainerLowest,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  rowFill: {
+    height: '100%',
+    borderRadius: DS.radius.full,
+    // So a book a few pages in still reads as started rather than as an empty
+    // track.
+    minWidth: 8,
+  },
+  rowMeta: {
+    fontSize: 11,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
+  },
+  rowMetaAccent: {
+    color: DS.colors.primary,
+  },
+  playButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Finished
+  finishedLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 22,
+  },
+  finishedText: {
+    fontSize: 12,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
   },
 });
 

@@ -58,6 +58,7 @@ const Home = ({ navigation }) => {
   const activeBookLoaded = useReadingProgressStore((s) => s.activeBookLoaded);
   const memberProgress = useReadingProgressStore((s) => s.memberProgress);
   const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
+  const attachRoom = useReadingProgressStore((s) => s.attachRoom);
 
   const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
   const commentsWaiting = useCommentsStore((s) => s.comments.length + s.lockedComments.length);
@@ -84,8 +85,25 @@ const Home = ({ navigation }) => {
   const recommendation = useFirstRunRecommendation(curatedBuckets, user?.preferences);
   const interest = recommendation?.interest || topInterest(user?.preferences);
   // The room whose book still has to be chosen — the hero nudge for a reader
-  // who joined a room before picking anything up.
-  const roomAwaitingBook = rooms.find((r) => !r.currentBookTitle) || rooms[0];
+  // who joined a room before picking anything up. Strictly a room with no
+  // book: joining one that has already chosen adopts its book (attachRoom), so
+  // a room that isn't waiting on anyone must not fall through to a nudge that
+  // tells you to pick a book that's already picked.
+  const roomAwaitingBook = rooms.find((r) => !r.currentBookTitle);
+  // Choosing what a room reads is creator-only, so a member gets told who
+  // they're waiting on rather than a button that would fail. my-rooms doesn't
+  // return members yet — like Room Detail, assume the viewer can act until it
+  // says otherwise.
+  const roomCreator = roomAwaitingBook?.members?.find((m) => m.isCreator);
+  const iPickTheBook = !roomCreator || roomCreator.name === username;
+  // A room reading something other than what's on the nightstand. The hero
+  // stays the reader's own — this is offered under it as an explicit swap,
+  // never taken automatically.
+  const roomWithOtherBook = activeBook
+    ? rooms.find((r) => r.currentBookId
+      && r.currentBookId !== activeBook.id
+      && r.id !== activeBook.roomId)
+    : null;
 
   const loadHome = async (showRefresh = false) => {
     const { status: curatedStatus } = await fetchCuratedBuckets(showRefresh);
@@ -161,6 +179,13 @@ const Home = ({ navigation }) => {
 
   const openRoom = (room) => {
     navigation.navigate('RoomLobbyScreen', { room });
+  };
+
+  // The reader chose to read what their room is reading. `force` because
+  // attachRoom deliberately won't displace a book on its own.
+  const switchToRoomBook = (room) => {
+    log.info('Switching to', room.currentBookTitle, 'with', room.name);
+    attachRoom(room, { force: true });
   };
 
   const openBucket = (bucket) => {
@@ -315,13 +340,37 @@ const Home = ({ navigation }) => {
           </View>
         )}
 
+        {/* ── Your room is reading something else ────────────────── */}
+        {ready && roomWithOtherBook && (
+          <Pressable
+            onPress={() => switchToRoomBook(roomWithOtherBook)}
+            style={({ pressed }) => [styles.swapCard, pressed && styles.pressed]}
+          >
+            <BookCoverGradient
+              coverUrl={roomWithOtherBook.coverUrl}
+              title={roomWithOtherBook.currentBookTitle}
+              width={40}
+              height={56}
+              borderRadius={8}
+              titleFontSize={7}
+            />
+            <View style={styles.swapText}>
+              <Text style={styles.swapTitle} numberOfLines={1}>
+                {roomWithOtherBook.name} is reading {roomWithOtherBook.currentBookTitle}
+              </Text>
+              <Text style={styles.swapBody}>Read this instead — your place here is kept</Text>
+            </View>
+            <Icon name="chevron-forward" size={18} color={DS.colors.primary} />
+          </Pressable>
+        )}
+
         {/* ── Room nudge hero (mixed state: a room, but no book yet) ─ */}
         {ready && !activeBook && hasRooms && roomAwaitingBook && (
           <View style={styles.heroSection}>
             <View style={styles.heroCard}>
               <BookCoverGradient
                 coverUrl={roomAwaitingBook.coverUrl}
-                title={roomAwaitingBook.currentBookTitle || roomAwaitingBook.name}
+                title={roomAwaitingBook.name}
                 width={112}
                 height={156}
                 borderRadius={16}
@@ -335,12 +384,15 @@ const Home = ({ navigation }) => {
                   : 'No book yet'}
               </Text>
               <Text style={styles.heroBody}>
-                Choose the book your room reads together — everyone&apos;s pace and comments start
-                from there.
+                {iPickTheBook
+                  ? 'Choose the book your room reads together — everyone\'s pace and comments start from there.'
+                  : `Waiting on ${roomCreator?.name || 'the room\'s creator'} to choose the book. Everyone's pace and comments start from there.`}
               </Text>
             </View>
             <GradientPill onPress={() => openRoom(roomAwaitingBook)} style={styles.cta}>
-              <Text style={styles.ctaText}>Choose the book</Text>
+              <Text style={styles.ctaText}>
+                {iPickTheBook ? 'Choose the book' : 'Open the room'}
+              </Text>
             </GradientPill>
           </View>
         )}
@@ -710,6 +762,33 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+
+  // "Your room is reading something else" — an offer, deliberately quieter
+  // than the hero it sits under.
+  swapCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 24,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: DS.radius.comment,
+    backgroundColor: DS.colors.surfaceContainer,
+  },
+  swapText: {
+    flex: 1,
+  },
+  swapTitle: {
+    fontSize: 13,
+    fontFamily: DS.font.bold,
+    color: DS.colors.onSurface,
+    marginBottom: 3,
+  },
+  swapBody: {
+    fontSize: 11,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
   },
 
   // Join by code

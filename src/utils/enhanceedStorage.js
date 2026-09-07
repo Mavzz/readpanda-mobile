@@ -87,6 +87,31 @@ class EnhancedStorage {
     return StorageService.getManuscripts({ isFavorite: true });
   }
 
+  // ── Reading positions (MMKV) ────────────────────────────────────────
+  // One entry per book, keyed by book id, plus a pointer at the one read most
+  // recently. This used to be a single slot, so opening a second book erased
+  // the first one's position — the row survived in SQLite, but nothing ever
+  // read it back, and reopening the first book restarted it at page one.
+  readingPositionsKey() {
+    return this.scopedKey(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION);
+  }
+
+  getReadingPositions() {
+    const stored = StorageService.getItem(this.readingPositionsKey());
+    if (!stored) {
+      return { lastBookId: null, books: {} };
+    }
+    // Positions written by the single-slot version read as one entry, so an
+    // upgrade keeps the book the reader was on rather than losing it.
+    if (stored.manuscriptId) {
+      return {
+        lastBookId: stored.manuscriptId,
+        books: { [stored.manuscriptId]: stored },
+      };
+    }
+    return { lastBookId: stored.lastBookId || null, books: stored.books || {} };
+  }
+
   // Reading progress (Hybrid approach)
   saveReadingProgress(manuscriptId, progress, book = null) {
     // MMKV first, and on its own: this is what the Home hero and the Reading
@@ -96,13 +121,16 @@ class EnhancedStorage {
     // every save threw before reaching here and no reading position was ever
     // persisted.
     //
-    // Store current position in MMKV for quick access. `book` carries just
-    // enough of the manuscript (title/cover/url) for Home's "Continue
-    // reading" hero and the Reading tab to show the real book — including
-    // its real cover image — after a cold start.
-    StorageService.setItem(this.scopedKey(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION), {
+    // `book` carries just enough of the manuscript (title/cover/url) for
+    // Home's "Continue reading" hero and the Reading tab to show the real
+    // book — including its real cover image — after a cold start.
+    const { books } = this.getReadingPositions();
+    const existing = books[manuscriptId];
+    const entry = {
       manuscriptId,
       progress,
+      // A save that doesn't carry the book keeps what we already knew about
+      // it, rather than blanking the hero's title and cover.
       book: book
         ? {
           book_id: book.book_id,
@@ -111,12 +139,22 @@ class EnhancedStorage {
           manuscript_url: book.manuscript_url || null,
           // The room the book is being read with, when it was chosen in one,
           // and its members — so the Reading tab's pace card can name real
-          // people after a cold start instead of the demo fixture.
+          // people after a cold start instead of the demo fixture. The id is
+          // what lets a deleted or left room find the books it was attached to.
+          room_id: book.room_id || null,
           room_name: book.room_name || null,
           room_members: book.room_members || null,
+          // "This book explicitly has no room" — set once its room is gone.
+          // Distinguishes that from "never had one", which gets the fixture.
+          solo: !!book.solo,
         }
-        : null,
+        : existing?.book || null,
       timestamp: Date.now(),
+    };
+
+    StorageService.setItem(this.readingPositionsKey(), {
+      lastBookId: manuscriptId,
+      books: { ...books, [manuscriptId]: entry },
     });
 
     // SQLite is the durable per-user history: reading_progress is keyed
@@ -143,7 +181,46 @@ class EnhancedStorage {
   }
 
   getCurrentReadingPosition() {
-    return StorageService.getItem(this.scopedKey(STORAGE_CATEGORIES.MMKV.LAST_READ_POSITION));
+    const { lastBookId, books } = this.getReadingPositions();
+    return (lastBookId && books[lastBookId]) || null;
+  }
+
+  getReadingPosition(bookId) {
+    return this.getReadingPositions().books[bookId] || null;
+  }
+
+  // Rewrites just the stored *book* record for one position — which room it
+  // belongs to, mainly. Deliberately leaves the progress alone and does not
+  // move the "read most recently" pointer: detaching a room from a book you
+  // aren't currently reading must not promote it onto the hero.
+  updateReadingPositionBook(bookId, fields) {
+    const { lastBookId, books } = this.getReadingPositions();
+    const entry = books[bookId];
+    if (!entry) {
+      return;
+    }
+    StorageService.setItem(this.readingPositionsKey(), {
+      lastBookId,
+      books: { ...books, [bookId]: { ...entry, book: { ...entry.book, ...fields } } },
+    });
+  }
+
+  // Forgets one book's position — used when the only reason the app was
+  // tracking it was a room that has since been deleted or left.
+  clearReadingPosition(bookId) {
+    const { lastBookId, books } = this.getReadingPositions();
+    if (!books[bookId]) {
+      return;
+    }
+    const remaining = { ...books };
+    delete remaining[bookId];
+    // Dropping the book the pointer named hands the hero to whatever was read
+    // most recently before it, rather than leaving Home with nothing.
+    const nextLast = lastBookId === bookId
+      ? Object.values(remaining)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0]?.manuscriptId || null
+      : lastBookId;
+    StorageService.setItem(this.readingPositionsKey(), { lastBookId: nextLast, books: remaining });
   }
 
   // Cache management (MMKV)

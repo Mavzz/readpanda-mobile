@@ -88,6 +88,10 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   const fetchCustomBuckets = useBucketsStore((s) => s.fetchCustomBuckets);
   const fetchCuratedBuckets = useBucketsStore((s) => s.fetchCuratedBuckets);
   const startBook = useReadingProgressStore((s) => s.startBook);
+  const loadProgress = useReadingProgressStore((s) => s.loadProgress);
+  // Subscribed, not just read once: coming back from the reader has to move
+  // the room's progress bar without a remount.
+  const progressMap = useReadingProgressStore((s) => s.progress);
 
   const selfName = user?.username || 'You';
   const inviteCode = room?.inviteCode || room?.invite_code || null;
@@ -96,6 +100,33 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   const bookTitle = currentBook?.title || room?.currentBookTitle || null;
   const bucketBooks = bucket?.books || [];
   const upNext = bucketBooks.filter((b) => bookIdOf(b) !== bookIdOf(currentBook));
+
+  // How far into the room's book the reader actually is. There is no
+  // per-member progress endpoint yet, so what the room can honestly show is
+  // this reader's own position — groupProgressPct takes over the moment the
+  // API starts returning it.
+  const roomBookId = bookIdOf(currentBook) || room?.currentBookId || null;
+  const roomProgress = (roomBookId && progressMap[roomBookId])
+    || (roomBookId ? loadProgress(roomBookId) : null);
+  const pagesRead = roomProgress?.currentPage || 0;
+  const roomTotalPages = roomProgress?.totalPages || 0;
+  const startedInRoom = roomTotalPages > 0;
+  const myPct = startedInRoom ? Math.round(((pagesRead + 1) / roomTotalPages) * 100) : 0;
+  const shownPct = room?.groupProgressPct > 0 ? room.groupProgressPct : myPct;
+  const progressLabel = room?.groupProgressPct > 0
+    ? `${room.groupProgressPct}% through · together`
+    : startedInRoom
+      ? `Page ${pagesRead + 1} of ${roomTotalPages} · ${myPct}% · your progress`
+      : 'Not started yet';
+
+  // Once reading has begun the room is committed. Swapping the book out from
+  // under people would strand everyone's progress and comments on a book the
+  // room is no longer reading, so the choice is made once.
+  const bookLocked = startedInRoom;
+  const refuseChange = () => showToast(
+    'Reading has started — this book is locked for the room',
+    'info',
+  );
 
   useEffect(() => {
     // GET /room/{id} brings the real members, current book and bucket.
@@ -173,6 +204,8 @@ const RoomLobbyScreen = ({ navigation, route }) => {
       : null);
 
     const stored = book && startBook(book, {
+      // The id is what lets deleting or leaving this room find the book again.
+      roomId: room?.id,
       roomName: room?.name,
       // Real members, so the Reading tab's pace card shows this room's people
       // rather than the 1b demo fixture.
@@ -201,6 +234,10 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   };
 
   const handlePickBook = (item) => {
+    if (bookLocked) {
+      refuseChange();
+      return;
+    }
     const picked = books.find((b) => bookIdOf(b) === item.id) || item;
     applyReading({ bucket: null, currentBook: picked }, `Now reading ${item.title}`);
   };
@@ -221,6 +258,10 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   };
 
   const handlePickBucketBook = (item) => {
+    if (bookLocked) {
+      refuseChange();
+      return;
+    }
     const picked = (pendingBucket?.books || []).find((b) => bookIdOf(b) === item.id) || item;
     const nextBucket = pendingBucket || bucket;
     setPendingBucket(null);
@@ -233,6 +274,10 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   // "Finish book → choose next": creator swaps the current book for another
   // one from the bucket (kept simple — no vote).
   const handleSwapCurrentBook = (book) => {
+    if (bookLocked) {
+      refuseChange();
+      return;
+    }
     applyReading({ bucket, currentBook: book }, `Now reading ${book.title}`);
   };
 
@@ -342,17 +387,22 @@ const RoomLobbyScreen = ({ navigation, route }) => {
               />
               <View style={styles.bookHeroText}>
                 <Text style={styles.bookHeroTitle} numberOfLines={2}>{bookTitle}</Text>
-                <Text style={styles.bookHeroMeta}>
-                  {room?.groupProgressPct > 0
-                    ? `${room.groupProgressPct}% through · together`
-                    : 'Not started yet'}
-                </Text>
+                <Text style={styles.bookHeroMeta}>{progressLabel}</Text>
                 <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${room?.groupProgressPct || 0}%` }]} />
+                  <View style={[styles.progressFill, { width: `${shownPct}%` }]} />
                 </View>
               </View>
               <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
             </Pressable>
+
+            {bookLocked && (
+              <View style={styles.lockedRow}>
+                <Icon name="lock-closed" size={13} color={DS.colors.onSurfaceVariant} />
+                <Text style={styles.lockedRowText}>
+                  Reading has started — this book is locked for the room
+                </Text>
+              </View>
+            )}
 
             {bucket ? (
               /* STATE B — reading through a bucket: what's queued after this */
@@ -370,8 +420,14 @@ const RoomLobbyScreen = ({ navigation, route }) => {
                       <Pressable
                         key={bookIdOf(book)}
                         onPress={() => handleSwapCurrentBook(book)}
-                        style={({ pressed }) => pressed && styles.pressed}
-                        accessibilityLabel={`Read ${book.title} next`}
+                        disabled={bookLocked}
+                        style={({ pressed }) => [
+                          pressed && styles.pressed,
+                          bookLocked && styles.upNextLocked,
+                        ]}
+                        accessibilityLabel={bookLocked
+                          ? `${book.title}, queued — the room's book is locked`
+                          : `Read ${book.title} next`}
                         accessibilityRole="button"
                       >
                         <BookCoverGradient
@@ -391,13 +447,17 @@ const RoomLobbyScreen = ({ navigation, route }) => {
                 </View>
               )
             ) : (
-              /* STATE C — standalone book: let the room graduate to a list */
-              <Pressable
-                onPress={openBucketPicker}
-                style={({ pressed }) => [styles.addBucket, pressed && styles.pressed]}
-              >
-                <Text style={styles.addBucketText}>Add a bucket</Text>
-              </Pressable>
+              /* STATE C — standalone book: let the room graduate to a list.
+                 Not once reading has started: picking a book from the new
+                 bucket is what changes the room's current book. */
+              !bookLocked && (
+                <Pressable
+                  onPress={openBucketPicker}
+                  style={({ pressed }) => [styles.addBucket, pressed && styles.pressed]}
+                >
+                  <Text style={styles.addBucketText}>Add a bucket</Text>
+                </Pressable>
+              )
             )}
           </>
         ) : (
@@ -592,6 +652,22 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     paddingBottom: 40,
+  },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 10,
+    paddingHorizontal: 2,
+  },
+  lockedRowText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
+  },
+  upNextLocked: {
+    opacity: 0.55,
   },
   pressed: {
     opacity: 0.85,

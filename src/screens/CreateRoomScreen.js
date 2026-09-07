@@ -82,8 +82,13 @@ const StepsStrip = () => (
   </View>
 );
 
-const CreateRoomScreen = ({ navigation }) => {
+const CreateRoomScreen = ({ navigation, route }) => {
   const saveRoom = useRoomStore((state) => state.saveRoom);
+  const setRoomReading = useRoomStore((state) => state.setRoomReading);
+  // 4b's "start a room with this book": the new room opens already reading it,
+  // so the reader's progress carries straight over instead of them having to
+  // find the book again in the picker.
+  const seedBook = route?.params?.seedBook || null;
   const [name, setName] = useState('');
   const [privacy, setPrivacy] = useState(PRIVACY.invite.key);
   const [saving, setSaving] = useState(false);
@@ -107,7 +112,18 @@ const CreateRoomScreen = ({ navigation }) => {
     });
 
     if (status === 201 || status === 200) {
-      showToast('Room created', 'success');
+      if (seedBook) {
+        // Best-effort: a room that exists but hasn't taken the book yet is
+        // still a room, and the lobby's picker is right there.
+        const { status: readingStatus } = await setRoomReading(response.id, {
+          bucket: null,
+          currentBook: seedBook,
+        });
+        if (readingStatus !== 200) {
+          log.error('Room created but could not seed its book:', seedBook.title);
+        }
+      }
+      showToast(seedBook ? `Room created — reading ${seedBook.title}` : 'Room created', 'success');
       navigation.replace('RoomLobbyScreen', { room: response });
       return;
     }

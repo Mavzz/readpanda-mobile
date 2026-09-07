@@ -5,6 +5,8 @@ import { Text, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import ReadingScreen from '../screens/ReadingScreen';
+import RoomBookScreen from '../screens/RoomBookScreen';
+import SoloBookScreen from '../screens/SoloBookScreen';
 import RoomsScreen from '../screens/RoomsScreen';
 import InterestScreen from '../screens/InterestScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -60,6 +62,25 @@ const HomeStackNavigator = () => {
   );
 };
 
+// Stack navigator for the Reading tab — the shelf (4a) and the two detail
+// views a row can open: the room read (1b) and the solo read (4b).
+const ReadingStackNavigator = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        presentation: 'card',
+        animationEnabled: true,
+        cardStyle: { backgroundColor: DS.colors.background },
+      }}
+    >
+      <Stack.Screen name="ReadingMain" component={ReadingScreen} />
+      <Stack.Screen name="RoomBookScreen" component={RoomBookScreen} />
+      <Stack.Screen name="SoloBookScreen" component={SoloBookScreen} />
+    </Stack.Navigator>
+  );
+};
+
 // 3-tab IA per design_handoff_redesign § 1a/1b/1c: Home · Reading · Rooms.
 // No blur library is installed (@react-native-community/blur etc.), so the
 // glass tab bar falls back to a solid surfaceContainerHigh per the handoff's
@@ -94,7 +115,7 @@ const TabNavigator = () => {
       />
       <Tab.Screen
         name="Reading"
-        component={ReadingScreen}
+        component={ReadingStackNavigator}
         options={{
           tabBarLabel: tabLabel('Reading'),
           tabBarIcon: ({ color, focused }) => (
