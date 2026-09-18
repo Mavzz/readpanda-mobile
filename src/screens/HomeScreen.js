@@ -58,10 +58,16 @@ const Home = ({ navigation }) => {
   const activeBookLoaded = useReadingProgressStore((s) => s.activeBookLoaded);
   const memberProgress = useReadingProgressStore((s) => s.memberProgress);
   const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
+  const refreshMemberProgress = useReadingProgressStore((s) => s.refreshMemberProgress);
   const attachRoom = useReadingProgressStore((s) => s.attachRoom);
 
-  const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
-  const commentsWaiting = useCommentsStore((s) => s.comments.length + s.lockedComments.length);
+  const loadComments = useCommentsStore((s) => s.loadComments);
+  // Scoped to the hero. This count is rendered inside the hero card beside
+  // that book's friend avatars, so a global tally across every book on the
+  // shelf would be describing the wrong book.
+  const commentsWaiting = useCommentsStore(
+    (s) => s.byBook[activeBook?.id]?.unreadCount || 0,
+  );
 
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
@@ -110,7 +116,16 @@ const Home = ({ navigation }) => {
     const { status: customStatus } = await fetchCustomBuckets();
     const { status: roomsStatus } = await fetchRooms();
     loadActiveBook();
-    loadFixtureComments();
+    // After loadActiveBook, so the hero's room is known before we ask where
+    // its members are.
+    refreshMemberProgress();
+    // Read the hero back out of the store rather than the closure —
+    // loadActiveBook() ran a line ago, so the rendered value is stale. Solo
+    // books have no room and so no conversation to load.
+    const hero = useReadingProgressStore.getState().activeBook;
+    if (hero?.roomId) {
+      loadComments(hero.roomId, hero.id);
+    }
     if (showRefresh && curatedStatus === 200 && customStatus === 200) {
       showToast('Refreshed! 📚', 'success');
     } else if (curatedStatus !== 200 && curatedStatus !== null && roomsStatus !== 200) {
@@ -155,7 +170,10 @@ const Home = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       loadActiveBook();
-    }, [loadActiveBook]),
+      // The pace track is other people's live position, so unlike the hero it
+      // is worth re-asking for on every look, not just the first.
+      refreshMemberProgress();
+    }, [loadActiveBook, refreshMemberProgress]),
   );
 
   const handleNotificationPress = () => {

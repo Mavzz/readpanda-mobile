@@ -23,13 +23,18 @@ const ReadingScreen = () => {
   const activeBookLoaded = useReadingProgressStore((s) => s.activeBookLoaded);
   const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
   const loadShelf = useReadingProgressStore((s) => s.loadShelf);
+  const refreshMemberProgress = useReadingProgressStore((s) => s.refreshMemberProgress);
 
-  const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
-  const unlockedComments = useCommentsStore((s) => s.unlockedComments);
+  // Subscribing to byBook, not only to the actions: action identities are
+  // stable, so reading them alone would leave this tab frozen when comments
+  // arrive from the network.
+  const commentsByBook = useCommentsStore((s) => s.byBook);
+  const refreshComments = useCommentsStore((s) => s.refreshComments);
 
   useEffect(() => {
     loadActiveBook();
-    loadFixtureComments();
+    refreshMemberProgress();
+    refreshComments(shelf);
   }, []);
 
   // This tab stays mounted once visited, so re-read on focus: a book just put
@@ -38,7 +43,12 @@ const ReadingScreen = () => {
     useCallback(() => {
       loadActiveBook();
       loadShelf();
-    }, [loadActiveBook, loadShelf]),
+      // Each shelf row carries its own room's pace track, so this sweeps every
+      // room the shelf touches rather than just the hero's. Comments key the
+      // same way, so they sweep alongside it.
+      refreshMemberProgress();
+      refreshComments(shelf);
+    }, [loadActiveBook, loadShelf, refreshMemberProgress, refreshComments, shelf]),
   );
 
   const pickABook = () => navigation.navigate('Home', { screen: 'LibraryScreen' });
@@ -130,7 +140,7 @@ const ReadingScreen = () => {
   // Room rows carry the social tail: comments waiting where there are any,
   // otherwise how the reader stands against the room's pace.
   const socialTailFor = (book) => {
-    const waiting = unlockedComments(book.chapter).length;
+    const waiting = commentsByBook[book.id]?.unreadCount || 0;
     if (waiting > 0) {
       return `${waiting} comment${waiting > 1 ? 's' : ''} waiting`;
     }

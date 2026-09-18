@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
@@ -8,6 +8,7 @@ import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
+import CommentThreadSheet from '../components/CommentThreadSheet';
 import log from '../utils/logger';
 
 // The room read (§ 1b): where everyone in the room is, and comments unlocked
@@ -20,15 +21,32 @@ const RoomBookScreen = () => {
 
   const book = useReadingProgressStore((s) => s.shelf.find((b) => b.id === bookId));
   const loadShelf = useReadingProgressStore((s) => s.loadShelf);
+  const fetchMemberProgress = useReadingProgressStore((s) => s.fetchMemberProgress);
 
-  const loadFixtureComments = useCommentsStore((s) => s.loadFixtureComments);
-  const unlockedComments = useCommentsStore((s) => s.unlockedComments);
-  const nextLockedBatch = useCommentsStore((s) => s.nextLockedBatch);
+  // Subscribing to byBook, not only to the actions: action identities are
+  // stable, so reading them alone would leave this screen frozen when the
+  // comments actually arrive.
+  const commentsByBook = useCommentsStore((s) => s.byBook);
+  const loadComments = useCommentsStore((s) => s.loadComments);
+  const toggleLike = useCommentsStore((s) => s.toggleLike);
+  const markThreadRead = useCommentsStore((s) => s.markThreadRead);
+  const retryComment = useCommentsStore((s) => s.retryComment);
+  const addComment = useCommentsStore((s) => s.addComment);
+
+  const [openThreadKey, setOpenThreadKey] = useState(null);
 
   useEffect(() => {
     loadShelf();
-    loadFixtureComments();
   }, []);
+
+  // This screen is the pace track — one room, one book. Keyed on the room so
+  // it re-asks if the shelf row arrives after the first render.
+  useEffect(() => {
+    if (book?.roomId) {
+      fetchMemberProgress(book.roomId);
+      loadComments(book.roomId, book.id);
+    }
+  }, [book?.roomId, book?.id, fetchMemberProgress, loadComments]);
 
   const handleContinue = () => {
     if (!book) {
@@ -76,8 +94,10 @@ const RoomBookScreen = () => {
     ? Math.max(1, Math.round(((behindOf.progressPct - (me?.progressPct || 0)) / 100) * book.totalChapters))
     : 0;
 
-  const unlocked = unlockedComments(book.chapter);
-  const lockedBatch = nextLockedBatch(book.chapter);
+  const commentEntry = commentsByBook[book.id];
+  const threads = commentEntry?.threads || [];
+  const lockedCount = commentEntry?.lockedCount || 0;
+  const openThread = threads.find((t) => t.anchorKey === openThreadKey) || null;
 
   return (
     <View style={styles.container}>
@@ -151,38 +171,63 @@ const RoomBookScreen = () => {
         )}
 
         {/* ── Unlocked comments ───────────────── */}
-        {(unlocked.length > 0 || lockedBatch) && (
+        {(threads.length > 0 || lockedCount > 0) && (
           <View style={styles.commentsSection}>
-            {unlocked.length > 0 && (
+            {threads.length > 0 && (
               <Text style={styles.commentsSectionTitle}>
-                Unlocked at Chapter {Math.max(...unlocked.map((c) => c.anchor.chapter))}
+                Unlocked up to page {Math.max(...threads.map((t) => t.page)) + 1}
               </Text>
             )}
 
-            {unlocked.map((c) => (
-              <View key={c.id} style={styles.commentCard}>
-                <View style={styles.commentHeader}>
-                  <View style={styles.commentAvatar}>
-                    <Text style={styles.commentAvatarText}>{c.userInitials}</Text>
+            {threads.map((thread) => {
+              const root = thread.comments[0];
+              if (!root) {
+                return null;
+              }
+              const more = thread.comments.length - 1 + (root.replies?.length || 0);
+              return (
+                <Pressable
+                  key={thread.anchorKey}
+                  onPress={() => {
+                    setOpenThreadKey(thread.anchorKey);
+                    markThreadRead(book.id, thread.anchorKey);
+                  }}
+                  style={({ pressed }) => [styles.commentCard, pressed && styles.commentCardPressed]}
+                >
+                  <View style={styles.commentHeader}>
+                    <View style={styles.commentAvatar}>
+                      <Text style={styles.commentAvatarText}>{root.initials}</Text>
+                    </View>
+                    <Text style={styles.commentName}>{root.username}</Text>
+                    <Text style={styles.commentPage}>· p. {root.page + 1}</Text>
+                    {thread.unreadCount > 0 && <View style={styles.unreadDot} />}
                   </View>
-                  <Text style={styles.commentName}>{c.userName}</Text>
-                  <Text style={styles.commentPage}>· p. {c.anchor.page}</Text>
-                </View>
-                <View style={styles.quoteBlock}>
-                  <Text style={styles.quoteText}>&ldquo;{c.quote}&rdquo;</Text>
-                </View>
-                <Text style={styles.commentBody}>{c.body}</Text>
-              </View>
-            ))}
+                  {/* Page-level comments have nothing to quote. */}
+                  {thread.anchorText ? (
+                    <View style={styles.quoteBlock}>
+                      <Text style={styles.quoteText}>&ldquo;{thread.anchorText}&rdquo;</Text>
+                    </View>
+                  ) : null}
+                  <Text style={styles.commentBody}>{root.body}</Text>
+                  {more > 0 && (
+                    <Text style={styles.threadMore}>
+                      {more} more in this thread
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
 
-            {lockedBatch && (
+            {/* Everything still ahead of the reader is one number and nothing
+                else — the server never sends a page or a preview for these. */}
+            {lockedCount > 0 && (
               <View style={styles.lockedCard}>
                 <View style={styles.lockedIcon}>
                   <Icon name="lock-closed" size={16} color={DS.colors.onSurfaceVariant} />
                 </View>
                 <View style={styles.lockedText}>
                   <Text style={styles.lockedTitle}>
-                    {lockedBatch.count} comment{lockedBatch.count > 1 ? 's' : ''} waiting at Chapter {lockedBatch.chapter}
+                    {lockedCount} later in the book
                   </Text>
                   <Text style={styles.lockedSubtitle}>Keep reading to unlock them</Text>
                 </View>
@@ -199,6 +244,28 @@ const RoomBookScreen = () => {
           </Text>
         </GradientPill>
       </ScrollView>
+
+      <CommentThreadSheet
+        visible={!!openThread}
+        thread={openThread}
+        roomName={book.roomName}
+        submitting={false}
+        onSubmit={({ body, parentId }) =>
+          addComment({
+            roomId: book.roomId,
+            bookId: book.id,
+            page: openThread?.page,
+            anchorText: openThread?.anchorText,
+            anchorBounds: openThread?.anchorBounds,
+            parentId,
+            body,
+            fileHash: openThread?.fileHash,
+          }).catch(() => {})
+        }
+        onLike={(c) => toggleLike(book.id, c.id)}
+        onRetry={(c) => retryComment(book.id, c.clientId)}
+        onClose={() => setOpenThreadKey(null)}
+      />
     </View>
   );
 };
@@ -363,6 +430,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
+  },
+  commentCardPressed: {
+    opacity: 0.85,
+  },
+  unreadDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DS.colors.primary,
+  },
+  threadMore: {
+    marginTop: 8,
+    fontFamily: DS.font.bold,
+    fontSize: 11,
+    color: DS.colors.primary,
   },
   commentAvatar: {
     width: 24,

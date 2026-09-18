@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import log from '../utils/logger';
 import { DS } from '../styles/global';
 
@@ -27,26 +26,63 @@ const RNPdfViewerComponent = Platform.select({
   },
 });
 
-const PdfViewer = ({ pdfUrl, pdfTitle, style, initialPage, onPageChanged, onLoadComplete, onError }) => {
-  const insets = useSafeAreaInsets();
+// The passage a comment can be anchored to is capped to the same length the
+// API accepts, so a runaway drag can't produce a write the server truncates.
+const MAX_ANCHOR_LENGTH = 1000;
+
+const PdfViewer = ({
+  pdfUrl,
+  pdfTitle,
+  style,
+  initialPage,
+  onPageChanged,
+  onLoadComplete,
+  onError,
+  comments,
+  clearSelectionToken,
+  scrollToAnchorKey,
+  onCommentRequested,
+  onThreadOpen,
+  onSelectionChanged,
+}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(initialPage || 0);
 
+  // Page position lives on the screen that owns the scrubber, not here — this
+  // component is just the page now.
   const handleLoadComplete = useCallback((event) => {
-    const { totalPages: pages } = event.nativeEvent;
+    const { totalPages: pages, fileHash } = event.nativeEvent;
     log.info(`PDF loaded: ${pdfTitle} (${pages} pages)`);
-    setTotalPages(pages);
     setLoading(false);
     setError(null);
-    onLoadComplete?.(pages);
+    onLoadComplete?.(pages, fileHash);
   }, [pdfTitle, onLoadComplete]);
+
+  const handleCommentRequested = useCallback((event) => {
+    const { page, text, bounds, fileHash } = event.nativeEvent;
+    onCommentRequested?.({
+      page,
+      text: (text || '').slice(0, MAX_ANCHOR_LENGTH),
+      bounds,
+      fileHash,
+    });
+  }, [onCommentRequested]);
+
+  const handleThreadOpen = useCallback((event) => {
+    onThreadOpen?.(event.nativeEvent.anchorKey);
+  }, [onThreadOpen]);
+
+  // One clear signal for "there is a selection" / "there isn't", rather than
+  // making every caller unpack the native payload.
+  const handleSelectionChanged = useCallback((event) => {
+    const { hasSelection, text, page } = event.nativeEvent;
+    onSelectionChanged?.(
+      hasSelection ? { text: (text || '').slice(0, MAX_ANCHOR_LENGTH), page } : null,
+    );
+  }, [onSelectionChanged]);
 
   const handlePageChanged = useCallback((event) => {
     const { currentPage: page, totalPages: pages } = event.nativeEvent;
-    setCurrentPage(page);
-    setTotalPages(pages);
     onPageChanged?.(page, pages);
   }, [onPageChanged]);
 
@@ -89,23 +125,20 @@ const PdfViewer = ({ pdfUrl, pdfTitle, style, initialPage, onPageChanged, onLoad
         style={StyleSheet.absoluteFill}
         pdfDetails={{ url: pdfUrl, title: pdfTitle }}
         initialPage={initialPage || 0}
+        comments={comments || []}
+        clearSelectionToken={clearSelectionToken || 0}
+        scrollToAnchorKey={scrollToAnchorKey || ''}
         onLoadComplete={handleLoadComplete}
         onPageChanged={handlePageChanged}
         onError={handleError}
+        onCommentRequested={handleCommentRequested}
+        onThreadOpen={handleThreadOpen}
+        onSelectionChanged={handleSelectionChanged}
       />
       {loading && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={DS.colors.primary} />
           <Text style={styles.loadingText}>Loading PDF...</Text>
-        </View>
-      )}
-      {!loading && totalPages > 0 && (
-        // The reader runs full-bleed to the bottom edge, so the indicator has
-        // to clear the home indicator itself.
-        <View style={[styles.pageIndicator, { bottom: insets.bottom + 20 }]}>
-          <Text style={styles.pageText}>
-            {currentPage + 1} / {totalPages}
-          </Text>
         </View>
       )}
     </View>
@@ -145,19 +178,6 @@ const styles = StyleSheet.create({
     color: DS.colors.onPrimary,
     fontSize: 16,
     fontWeight: '600',
-  },
-  pageIndicator: {
-    position: 'absolute',
-    alignSelf: 'center',
-    backgroundColor: DS.colors.surfaceContainerGlass, // glass rule
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: DS.radius.full,
-  },
-  pageText: {
-    color: DS.colors.onSurface,
-    fontSize: 13,
-    fontWeight: '500',
   },
 });
 

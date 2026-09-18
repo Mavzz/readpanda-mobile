@@ -2,19 +2,14 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import enhanceedStorage from '../utils/enhanceedStorage';
 import getInitials from '../utils/getInitials';
+import { putReadingProgress, fetchRoomProgress } from '../services/progressService';
 
-// Fixture used by the Home/Reading redesign (1a/1b) until the backend exposes
-// room member pace. Matches the shape described in
-// design_handoff_redesign/README.md ("State Management").
-//
 // There is deliberately no fixture *active book*: "no activeBook" is a real
 // state the app has to render (FIRST_RUN_3a_3b.md § 3a/3b), so a reader who
 // hasn't opened anything yet gets the first-run screens, not a phantom book.
-const FIXTURE_MEMBER_PROGRESS = [
-  { userId: 'me', initials: 'ME', progressPct: 62, isMe: true },
-  { userId: 'priya', initials: 'PR', progressPct: 78 },
-  { userId: 'tom', initials: 'TO', progressPct: 91 },
-];
+//
+// Member pace used to be a fixture here too. It now comes from
+// GET /room/{id}/progress — see fetchMemberProgress below.
 
 // Books reach us in two shapes: the manuscripts list uses `id`, everything
 // that came through a bucket or a room uses `book_id`.
@@ -74,25 +69,29 @@ const toStoredBook = (book, { roomId = null, roomName = null, roomMembers = null
   solo,
 });
 
-// Pace for a book being read with a real room. The backend has no per-member
-// progress yet, so everyone but me sits at 0 — an honest "nobody has recorded
-// progress" rather than the invented pace the fixture shows.
-const roomMemberProgress = (members, myProgressPct) => (members || []).map((m) => ({
+// Pace for a book being read with a real room. My own marker comes from the
+// local position rather than the server's copy of it: the page I'm on has to
+// move the instant I turn it, and my last publish may still be in flight (or
+// have failed offline). Everyone else comes from `remote`, the percentages
+// GET /room/{id}/progress last returned, keyed by user id. A member the server
+// hasn't heard from sits at 0 — they genuinely haven't opened the book.
+const roomMemberProgress = (members, myProgressPct, remote) => (members || []).map((m) => ({
   userId: m.userId,
   initials: m.initials,
-  progressPct: m.isMe ? myProgressPct : 0,
+  progressPct: m.isMe ? myProgressPct : (remote?.[m.userId] ?? 0),
   isMe: !!m.isMe,
 }));
 
 // The pace track for a stored book: the room's real members while it has a
-// room, an empty track once that room is gone, and the 1b demo fixture only
-// for a book that never had a room at all. Without the `solo` check a
-// detached book would look like a fixture book and resurrect invented people.
-const memberProgressFor = (book, myProgressPct) => {
-  if (book?.room_members) {
-    return roomMemberProgress(book.room_members, myProgressPct);
+// room, and an empty track otherwise — a book with nobody behind it has no
+// pace to show. `remoteProgress` is the store's whole {bookId: {userId: pct}}
+// cache; the row for this book is looked up here so every caller can thread
+// through one argument.
+const memberProgressFor = (book, myProgressPct, remoteProgress) => {
+  if (!book?.room_members) {
+    return [];
   }
-  return book?.solo ? [] : FIXTURE_MEMBER_PROGRESS;
+  return roomMemberProgress(book.room_members, myProgressPct, remoteProgress?.[book.book_id]);
 };
 
 // What a stored book looks like once its room is gone.
@@ -146,13 +145,13 @@ const toActiveBook = (book, progress = {}) => {
 
 // One row of the Reading shelf (4a): the same view model the hero uses, plus
 // when it was last touched and the pace track for its room.
-const toShelfBook = (entry) => {
+const toShelfBook = (entry, remoteProgress) => {
   const book = entry.book || {};
   const view = toActiveBook(book, entry.progress);
   return {
     ...view,
     lastReadAt: entry.progress?.lastReadAt || entry.timestamp || 0,
-    memberProgress: memberProgressFor(book, view.progressPct),
+    memberProgress: memberProgressFor(book, view.progressPct, remoteProgress),
   };
 };
 
@@ -161,11 +160,18 @@ const useReadingProgressStore = create((set, get) => ({
   progress: {},
   recentBooks: [],
 
-  // ── "Tonight" (Home) / Reading tab fixtures ──────────────────────────
-  // TODO: replace with real endpoints once member-progress + comment-anchor
-  // APIs exist; shapes are already what those endpoints should return.
+  // ── "Tonight" (Home) / Reading tab ───────────────────────────────────
   activeBook: null,
   memberProgress: [],
+  // What GET /room/{id}/progress last told us about everyone else, as
+  // {bookId: {userId: progressPct}}. Keyed by book rather than by room because
+  // that's how progress itself is keyed — one book read in two rooms is one
+  // set of positions, and the pace track for a stored book can be rebuilt
+  // without knowing which room the numbers arrived through.
+  //
+  // Cached in memory only: it's other people's live position, so it should be
+  // re-fetched on the next look rather than restored stale from a cold start.
+  remoteProgress: {},
   // Every book with a stored position, most recently read first — what the
   // Reading tab renders (4a). The hero is simply shelf[0].
   shelf: [],
@@ -192,7 +198,7 @@ const useReadingProgressStore = create((set, get) => ({
         const restored = toActiveBook(book, lastRead.progress);
         set({
           activeBook: restored,
-          memberProgress: memberProgressFor(book, restored.progressPct),
+          memberProgress: memberProgressFor(book, restored.progressPct, get().remoteProgress),
           activeBookLoaded: true,
         });
         get().loadShelf();
@@ -211,9 +217,10 @@ const useReadingProgressStore = create((set, get) => ({
   // changes a position (a save, a room attach/detach, a book dropped) already
   // writes there, so re-reading is the one way the shelf can't drift.
   loadShelf: () => {
+    const { remoteProgress } = get();
     const shelf = storedBooks()
       .filter((entry) => entry?.book?.title)
-      .map(toShelfBook)
+      .map((entry) => toShelfBook(entry, remoteProgress))
       .sort((a, b) => b.lastReadAt - a.lastReadAt);
     set({ shelf });
   },
@@ -255,12 +262,16 @@ const useReadingProgressStore = create((set, get) => ({
     const active = toActiveBook(stored, progress);
     set({
       activeBook: active,
-      // A book started in a room shows that room's real members. Only a book
-      // with no room behind it falls back to the 1b demo fixture.
-      memberProgress: memberProgressFor(stored, active.progressPct),
+      // A book started in a room shows that room's real members; one with no
+      // room behind it has no pace track at all.
+      memberProgress: memberProgressFor(stored, active.progressPct, get().remoteProgress),
       activeBookLoaded: true,
     });
     get().loadShelf();
+    // The room's members have been reading it without us — ask where they are.
+    if (roomId) {
+      get().fetchMemberProgress(roomId);
+    }
     return stored;
   },
 
@@ -316,10 +327,18 @@ const useReadingProgressStore = create((set, get) => ({
         // My own marker on the pace track moves with my progress — and the
         // track itself follows whichever book just became the hero.
         memberProgress: stored
-          ? memberProgressFor(stored, toActiveBook(stored, progress).progressPct)
+          ? memberProgressFor(stored, toActiveBook(stored, progress).progressPct, state.remoteProgress)
           : state.memberProgress,
       }));
       get().loadShelf();
+
+      // Publish my place so the rooms reading this book can show it. Local
+      // storage above is what this device renders, so a failed push costs
+      // nothing but freshness on other people's pace tracks — never the
+      // reader's own position.
+      putReadingProgress(manuscriptId, progress).catch((e) => {
+        log.error('Failed to publish reading progress:', e);
+      });
     } catch (e) {
       log.error('Failed to save reading progress:', e);
     }
@@ -351,6 +370,81 @@ const useReadingProgressStore = create((set, get) => ({
       set({ recentBooks: updated });
       log.info('Added book to recent list:', book.title);
     }
+  },
+
+  // GET /room/{id}/progress — where the room's members actually are in the
+  // book it's reading. Called by the screens that render a pace track, and
+  // whenever a room's book is adopted.
+  //
+  // Failures are logged and swallowed: the track keeps whatever it last knew
+  // rather than dropping everyone to 0%, which would read as "nobody has
+  // opened this" instead of "we couldn't ask".
+  fetchMemberProgress: async (roomId) => {
+    if (!roomId) {
+      return;
+    }
+    try {
+      const { status, response } = await fetchRoomProgress(roomId);
+      if (status !== 200) {
+        log.error('Failed to fetch room progress:', response);
+        return;
+      }
+      // A room that hasn't chosen a book yet returns no book_id and no
+      // members — nothing to cache, and nothing to pace against.
+      const bookId = response?.book_id;
+      if (!bookId) {
+        return;
+      }
+
+      const byUser = {};
+      (response.members || []).forEach((m) => {
+        const userId = m.user_id ?? m.userId;
+        if (userId) {
+          byUser[userId] = m.progress_pct ?? m.progressPct ?? 0;
+        }
+      });
+
+      set((state) => ({
+        remoteProgress: { ...state.remoteProgress, [bookId]: byUser },
+      }));
+      get().applyMemberProgress();
+    } catch (e) {
+      log.error('Error fetching room progress:', e);
+    }
+  },
+
+  // Every room any tracked book is being read with. The screens fetch through
+  // this rather than naming a room, so the Reading shelf — which shows several
+  // books, each with its own room — refreshes in one call.
+  refreshMemberProgress: () => {
+    const { activeBook, shelf } = get();
+    const roomIds = new Set(
+      [activeBook, ...shelf]
+        .map((book) => book?.roomId)
+        .filter(Boolean),
+    );
+    roomIds.forEach((roomId) => get().fetchMemberProgress(roomId));
+  },
+
+  // Rebuilds the pace tracks from the cache without re-reading positions —
+  // what runs once a fetch has landed. The active book's view model carries
+  // everything memberProgressFor needs, so it's reshaped rather than re-read.
+  applyMemberProgress: () => {
+    const { activeBook, remoteProgress } = get();
+    if (activeBook) {
+      set({
+        memberProgress: memberProgressFor(
+          {
+            book_id: activeBook.id,
+            room_members: activeBook.roomMembers,
+            solo: activeBook.solo,
+          },
+          activeBook.progressPct,
+          remoteProgress,
+        ),
+      });
+    }
+    get().loadShelf();
   },
 
   // The mirror of detachRoom: a room brings its social layer to a book.
@@ -415,6 +509,9 @@ const useReadingProgressStore = create((set, get) => ({
         solo: false,
       });
       get().loadShelf();
+      // The book now wears the room's colours on the Reading shelf, so its row
+      // needs the room's pace even though it isn't the book on the hero.
+      get().fetchMemberProgress(room.id);
     } catch (e) {
       log.error('Failed to attach the room to a stored book:', e);
     }
@@ -526,6 +623,7 @@ const useReadingProgressStore = create((set, get) => ({
       recentBooks: [],
       activeBook: null,
       memberProgress: [],
+      remoteProgress: {},
       shelf: [],
       activeBookLoaded: false,
     });
