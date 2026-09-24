@@ -6,7 +6,7 @@ import { makeAuthenticatedGetRequest, makeAuthenticatedPutRequest } from './auth
 // is sent once however many rooms are reading it.
 //
 // My own reading never waits on this call: the local position written by
-// enhanceedStorage stays what this device renders.
+// enhancedStorage stays what this device renders.
 const putReadingProgress = async (bookId, progress) => {
   const { status, response } = await makeAuthenticatedPutRequest(
     getBackendUrl(`/progress/${encodeURIComponent(bookId)}`),

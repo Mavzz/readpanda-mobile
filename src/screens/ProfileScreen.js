@@ -7,7 +7,7 @@ import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../services/auth';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import { DS } from '../styles/global';
 
 const ProfileSection = ({ title, children }) => (
@@ -23,7 +23,7 @@ const ProfileScreen = () => {
   const { user, signOut, updateUser } = useAuth();
   const username = user?.username;
   const navigation = useNavigation();
-  const refreshToken = enhanceedStorage.getRefreshToken();
+  const refreshToken = enhancedStorage.getRefreshToken();
 
   useScreenTracking('ProfileScreen');
 

@@ -16,7 +16,7 @@ import { SignUpType } from '../utils/Helper';
 import { googleSignUpLogin, emailLogin } from '../services/auth';
 import log from '../utils/logger';
 import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from '../services/user_PreferencesService';
+import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 import readpandaLogo from '../assets/readpandaLogo_New.png';
 

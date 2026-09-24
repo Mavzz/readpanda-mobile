@@ -47,8 +47,12 @@ const ReadingScreen = () => {
       // room the shelf touches rather than just the hero's. Comments key the
       // same way, so they sweep alongside it.
       refreshMemberProgress();
-      refreshComments(shelf);
-    }, [loadActiveBook, loadShelf, refreshMemberProgress, refreshComments, shelf]),
+      // Read back through the store rather than closing over this render's
+      // `shelf`. loadShelf rebuilds the array from storage on every call, so a
+      // `shelf` dependency here made the effect retrigger itself without end —
+      // and the copy read after the rebuild is the fresher one anyway.
+      refreshComments(useReadingProgressStore.getState().shelf);
+    }, [loadActiveBook, loadShelf, refreshMemberProgress, refreshComments]),
   );
 
   const pickABook = () => navigation.navigate('Home', { screen: 'LibraryScreen' });

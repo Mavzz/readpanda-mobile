@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image, TouchableOpacity, StyleSheet, Alert, Platform, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import { DS } from '../styles/global';
 import log from '../utils/logger';
 
@@ -112,10 +112,10 @@ const ProfilePicture = ({
       setIsLoading(true);
 
       // Update user profile in storage
-      const currentUser = enhanceedStorage.getUserProfile();
+      const currentUser = enhancedStorage.getUserProfile();
       if (currentUser) {
         const updatedUser = { ...currentUser, profilePicture: uri };
-        enhanceedStorage.updateUserProfile({ profilePicture: uri });
+        enhancedStorage.updateUserProfile({ profilePicture: uri });
         log.info('Profile picture updated in storage');
       }
 

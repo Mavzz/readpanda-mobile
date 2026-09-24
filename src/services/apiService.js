@@ -1,5 +1,5 @@
 import { getBackendUrl } from '../utils/Helper';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import log from '../utils/logger';
 
 // Error types for better handling
@@ -54,8 +54,8 @@ class ApiService {
      * Check if user has valid authentication tokens
      */
   hasValidTokens() {
-    const accessToken = enhanceedStorage.getAuthToken();
-    const refreshToken = enhanceedStorage.getRefreshToken();
+    const accessToken = enhancedStorage.getAuthToken();
+    const refreshToken = enhancedStorage.getRefreshToken();
     return !!(accessToken && refreshToken);
   }
 
@@ -66,7 +66,7 @@ class ApiService {
     log.error(`Authentication failure: ${reason}`);
 
     // Clear all auth data
-    enhanceedStorage.clearAuthData();
+    enhancedStorage.clearAuthData();
 
     // Call auth failure callback if set (usually signOut from AuthContext)
     if (this.authCallback) {
@@ -94,8 +94,8 @@ class ApiService {
     this.isRefreshing = true;
 
     try {
-      const accessToken = enhanceedStorage.getAuthToken();
-      const refreshToken = enhanceedStorage.getRefreshToken();
+      const accessToken = enhancedStorage.getAuthToken();
+      const refreshToken = enhancedStorage.getRefreshToken();
 
       // Check if both tokens are missing
       if (!accessToken && !refreshToken) {
@@ -122,11 +122,11 @@ class ApiService {
 
       if (tokenResponse.status === 200) {
         const { accessToken, refreshToken: rotatedRefreshToken } = await tokenResponse.json();
-        enhanceedStorage.updateAuthToken(accessToken);
+        enhancedStorage.updateAuthToken(accessToken);
         // The backend rotates the refresh token on every use — persist the
         // new one so the next refresh doesn't fail against a stale value.
         if (rotatedRefreshToken) {
-          enhanceedStorage.updateRefreshToken(rotatedRefreshToken);
+          enhancedStorage.updateRefreshToken(rotatedRefreshToken);
         }
         this.processQueue(null, accessToken);
         log.info('Token refreshed successfully');

@@ -8,7 +8,7 @@ import { DS } from '../styles/global';
 import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
 import useReadingProgressStore from '../stores/readingProgressStore';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import relativeTime from '../utils/relativeTime';
 import log from '../utils/logger';
 
@@ -27,7 +27,7 @@ const SoloBookScreen = () => {
   // the same scoped preferences the rest of the app uses.
   const upsellKey = `solo_upsell_dismissed_${bookId}`;
   const [upsellDismissed, setUpsellDismissed] = useState(
-    () => !!enhanceedStorage.getUserPreference(upsellKey, false),
+    () => !!enhancedStorage.getUserPreference(upsellKey, false),
   );
 
   useEffect(() => {
@@ -35,7 +35,7 @@ const SoloBookScreen = () => {
   }, []);
 
   const dismissUpsell = () => {
-    enhanceedStorage.storeUserPreference(upsellKey, true);
+    enhancedStorage.storeUserPreference(upsellKey, true);
     setUpsellDismissed(true);
   };
 

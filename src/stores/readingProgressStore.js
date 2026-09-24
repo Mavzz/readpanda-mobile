@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import getInitials from '../utils/getInitials';
 import { putReadingProgress, fetchRoomProgress } from '../services/progressService';
 
@@ -36,7 +36,7 @@ const roomBookOf = (room) => {
 // return members at all yet — rather than claim the room is empty, fall back
 // to the one member we can always name: the person holding the phone.
 const roomMembersOf = (room) => {
-  const me = enhanceedStorage.getUserProfile()?.username || null;
+  const me = enhancedStorage.getUserProfile()?.username || null;
   const members = (room?.members || []).map((m, i) => {
     const name = m.name || m.username || '';
     return {
@@ -102,7 +102,7 @@ const SOLO_FIELDS = { room_id: null, room_name: null, room_members: null, solo: 
 // currently on the hero.
 const storedBooks = () => {
   try {
-    return Object.values(enhanceedStorage.getReadingPositions().books || {});
+    return Object.values(enhancedStorage.getReadingPositions().books || {});
   } catch (e) {
     log.error('Failed to read stored reading positions:', e);
     return [];
@@ -191,7 +191,7 @@ const useReadingProgressStore = create((set, get) => ({
     }
 
     try {
-      const lastRead = enhanceedStorage.getCurrentReadingPosition();
+      const lastRead = enhancedStorage.getCurrentReadingPosition();
       const book = lastRead?.book;
       if (book?.title) {
         log.info('Restoring last-read book for Home/Reading:', book.title);
@@ -254,7 +254,7 @@ const useReadingProgressStore = create((set, get) => ({
     try {
       // Persisted the same way finishing a reading session is, so the choice
       // survives a cold start.
-      enhanceedStorage.saveReadingProgress(id, progress, stored);
+      enhancedStorage.saveReadingProgress(id, progress, stored);
     } catch (e) {
       log.error('Failed to persist the chosen book:', e);
     }
@@ -287,7 +287,7 @@ const useReadingProgressStore = create((set, get) => ({
       // its own stored record, so read it back rather than writing a blank one
       // and quietly stripping the room off a book you'd been reading with
       // people.
-      const previous = sameBook ? null : enhanceedStorage.getReadingPosition(manuscriptId)?.book;
+      const previous = sameBook ? null : enhancedStorage.getReadingPosition(manuscriptId)?.book;
       const roomContext = sameBook
         ? {
           roomId: activeBook.roomId,
@@ -311,7 +311,7 @@ const useReadingProgressStore = create((set, get) => ({
         ? progressData
         : { ...progressData, totalPages: known };
 
-      enhanceedStorage.saveReadingProgress(manuscriptId, progress, stored);
+      enhancedStorage.saveReadingProgress(manuscriptId, progress, stored);
       set((state) => ({
         progress: {
           ...state.progress,
@@ -354,7 +354,7 @@ const useReadingProgressStore = create((set, get) => ({
     // matched the single stored position, which is why coming back to a book
     // you'd put down restarted it at page one.
     try {
-      return enhanceedStorage.getReadingPosition(manuscriptId)?.progress || null;
+      return enhancedStorage.getReadingPosition(manuscriptId)?.progress || null;
     } catch (e) {
       log.error('Failed to load reading progress:', e);
       return null;
@@ -502,7 +502,7 @@ const useReadingProgressStore = create((set, get) => ({
     // Tracked, but not the book on the hero: tag it where it sits so it comes
     // back wearing the room's colours when the reader switches to it.
     try {
-      enhanceedStorage.updateReadingPositionBook(bookId, {
+      enhancedStorage.updateReadingPositionBook(bookId, {
         room_id: room.id,
         room_name: room.name,
         room_members: context.roomMembers,
@@ -541,10 +541,10 @@ const useReadingProgressStore = create((set, get) => ({
       try {
         if (started) {
           log.info('Room gone — keeping', entry.book.title, 'as a solo read');
-          enhanceedStorage.updateReadingPositionBook(entry.manuscriptId, SOLO_FIELDS);
+          enhancedStorage.updateReadingPositionBook(entry.manuscriptId, SOLO_FIELDS);
         } else {
           log.info('Room gone before its book was ever opened — dropping', entry.book.title);
-          enhanceedStorage.clearReadingPosition(entry.manuscriptId);
+          enhancedStorage.clearReadingPosition(entry.manuscriptId);
         }
       } catch (e) {
         log.error('Failed to detach the room from a stored book:', e);

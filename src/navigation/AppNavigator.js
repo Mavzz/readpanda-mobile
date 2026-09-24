@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { MyTheme } from '../styles/global';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import AuthStackNavigator from './AuthStackNavigator';
-import MainTabNavigator from './MainTabNavigator';
+import MainStackNavigator from './MainStackNavigator';
 import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
 import useInviteDeepLink from '../hooks/useInviteDeepLink';
@@ -53,7 +53,7 @@ const AppContent = () => {
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="Main" component={MainStackNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthStackNavigator} />
         )}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import log from '../utils/logger';
 import { seedCollection } from '../utils/interests';
 
@@ -10,7 +10,7 @@ const CACHE_KEY = 'first_run_pick';
 // buckets come back in a different order on every fetch, so without the cache
 // the first-run hero would recommend a different book each launch.
 const useFirstRunRecommendation = (curatedBuckets, preferences) => {
-  const [pick, setPick] = useState(() => enhanceedStorage.getUserPreference(CACHE_KEY));
+  const [pick, setPick] = useState(() => enhancedStorage.getUserPreference(CACHE_KEY));
 
   useEffect(() => {
     if (pick || !curatedBuckets?.length) {
@@ -33,7 +33,7 @@ const useFirstRunRecommendation = (curatedBuckets, preferences) => {
       interest,
     };
     log.info('Caching first-run recommendation:', next.title);
-    enhanceedStorage.storeUserPreference(CACHE_KEY, next);
+    enhancedStorage.storeUserPreference(CACHE_KEY, next);
     setPick(next);
   }, [curatedBuckets, preferences, pick]);
 

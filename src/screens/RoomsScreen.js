@@ -90,6 +90,8 @@ const RoomsScreen = () => {
     navigation.navigate('RoomLobbyScreen', { room });
   };
 
+  log.debug('RoomsDetails', { rooms, loading, inviteCode });
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />

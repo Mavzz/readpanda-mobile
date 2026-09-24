@@ -13,7 +13,7 @@ import { primaryButton as PrimaryButton } from '../components/Button';
 import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from '../services/user_PreferencesService';
+import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 
 const InterestScreen = () => {

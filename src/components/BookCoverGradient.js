@@ -2,6 +2,7 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { DS } from '../styles/global';
 import { duotoneFor, COVER_SHADOW, SCRIM_COLORS } from '../utils/covers';
+import log from '../utils/logger';
 
 // The one cover primitive: a real cover image when the API gave us one, and
 // otherwise the duotone placeholder from FIRST_RUN_3a_3b.md § "Cover fallback"
@@ -34,6 +35,9 @@ const BookCoverGradient = ({
   // on small covers the title just got clipped by the bottom edge.
   // A caller that draws its own label over the cover (a collection tile, say)
   // supplies `children`; don't print the fallback title underneath it too.
+
+  log.debug('BookCoverGradient', { coverUrl, title, seed, width, height, borderRadius, titleFontSize, elevated, scrim, style, children });
+
   const showTitle = !!title && !children
     && (typeof height !== 'number' || height >= titleFontSize * 4);
   const box = { width, height, borderRadius };

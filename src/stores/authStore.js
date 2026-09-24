@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import useReadingProgressStore from './readingProgressStore';
 import useCommentsStore from './commentsStore';
 
@@ -13,7 +13,7 @@ const useAuthStore = create((set, get) => ({
 
   loadUser: async () => {
     try {
-      const authData = enhanceedStorage.getAuthData();
+      const authData = enhancedStorage.getAuthData();
 
       if (authData && authData.token && authData.userProfile) {
         set({
@@ -41,7 +41,7 @@ const useAuthStore = create((set, get) => ({
         refreshToken: userData.refreshToken,
         isAuthenticated: true,
       });
-      enhanceedStorage.storeAuthData(userData);
+      enhancedStorage.storeAuthData(userData);
     } catch (e) {
       log.error('Failed to save user data', e);
     }
@@ -50,7 +50,7 @@ const useAuthStore = create((set, get) => ({
   signOut: async () => {
     try {
       set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
-      enhanceedStorage.clearAuthData();
+      enhancedStorage.clearAuthData();
       // Stored reading state is keyed per account, but the in-memory copy
       // isn't — without this the next person to sign in on this device
       // inherits the previous reader's hero until something reloads it.
@@ -69,7 +69,7 @@ const useAuthStore = create((set, get) => ({
     const updatedUser = { ...user, ...updates };
     log.info('Updating user data', { updatedUser });
     try {
-      enhanceedStorage.updateUserProfile(updates);
+      enhancedStorage.updateUserProfile(updates);
       set({ user: updatedUser });
       log.info('User data updated', { username: updatedUser.username });
     } catch (e) {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import getInitials from '../utils/getInitials';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import {
   fetchBookComments,
   createComment,
@@ -157,7 +157,7 @@ const useCommentsStore = create((set, get) => ({
     }
 
     const clientId = newClientId();
-    const profile = enhanceedStorage.getUserProfile();
+    const profile = enhancedStorage.getUserProfile();
     const username = profile?.username || '';
     const anchorKey = parentId ? null : `pending:${clientId}`;
 

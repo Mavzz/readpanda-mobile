@@ -19,7 +19,7 @@ import { SignUpType } from '../utils/Helper';
 import log from '../utils/logger';
 import { googleSignUpLogin, emailSignUp } from '../services/auth';
 import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from '../services/user_PreferencesService';
+import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 
 const SignUp = ({ navigation }) => {
