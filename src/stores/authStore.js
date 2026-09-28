@@ -3,6 +3,10 @@ import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
 import useReadingProgressStore from './readingProgressStore';
 import useCommentsStore from './commentsStore';
+import useRoomStore from './roomStore';
+import useBucketsStore from './bucketsStore';
+import useBooksStore from './booksStore';
+import useNotificationStore from './notificationStore';
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -51,11 +55,16 @@ const useAuthStore = create((set, get) => ({
     try {
       set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
       enhancedStorage.clearAuthData();
-      // Stored reading state is keyed per account, but the in-memory copy
-      // isn't — without this the next person to sign in on this device
-      // inherits the previous reader's hero until something reloads it.
+      // Stored state is keyed per account, but the in-memory stores aren't —
+      // without this the next person to sign in on this device inherits the
+      // previous reader's hero, rooms, buckets and inbox until something
+      // reloads them.
       useReadingProgressStore.getState().clearProgress();
       useCommentsStore.getState().clearComments();
+      useRoomStore.getState().clearRooms();
+      useBucketsStore.getState().clearBuckets();
+      useBooksStore.getState().clearBooks();
+      useNotificationStore.getState().clearNotifications();
       log.info('User signed out');
     } catch (e) {
       log.error('Failed to clear user data', e);

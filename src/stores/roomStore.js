@@ -3,6 +3,30 @@ import log from '../utils/logger';
 import { getBackendUrl } from '../utils/Helper';
 import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest, makeAuthenticatedPatchRequest, makeAuthenticatedDeleteRequest } from '../services/authenticatedRequests';
 import useReadingProgressStore from './readingProgressStore';
+import enhancedStorage from '../utils/enhancedStorage';
+import getInitials from '../utils/getInitials';
+
+// GET /room/my-rooms and GET /room/{id} return members as
+// { user_id, username, role, joined_at, progress_pct }. The API doesn't flag
+// which one is me, so match on username the way Room Detail does; me first,
+// per the room card design.
+const normalizeMembers = (members) => {
+  const me = enhancedStorage.getUserProfile()?.username || null;
+  return (members || [])
+    .map((m) => {
+      const name = m.username ?? m.name;
+      return {
+        userId: m.user_id ?? m.userId,
+        name,
+        initials: m.initials || getInitials(name || ''),
+        isCreator: (m.role ?? m.roleName) === 'admin' || !!m.isCreator,
+        joinedAt: m.joined_at ?? m.joinedAt ?? null,
+        isMe: !!m.isMe || (!!me && name === me),
+        progressPct: m.progress_pct ?? m.progressPct ?? 0,
+      };
+    })
+    .sort((a, b) => Number(b.isMe) - Number(a.isMe));
+};
 
 const normalizeRoom = (room) => ({
   id: room.id,
@@ -23,17 +47,8 @@ const normalizeRoom = (room) => ({
   // GET /room/{id} returns bucket as { id, name, type, books[] }.
   bucket: room.bucket || null,
   currentBook: room.current_book || null,
-  // GET /room/{id} returns members as { user_id, username, role, joined_at }.
-  members: (room.members || []).map((m) => ({
-    userId: m.user_id ?? m.userId,
-    name: m.username ?? m.name,
-    initials: m.initials || null,
-    isCreator: (m.role ?? m.roleName) === 'admin' || !!m.isCreator,
-    joinedAt: m.joined_at ?? m.joinedAt ?? null,
-    isMe: !!m.isMe,
-  })),
-  // Still not returned by the API — the Home/Rooms cards degrade gracefully
-  // (no badge, empty progress bar) until unread counts and group progress exist.
+  members: normalizeMembers(room.members),
+  // Unread counts aren't returned by the API yet — the cards show no badge.
   unreadCount: room.unread_count || 0,
   groupProgressPct: room.group_progress_pct ?? 0,
   status: room.status || null,
@@ -340,7 +355,9 @@ const useRoomStore = create((set, get) => ({
   },
 
   clearRooms: () => {
-    set({ rooms: [], activeRoom: null, participants: [] });
+    // roomsLoaded too, so the next account's Home waits for its own fetch
+    // before deciding between the first-run and room states.
+    set({ rooms: [], activeRoom: null, participants: [], roomsLoaded: false });
   },
 }));
 

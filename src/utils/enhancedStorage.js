@@ -205,6 +205,25 @@ class EnhancedStorage {
     });
   }
 
+  // Takes a position read on another device. Unlike saveReadingProgress it
+  // keeps the server's time rather than stamping "now" — otherwise a book
+  // last read a week ago elsewhere would jump to the front of the shelf — and
+  // skips the SQLite queue, since this position came *from* the server. The
+  // "read most recently" pointer follows whichever entry is now newest.
+  mergeReadingPosition(bookId, progress, book, timestamp) {
+    const { books } = this.getReadingPositions();
+    const merged = {
+      ...books,
+      [bookId]: { manuscriptId: bookId, progress, book, timestamp },
+    };
+    const newest = Object.values(merged)
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+    StorageService.setItem(this.readingPositionsKey(), {
+      lastBookId: newest?.manuscriptId || bookId,
+      books: merged,
+    });
+  }
+
   // Forgets one book's position — used when the only reason the app was
   // tracking it was a room that has since been deleted or left.
   clearReadingPosition(bookId) {

@@ -1,7 +1,5 @@
 import { Local_IP, API_VERSION, BACKEND_URL } from '@env';
-import messaging from '@react-native-firebase/messaging';
 import log from '../utils/logger';
-import { saveNotification, NotificationType } from './notification';
 
 const getBackendUrl = (path = '') => {
   try {
@@ -28,29 +26,4 @@ const SignUpType = {
   Other: 'Other',
 };
 
-const checkNotificationPermission = async () => {
-  const authStatus = await messaging().requestPermission();
-  const enabled =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-  if (enabled) {
-    log.info('Notification permission granted.');
-    log.info('Authorization status:', authStatus);
-
-    // Set up message handler
-    messaging().onMessage(async remoteMessage => {
-      if (remoteMessage.data?.type === NotificationType.NEW_BOOK) {
-        await saveNotification({
-          type: NotificationType.NEW_BOOK,
-          title: 'New Book Added',
-          message: remoteMessage.notification.body,
-          bookId: remoteMessage.data.bookId,
-        });
-      }
-    });
-  }
-  return enabled;
-};
-
-export { getBackendUrl, SignUpType, checkNotificationPermission };
+export { getBackendUrl, SignUpType };

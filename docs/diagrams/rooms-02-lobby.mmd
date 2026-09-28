@@ -1,0 +1,73 @@
+sequenceDiagram
+    %% Rooms flow 2 of 3 — Room lobby: choose what to read, start reading
+    %% Participants map to:
+    %%   LB   src/screens/RoomLobbyScreen.js
+    %%   PK   src/components/PickerSheet.js
+    %%   RS   src/stores/roomStore.js
+    %%   BKS  src/stores/booksStore.js
+    %%   BS   src/stores/bucketsStore.js
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   MS   src/screens/ManuscriptScreen.js
+    autonumber
+    actor R as Reader
+    participant LB as RoomLobbyScreen
+    participant PK as PickerSheet
+    participant RS as roomStore
+    participant BKS as booksStore
+    participant BS as bucketsStore
+    participant RPS as readingProgressStore
+    participant SRV as Server
+    participant MS as ManuscriptScreen
+
+    R->>LB: open room (route.params.room)
+    par room detail
+        LB->>RS: fetchRoomDetail(id)
+        RS->>SRV: GET /room/{id}
+        SRV-->>RS: members, current_book, bucket{books[]}
+        RS->>RS: merge into rooms, activeRoom
+        RS->>RPS: attachRoom(detail) — re-attach only, no adopt
+    and picker data
+        LB->>BKS: fetchBooks() → GET /books/all
+        LB->>BS: fetchCustomBuckets(), fetchCuratedBuckets()
+    end
+    LB->>LB: room = live store copy, iAmCreator by username match
+    LB->>RPS: loadProgress(bookId) — bookLocked if totalPages > 0
+
+    alt State A — nothing chosen
+        alt "Choose a book"
+            R->>PK: pick from all books
+            PK->>LB: handlePickBook
+            LB->>LB: next = {bucket: null, currentBook}
+        else "Read through a bucket"
+            R->>PK: pick bucket (custom + curated)
+            LB->>LB: pendingBucket {id, type: user|curated, books}
+            R->>PK: "Which book first?"
+            PK->>LB: handlePickBucketBook
+            LB->>LB: next = {bucket, currentBook}
+        end
+        LB->>RS: setRoomReading(roomId, next)
+        RS->>RS: optimistic update of the room
+        RS->>SRV: PATCH /room/{id}/reading {current_book_id, bucket_id, bucket_type}
+        alt 200
+            SRV-->>RS: room
+            RS->>RS: reconcile rooms + activeRoom
+        else rejected (e.g. not the creator) or network error
+            RS->>RS: revert to previous rooms
+            RS-->>R: error toast
+        end
+    else State B / C — a book is chosen
+        opt swap to "Up next" or "Add a bucket"
+            LB->>LB: bookLocked? → toast "book is locked", stop
+            LB->>RS: setRoomReading(...) as above
+        end
+        R->>LB: tap book hero
+        LB->>RPS: startBook(book, {roomId, roomName, roomMembers})
+        RPS->>RPS: carry over saved progress, persist via saveReadingProgress
+        RPS->>RPS: activeBook, loadShelf(), fetchMemberProgress(roomId)
+        LB->>MS: navigate ManuscriptScreen {book} — reading-02
+    end
+
+    opt invite
+        R->>LB: Copy / Share / QR
+        LB-->>R: code, share sheet, or QR of readpanda://join/CODE
+    end

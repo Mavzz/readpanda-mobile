@@ -7,6 +7,7 @@ import MainStackNavigator from './MainStackNavigator';
 import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
 import useInviteDeepLink from '../hooks/useInviteDeepLink';
+import usePushNotifications from '../hooks/usePushNotifications';
 
 const Stack = createStackNavigator();
 
@@ -43,6 +44,7 @@ const AppContent = () => {
   // readpanda://join/{CODE} — from the Room Detail QR. Not in `linking` above
   // because joining is an API call, not just a route.
   useInviteDeepLink({ isAuthenticated, navigationRef });
+  usePushNotifications({ isAuthenticated, navigationRef });
 
   return (
     <NavigationContainer

@@ -11,6 +11,8 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { DS } from '../styles/global';
+import { showToast } from './Toaster';
+import findReaderBook from '../utils/readerBook';
 
 const NotificationItem = ({ notification, onPress }) => {
   const formattedDate = new Date(notification.timestamp).toLocaleDateString('en-US', {
@@ -63,8 +65,13 @@ const NotificationList = ({ notifications, onNotificationRead, onClose }) => {
     }
 
     if (notification.type === 'NEW_BOOK' && notification.bookId) {
+      const book = await findReaderBook(notification.bookId);
       onClose?.();
-      navigation.navigate('ManuscriptScreen', { bookId: notification.bookId });
+      if (!book) {
+        showToast('That book isn\'t available right now', 'error');
+        return;
+      }
+      navigation.navigate('ManuscriptScreen', { book });
     }
   };
 

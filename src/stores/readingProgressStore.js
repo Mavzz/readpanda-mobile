@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
 import getInitials from '../utils/getInitials';
-import { putReadingProgress, fetchRoomProgress } from '../services/progressService';
+import { putReadingProgress, fetchRoomProgress, fetchMyProgress } from '../services/progressService';
 
 // There is deliberately no fixture *active book*: "no activeBook" is a real
 // state the app has to render (FIRST_RUN_3a_3b.md § 3a/3b), so a reader who
@@ -445,6 +445,89 @@ const useReadingProgressStore = create((set, get) => ({
       });
     }
     get().loadShelf();
+  },
+
+  // GET /progress — pull in what the reader has been reading on other devices.
+  // Positions live on the device first (saveProgress), so a second phone or a
+  // reinstall would otherwise open to the first-run state mid-book.
+  //
+  // Per book, the newer copy wins: a server row only replaces the local one
+  // when it was read more recently. A book the device doesn't know yet is
+  // tagged with whichever of `rooms` is currently reading it, so it comes back
+  // with its room's pace track and comments rather than as a solo read.
+  //
+  // Failures are logged and swallowed — this device's own positions are still
+  // right, just not caught up.
+  syncFromServer: async (rooms = []) => {
+    try {
+      const { status, response } = await fetchMyProgress();
+      if (status !== 200 || !Array.isArray(response)) {
+        log.error('Failed to fetch my reading progress:', response);
+        return;
+      }
+
+      let changed = false;
+      response.forEach((row) => {
+        const bookId = row.book_id;
+        const title = row.book?.title;
+        if (!bookId || !title) {
+          return;
+        }
+        const serverTime = Date.parse(row.last_read_at) || 0;
+        const local = enhancedStorage.getReadingPosition(bookId);
+        const localTime = local?.progress?.lastReadAt || local?.timestamp || 0;
+        if (local && localTime >= serverTime) {
+          return;
+        }
+
+        // Keep the room the device already knew about; otherwise adopt the
+        // room of mine that is reading this book right now, if any.
+        const room = rooms.find((r) => r.currentBookId === bookId);
+        const roomFields = local?.book?.room_id || local?.book?.solo
+          ? {
+            room_id: local.book.room_id || null,
+            room_name: local.book.room_name || null,
+            room_members: local.book.room_members || null,
+            solo: !!local.book.solo,
+          }
+          : {
+            room_id: room?.id || null,
+            room_name: room?.name || null,
+            room_members: room ? roomMembersOf(room) : null,
+            solo: false,
+          };
+
+        enhancedStorage.mergeReadingPosition(
+          bookId,
+          {
+            currentPage: row.current_page || 0,
+            totalPages: row.total_pages || 0,
+            lastReadAt: serverTime,
+          },
+          {
+            book_id: bookId,
+            title,
+            cover_image_url: row.book.cover_image_url || null,
+            manuscript_url: row.book.manuscript_url || null,
+            ...roomFields,
+          },
+          serverTime,
+        );
+        changed = true;
+      });
+
+      if (!changed) {
+        return;
+      }
+      log.info('Caught up reading positions from the server');
+      // Positions now differ from what's in memory: drop the cached ones and
+      // re-read the hero, which loadActiveBook skips while one is set.
+      set({ activeBook: null, progress: {} });
+      get().loadActiveBook();
+      get().refreshMemberProgress();
+    } catch (e) {
+      log.error('Error syncing reading progress:', e);
+    }
   },
 
   // The mirror of detachRoom: a room brings its social layer to a book.

@@ -1,0 +1,67 @@
+flowchart TD
+    %% Navigator tree and the main cross-screen edges.
+    %% Solid = nesting, dashed = navigate() calls.
+    %% Files: src/navigation/*.js
+    Root["AppNavigator<br/>(isAuthenticated switch)"]
+
+    subgraph Auth["Auth — AuthStackNavigator"]
+        Login
+        SignUp
+        InterestA["Interest"]
+    end
+
+    subgraph Main["Main — MainStackNavigator"]
+        subgraph Tabs["Tabs — TabNavigator"]
+            subgraph HomeTab["Home — HomeStackNavigator"]
+                HomeMain
+                LibraryScreen
+                BucketBooksScreen
+                GenreBooksScreen["GenreBooksScreen<br/>(registered, never navigated to)"]
+            end
+            subgraph ReadingTab["Reading — ReadingStackNavigator"]
+                ReadingMain
+                RoomBookScreen
+                SoloBookScreen
+            end
+            Rooms["Rooms — RoomsScreen"]
+        end
+        ManuscriptScreen["ManuscriptScreen<br/>(full-screen reader)"]
+        Profile
+        InterestM["Interest"]
+        CreateBucketScreen["CreateBucketScreen (modal)"]
+        CreateRoomScreen["CreateRoomScreen (modal)"]
+        RoomLobbyScreen
+    end
+
+    Root -->|signed out| Auth
+    Root -->|signed in| Main
+    Login -.-> SignUp
+    SignUp -.->|popTo| Login
+
+    HomeMain -.->|isNewUser| InterestM
+    HomeMain -.-> Profile
+    HomeMain -.->|See all / Browse| LibraryScreen
+    HomeMain -.->|curated card| BucketBooksScreen
+    HomeMain -.->|hero| ManuscriptScreen
+    HomeMain -.->|room card / nudge| RoomLobbyScreen
+    HomeMain -.->|first run| CreateRoomScreen
+    HomeMain -.->|join by code| Rooms
+    LibraryScreen -.-> BucketBooksScreen
+    LibraryScreen -.->|+| CreateBucketScreen
+    BucketBooksScreen -.-> ManuscriptScreen
+
+    ReadingMain -.->|room row| RoomBookScreen
+    ReadingMain -.->|solo row| SoloBookScreen
+    ReadingMain -.->|▶| ManuscriptScreen
+    ReadingMain -.->|first run| LibraryScreen
+    RoomBookScreen -.-> ManuscriptScreen
+    SoloBookScreen -.-> ManuscriptScreen
+    SoloBookScreen -.->|seedBook| CreateRoomScreen
+
+    Rooms -.->|New| CreateRoomScreen
+    Rooms -.->|open / join| RoomLobbyScreen
+    CreateRoomScreen -.->|replace| RoomLobbyScreen
+    RoomLobbyScreen -.->|start reading| ManuscriptScreen
+    Profile -.-> InterestM
+
+    DeepLink(["readpanda://join/CODE"]) -.->|useInviteDeepLink| RoomLobbyScreen

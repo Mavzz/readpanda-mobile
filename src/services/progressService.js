@@ -31,4 +31,15 @@ const fetchRoomProgress = async (roomId) => {
   return { status, response };
 };
 
-export { putReadingProgress, fetchRoomProgress };
+// GET /progress — every book I have a position in, with the book's title,
+// cover and manuscript url, most recently read first. What a fresh device (or
+// a reinstall) rebuilds the Reading shelf from.
+const fetchMyProgress = async () => {
+  const { status, response } = await makeAuthenticatedGetRequest(
+    getBackendUrl('/progress'),
+  );
+
+  return { status, response };
+};
+
+export { putReadingProgress, fetchRoomProgress, fetchMyProgress };

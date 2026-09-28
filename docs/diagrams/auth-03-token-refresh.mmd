@@ -1,0 +1,71 @@
+sequenceDiagram
+    %% Auth flow 3 of 4 — Authenticated request, refresh and retry
+    %% What every store call goes through: makeAuthenticated*Request →
+    %% apiService.executeRequest.
+    %% Participants map to:
+    %%   ST   any store/service (bucketsStore, roomStore, commentsStore, …)
+    %%   AR   src/services/authenticatedRequests.js
+    %%   API  src/services/apiService.js (singleton)
+    %%   ES   src/utils/enhancedStorage.js
+    %%   AS   src/stores/authStore.js (callback registered by AuthProvider)
+    autonumber
+    participant ST as Store / service
+    participant AR as authenticatedRequests
+    participant API as apiService
+    participant ES as enhancedStorage
+    participant SRV as Server
+    participant AS as authStore
+
+    ST->>AR: makeAuthenticatedGetRequest(url)
+    AR->>ES: getAuthToken()
+    alt no access token
+        AR-->>ST: throw AuthError NO_TOKENS
+    end
+    AR->>API: get(url, Bearer token)
+    API->>SRV: fetch (X-Application-Type: mobile)
+
+    alt 2xx
+        SRV-->>API: 200 / 201 / 204
+        API-->>ST: {status, response}
+    else 401 or 498, and not skipAuthRetry
+        SRV-->>API: 401 / 498
+        API->>API: handleTokenError(request, attempt)
+        alt a refresh is already in flight
+            API->>API: push onto failedQueue, await it
+        else first to fail
+            API->>API: isRefreshing = true
+            API->>ES: getAuthToken(), getRefreshToken()
+            API->>SRV: POST /token/refresh {refreshToken}
+            alt 200
+                SRV-->>API: accessToken, rotated refreshToken
+                API->>ES: updateAuthToken, updateRefreshToken
+                API->>API: processQueue(null, token) — waiters resume
+            else 401 / 403, or no refresh token
+                API->>ES: clearAuthData()
+                API->>AS: authCallback() → signOut()
+                AS->>AS: isAuthenticated = false, clear stores (auth-04)
+                Note over AS: AppContent swaps Main for Auth — the<br/>reader lands on Login
+                API-->>ST: throw AuthError NO_TOKENS
+            else other status or network error
+                API->>API: processQueue(error) — tokens kept
+                API-->>ST: throw AuthError REFRESH_FAILED
+            end
+            API->>API: isRefreshing = false
+        end
+        API->>SRV: retry with new Bearer (attempt + 1, max 3)
+    else other 4xx
+        SRV-->>API: 4xx
+        API-->>ST: throw "Client error …" — no retry
+    else 5xx
+        SRV-->>API: 5xx
+        loop attempt < 3
+            API->>API: wait 1s · 2^attempt
+            API->>SRV: retry
+        end
+        API-->>ST: throw after 3 attempts
+    end
+
+    opt fetch itself throws (offline, DNS)
+        API->>API: same backoff, up to 3 retries
+    end
+

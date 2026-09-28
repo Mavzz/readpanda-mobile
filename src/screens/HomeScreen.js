@@ -59,6 +59,7 @@ const Home = ({ navigation }) => {
   const memberProgress = useReadingProgressStore((s) => s.memberProgress);
   const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
   const refreshMemberProgress = useReadingProgressStore((s) => s.refreshMemberProgress);
+  const syncFromServer = useReadingProgressStore((s) => s.syncFromServer);
   const attachRoom = useReadingProgressStore((s) => s.attachRoom);
 
   const loadComments = useCommentsStore((s) => s.loadComments);
@@ -74,6 +75,7 @@ const Home = ({ navigation }) => {
   const notifLoading = useNotificationStore((s) => s.loading);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const refreshUnreadCount = useNotificationStore((s) => s.refreshUnreadCount);
   const [notifModalVisible, setNotifModalVisible] = useState(false);
 
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
@@ -115,6 +117,11 @@ const Home = ({ navigation }) => {
     const { status: curatedStatus } = await fetchCuratedBuckets(showRefresh);
     const { status: customStatus } = await fetchCustomBuckets();
     const { status: roomsStatus } = await fetchRooms();
+    // After the rooms, so a book started on another device comes back tagged
+    // with the room reading it.
+    await syncFromServer(useRoomStore.getState().rooms);
+    // The bell's badge — otherwise it only updated once the inbox was opened.
+    refreshUnreadCount();
     loadActiveBook();
     // After loadActiveBook, so the hero's room is known before we ask where
     // its members are.
@@ -211,6 +218,9 @@ const Home = ({ navigation }) => {
       books_preview: bucket.booksPreview,
       name: bucket.name,
       book_count: bucket.bookCount,
+      // Without the id the screen only ever has the 2-book preview.
+      bucket_id: bucket.id,
+      isCustom: !bucket.isCurated,
     });
   };
 

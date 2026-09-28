@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,10 +25,12 @@ const RoomsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const rooms = useRoomStore((s) => s.rooms);
-  const loading = useRoomStore((s) => s.loading);
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
   const joinRoomByCode = useRoomStore((s) => s.joinRoomByCode);
   const [inviteCode, setInviteCode] = useState('');
+  // Local, not the store's `loading`: Home refreshes rooms too, and that
+  // shouldn't spin this tab's pull-to-refresh indicator.
+  const [refreshing, setRefreshing] = useState(false);
   const codeInputRef = useRef(null);
 
   // The first-run nudges on Home and the Reading tab (FIRST_RUN_3a_3b.md
@@ -51,8 +53,12 @@ const RoomsScreen = () => {
   );
 
   const loadRooms = async (showRefresh = false) => {
+    if (showRefresh) {
+      setRefreshing(true);
+    }
     const { status } = await fetchRooms();
     if (showRefresh) {
+      setRefreshing(false);
       if (status === 200) {
         showToast('Rooms refreshed', 'success');
       } else {
@@ -61,9 +67,14 @@ const RoomsScreen = () => {
     }
   };
 
-  useEffect(() => {
-    loadRooms();
-  }, []);
+  // Every focus, not just mount: the tab stays mounted, and the cards' group
+  // track is everyone's live position — reading a room's book and coming back
+  // should move it without a pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      fetchRooms();
+    }, [fetchRooms]),
+  );
 
   const handleCreateRoom = () => {
     navigation.navigate('CreateRoomScreen');
@@ -90,7 +101,7 @@ const RoomsScreen = () => {
     navigation.navigate('RoomLobbyScreen', { room });
   };
 
-  log.debug('RoomsDetails', { rooms, loading, inviteCode });
+  log.debug('RoomsDetails', { rooms, refreshing, inviteCode });
 
   return (
     <View style={styles.container}>
@@ -108,7 +119,7 @@ const RoomsScreen = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={refreshing}
             onRefresh={() => loadRooms(true)}
             colors={[DS.colors.primary]}
             tintColor={DS.colors.primary}

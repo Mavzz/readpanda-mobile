@@ -1,6 +1,6 @@
 // src/screens/ManuscriptScreen.js
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -43,10 +43,13 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const markThreadRead = useCommentsStore((s) => s.markThreadRead);
   const rooms = useRoomStore((s) => s.rooms);
 
-  const currentPageRef = useRef(0);
-  const totalPagesRef = useRef(0);
   const savedProgress = loadProgress(book.book_id);
   const initialPage = savedProgress?.currentPage || 0;
+  // Seeded from the saved position, not 0: a save that lands before the PDF
+  // reports its first page (backgrounding right after opening) must not send
+  // the reader back to page one.
+  const currentPageRef = useRef(initialPage);
+  const totalPagesRef = useRef(savedProgress?.totalPages || 0);
 
   const fileHashRef = useRef('');
   const [submitting, setSubmitting] = useState(false);
@@ -78,23 +81,46 @@ const ManuscriptScreen = ({ route, navigation }) => {
 
   log.info(`ManuscriptScreen loaded for book: ${book.title}`);
 
+  // The last position handed to saveProgress, so leaving the foreground twice
+  // (inactive, then background) doesn't write and publish the same page twice.
+  const lastSavedRef = useRef(null);
+
+  const persistPosition = useCallback(() => {
+    const currentPage = currentPageRef.current;
+    const totalPages = totalPagesRef.current;
+    const last = lastSavedRef.current;
+    if (last && last.currentPage === currentPage && last.totalPages === totalPages) {
+      return;
+    }
+    lastSavedRef.current = { currentPage, totalPages };
+    saveProgress(
+      book.book_id,
+      { currentPage, totalPages, lastReadAt: Date.now() },
+      book,
+    );
+  }, [book, saveProgress]);
+
   useEffect(() => {
     setCurrentBook(book);
     addToRecentBooks(book);
 
     return () => {
-      saveProgress(
-        book.book_id,
-        {
-          currentPage: currentPageRef.current,
-          totalPages: totalPagesRef.current,
-          lastReadAt: Date.now(),
-        },
-        book,
-      );
+      persistPosition();
       setCurrentBook(null);
     };
-  }, [book, setCurrentBook, addToRecentBooks, saveProgress]);
+  }, [book, setCurrentBook, addToRecentBooks, persistPosition]);
+
+  // Unmount alone isn't enough: a reader who swipes the app away from the
+  // switcher never unmounts this screen. 'inactive' is the last event iOS
+  // reliably delivers before that, so save on it as well as on 'background'.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'inactive' || state === 'background') {
+        persistPosition();
+      }
+    });
+    return () => subscription.remove();
+  }, [persistPosition]);
 
   // Solo books have no room and therefore no conversation to fetch.
   useEffect(() => {

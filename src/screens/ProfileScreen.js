@@ -7,6 +7,7 @@ import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../services/auth';
+import { unregisterPushDevice } from '../hooks/usePushNotifications';
 import enhancedStorage from '../utils/enhancedStorage';
 import { DS } from '../styles/global';
 
@@ -31,7 +32,8 @@ const ProfileScreen = () => {
 
   const handleSignOut = async () => {
     log.info('Signing out...');
-    log.info('refreshToken:', refreshToken);
+    // Before logout: this needs the access token that signOut clears.
+    await unregisterPushDevice();
     await logout(username, refreshToken);
     signOut();
     log.info('User signed out successfully');
@@ -77,7 +79,7 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.settingItem}>
               <Text style={styles.settingText}>Edit Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Interest', { username: username, preferences: JSON.parse(user.preferences) })}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Interest')}>
               <Text style={styles.settingText}>Edit Preferences</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.settingItem}>

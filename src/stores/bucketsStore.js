@@ -203,6 +203,10 @@ const useBucketsStore = create((set, get) => ({
       return { status: null, response: [] };
     }
   },
+
+  clearBuckets: () => {
+    set({ customBuckets: [], curatedBuckets: [] });
+  },
 }));
 
 export default useBucketsStore;

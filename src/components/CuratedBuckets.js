@@ -10,11 +10,14 @@ const TILE_HEIGHT = 196;
 
 const CuratedBuckets = ({ navigation, curatedBuckets }) => {
 
-  const openBucket = (booksPreview, name, bookCount) => {
+  const openBucket = (bucket) => {
     navigation.navigate('BucketBooksScreen', {
-      books_preview: booksPreview,
-      name,
-      book_count: bookCount,
+      books_preview: bucket.booksPreview,
+      name: bucket.name,
+      book_count: bucket.bookCount,
+      // Without the id the screen only ever has the 2-book preview.
+      bucket_id: bucket.id,
+      isCustom: false,
     });
   };
 
@@ -32,7 +35,7 @@ const CuratedBuckets = ({ navigation, curatedBuckets }) => {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => openBucket(item.booksPreview, item.name, item.bookCount)}
+            onPress={() => openBucket(item)}
             activeOpacity={0.85}
           >
             <BookCoverGradient

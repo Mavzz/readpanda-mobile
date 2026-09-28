@@ -1,0 +1,61 @@
+sequenceDiagram
+    %% Auth flow 2 of 4 — Sign up, then pick interests
+    %% Participants map to:
+    %%   SU   src/screens/SignUpScreen.js
+    %%   AU   src/services/auth.js
+    %%   AS   src/stores/authStore.js
+    %%   PS   src/services/preferencesService.js
+    %%   NAV  src/navigation/AppNavigator.js
+    %%   HS   src/screens/HomeScreen.js
+    %%   IS   src/screens/InterestScreen.js (registered in MainStackNavigator)
+    autonumber
+    actor U as User
+    participant SU as SignUpScreen
+    participant AU as auth.js
+    participant SRV as Server
+    participant AS as authStore
+    participant PS as PreferenceService
+    participant NAV as AppContent
+    participant HS as HomeScreen
+    participant IS as InterestScreen
+
+    alt Email
+        U->>SU: username, email, password, confirm
+        SU->>SU: all filled and passwords match? else Alert, stop
+        SU->>AU: emailSignUp(username, password, email)
+        AU->>SRV: POST /signup {skipAuthRetry}
+        SRV-->>AU: 201 accessToken, refreshToken, username, preferences
+    else Google
+        SU->>AU: googleSignUpLogin() — same path as auth-01
+        AU->>SRV: POST /auth/google
+        SRV-->>AU: 200/201 tokens
+    end
+    AU-->>SU: status, response
+
+    SU->>AS: signIn(userData) — isNewUser: true
+    AS->>AS: isAuthenticated = true, storeAuthData
+    SU->>PS: fetchUserPreferences(username)
+    PS->>SRV: GET /user/preferences?username=…
+    SRV-->>PS: {category: [{preference_id, preference_subgenre, preference_value}]}
+    SU->>AS: updateUser({preferences})
+
+    AS-->>NAV: isAuthenticated
+    NAV->>HS: mount Main → Tabs → Home
+    HS->>HS: init effect (didInit guard)
+    HS->>HS: loadActiveBook(), welcome toast, loadHome() — see home-01
+    HS->>IS: user.isNewUser → navigate('Interest')
+
+    U->>IS: toggle chips
+    IS->>IS: setInterests, isUpdated = true
+    U->>IS: "Done!"
+    alt isUpdated
+        IS->>PS: updateUserPreferences(username, interests)
+        PS->>SRV: POST /user/preferences?username=…
+        SRV-->>PS: 200/201
+        IS->>AS: updateUser({preferences: interests, isNewUser: false})
+    else no changes
+        IS->>AS: updateUser({isNewUser: false})
+    end
+    AS->>AS: persisted via updateUserProfile
+    IS->>HS: navigation.goBack()
+    Note over AS,HS: isNewUser is cleared either way, so the next cold<br/>start goes straight to Home. Quitting before "Done!"<br/>leaves it set and the picker comes back — onboarding<br/>isn't finished yet

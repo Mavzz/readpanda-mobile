@@ -77,13 +77,15 @@ const InterestScreen = () => {
           log.error('Failed to update user preferences with status:', status);
           throw new Error('Failed to update preferences');
         }
-        updateUser({ preferences: interests });
+        updateUser({ preferences: interests, isNewUser: false });
         log.info('First time user experience completed');
-        navigation.reset({ index: 0, routes: [{ name: 'HomeMain' }] });
       } else {
         log.info('No changes made to preferences, navigating to Home');
-        navigation.reset({ index: 0, routes: [{ name: 'HomeMain' }] });
+        // Skipping the picks still finishes onboarding — without this the
+        // persisted isNewUser sends the reader back here on every cold start.
+        updateUser({ isNewUser: false });
       }
+      navigation.goBack();
     } catch (error) {
       log.error('Error updating preferences:', error);
     } finally {
