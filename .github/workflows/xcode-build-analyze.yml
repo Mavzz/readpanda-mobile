@@ -71,16 +71,3 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
             | xcpretty
-
-      - name: Package Simulator App
-        run: |
-          APP_PATH="build/DerivedData/Build/Products/Release-iphonesimulator/ReadPanda.app"
-          cd $(dirname "$APP_PATH")
-          zip -r ../../../../../ReadPanda-Simulator.app.zip ReadPanda.app
-
-      - name: Upload Simulator App
-        uses: actions/upload-artifact@v4
-        with:
-          name: ReadPanda-Simulator-App
-          path: ReadPanda-Simulator.app.zip
-          retention-days: 7
