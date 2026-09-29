@@ -98,7 +98,7 @@ showToast('Welcome back!', 'success', 4000);
 ### Environment Variables
 ```javascript
 // Always use @env imports
-import { SECRET_KEY, API_VERSION } from "@env";
+import { API_VERSION } from "@env";
 
 // Dynamic IP detection for local development
 const backendUrl = await getBackendUrl("/books/all");

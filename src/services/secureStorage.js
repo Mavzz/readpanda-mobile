@@ -1,13 +1,12 @@
 import * as Keychain from 'react-native-keychain';
 import { MMKV } from 'react-native-mmkv';
-import { SECRET_KEY } from '@env';
 import { STORAGE_CATEGORIES } from '../constants/storageConstants';
 import log from '../utils/logger';
 
 // Two secrets live in the Keychain rather than in the app:
-//  - the MMKV encryption key, generated once per device. It used to be
-//    SECRET_KEY from .env, which ships inside the JS bundle — anyone with the
-//    IPA could read it, so the encryption protected nothing.
+//  - the MMKV encryption key, generated once per device. A key shipped in the
+//    app (e.g. from .env) would be readable by anyone with the IPA, so the
+//    encryption would protect nothing.
 //  - the access and refresh tokens themselves.
 //
 // The Keychain is async but the app reads storage synchronously everywhere
@@ -17,10 +16,6 @@ import log from '../utils/logger';
 // at once and reach the Keychain in the background, in order.
 
 const STORE_ID = 'readpanda-storage';
-// Unencrypted, and holds one flag: whether STORE_ID has been moved onto the
-// device key. It can't live inside the store it describes.
-const META_ID = 'readpanda-meta';
-const MIGRATED_FLAG = 'onDeviceKey';
 
 const MMKV_KEY_SERVICE = 'com.readpanda.app.mmkv-key';
 const TOKEN_SERVICE = 'com.readpanda.app.auth-tokens';
@@ -57,33 +52,16 @@ const loadOrCreateKey = async () => {
   return { key, created: true };
 };
 
-// Each MMKV id is opened exactly once here: MMKV caches instances by id, so a
-// second open with a different key would silently get the first one back.
 const openStore = (key, created) => {
-  const meta = new MMKV({ id: META_ID });
-  const migrated = meta.getBoolean(MIGRATED_FLAG) === true;
-
-  if (migrated && created) {
-    // The store says it's on a device key, but this device has none — its
-    // data came from a backup of another phone, or the Keychain was wiped.
-    // Nothing in it can be decrypted, so start clean; the reader signs in again.
-    log.warn('Secure storage key missing for existing data; clearing local store');
-    const orphaned = new MMKV({ id: STORE_ID, encryptionKey: key });
-    orphaned.clearAll();
-    return orphaned;
+  const opened = new MMKV({ id: STORE_ID, encryptionKey: key });
+  if (created) {
+    // A key made just now can't decrypt anything already on disk — data from
+    // a backup of another phone, or from before the Keychain was wiped. Start
+    // clean; the reader signs in again. On a fresh install there's nothing
+    // to clear.
+    opened.clearAll();
   }
-
-  if (!migrated) {
-    // First launch of this version (or a fresh install): whatever is on disk
-    // was written under SECRET_KEY. Re-encrypt it in place under the device key.
-    const legacy = new MMKV({ id: STORE_ID, encryptionKey: SECRET_KEY || undefined });
-    legacy.recrypt(key);
-    meta.set(MIGRATED_FLAG, true);
-    log.info('Secure storage moved onto the device key');
-    return legacy;
-  }
-
-  return new MMKV({ id: STORE_ID, encryptionKey: key });
+  return opened;
 };
 
 const persistTokens = () => {
@@ -108,26 +86,14 @@ const parseJson = (raw) => {
 };
 
 const loadTokens = async () => {
-  // Before this version the tokens sat in MMKV beside the profile. Move them
-  // across once; the Keychain copy wins if both exist. They're deleted from
-  // MMKV only after the Keychain write has been attempted.
-  const { AUTH_TOKEN, REFRESH_TOKEN, USER_PROFILE } = STORAGE_CATEGORIES.MMKV;
-  const legacyToken = parseJson(store.getString(AUTH_TOKEN));
-  const legacyRefresh = parseJson(store.getString(REFRESH_TOKEN));
-
   const saved = parseJson((await Keychain.getGenericPassword({ service: TOKEN_SERVICE }))?.password);
   if (saved) {
     tokens = { token: saved.token || null, refreshToken: saved.refreshToken || null };
-  } else if (legacyToken || legacyRefresh) {
-    tokens = { token: legacyToken, refreshToken: legacyRefresh };
-    await persistTokens();
   }
-  store.delete(AUTH_TOKEN);
-  store.delete(REFRESH_TOKEN);
 
   // iOS keeps Keychain items after the app is deleted, but not the MMKV
   // store. Tokens with no profile beside them belong to a previous install.
-  if ((tokens.token || tokens.refreshToken) && !store.contains(USER_PROFILE)) {
+  if ((tokens.token || tokens.refreshToken) && !store.contains(STORAGE_CATEGORIES.MMKV.USER_PROFILE)) {
     tokens = { token: null, refreshToken: null };
     await persistTokens();
   }
