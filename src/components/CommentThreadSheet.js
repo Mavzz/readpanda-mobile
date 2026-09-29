@@ -5,12 +5,14 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  FlatList,
+  ScrollView,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { DS } from '../styles/global';
@@ -98,6 +100,15 @@ const CommentThreadSheet = ({
   onClose,
 }) => {
   const [body, setBody] = useState('');
+  // The cap has to be a number. As '62%' it resolved against the keyboard
+  // wrapper, whose height is the sheet's own — so the only thing Yoga could
+  // shrink to satisfy it was the comment list, and the thread vanished.
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const sheetFrame = {
+    maxHeight: windowHeight * 0.62,
+    paddingBottom: Math.max(20, insets.bottom + 8),
+  };
   const [replyTo, setReplyTo] = useState(null);
   const [expanded, setExpanded] = useState({});
 
@@ -134,14 +145,14 @@ const CommentThreadSheet = ({
     setReplyTo(comment);
   };
 
-  const renderThread = ({ item: comment }) => {
+  const renderThread = (comment) => {
     const replies = comment.replies || [];
     const showAll = expanded[comment.id];
     const shown = showAll ? replies : replies.slice(0, VISIBLE_REPLIES);
     const hidden = replies.length - shown.length;
 
     return (
-      <View>
+      <View key={comment.id}>
         <CommentRow comment={comment} onLike={onLike} onReply={handleReply} />
         {shown.map((reply) => (
           <CommentRow
@@ -173,7 +184,7 @@ const CommentThreadSheet = ({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardWrap}
         >
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.sheet, sheetFrame]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.grabber} />
 
             <View style={styles.header}>
@@ -195,22 +206,24 @@ const CommentThreadSheet = ({
               </View>
             ) : null}
 
-            <FlatList
-              data={comments}
-              keyExtractor={(comment) => String(comment.id)}
-              renderItem={renderThread}
-              // renderItem reads `expanded`, which the list can't see on its own.
-              extraData={expanded}
+            {/* A ScrollView, not a FlatList: the sheet has only a maxHeight and
+                sizes to its content, which a FlatList doesn't do — it collapsed
+                and hid the thread under the composer. One passage's thread is
+                short, so there's nothing to virtualize anyway. */}
+            <ScrollView
               style={styles.list}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={
+            >
+              {comments.length === 0 ? (
                 <Text style={styles.empty}>
                   Nothing here yet — say the first thing about this passage.
                 </Text>
-              }
-            />
+              ) : (
+                comments.map(renderThread)
+              )}
+            </ScrollView>
 
             {replyTo && (
               <View style={styles.replyingTo}>
@@ -273,12 +286,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    maxHeight: '62%',
     backgroundColor: DS.colors.surfaceContainer,
     borderTopLeftRadius: DS.radius.hero,
     borderTopRightRadius: DS.radius.hero,
     paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   grabber: {
     alignSelf: 'center',
