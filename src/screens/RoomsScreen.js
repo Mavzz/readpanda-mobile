@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   StatusBar,
   TextInput,
   RefreshControl,
@@ -101,6 +101,57 @@ const RoomsScreen = () => {
     navigation.navigate('RoomLobbyScreen', { room });
   };
 
+  const renderRoom = ({ item: room }) => (
+    <TouchableOpacity
+      style={styles.roomCard}
+      activeOpacity={0.85}
+      onPress={() => openRoom(room)}
+    >
+      <BookCoverGradient
+        coverUrl={room.coverUrl}
+        title={room.currentBookTitle}
+        width={56}
+        height={78}
+        borderRadius={12}
+        titleFontSize={8}
+      />
+      <View style={styles.roomInfo}>
+        <View style={styles.roomNameRow}>
+          <Text style={styles.roomName} numberOfLines={1}>{room.name}</Text>
+          {room.unreadCount > 0 && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>{room.unreadCount} new</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.roomMeta} numberOfLines={1}>
+          {room.currentBookTitle || 'No book yet'}{room.status ? ` · ${room.status}` : ''}
+        </Text>
+        <View style={styles.memberRow}>
+          <View style={styles.avatarStack}>
+            {(room.members || []).slice(0, 3).map((m, i) => (
+              <View
+                key={m.userId}
+                style={[
+                  styles.memberAvatar,
+                  i > 0 && styles.memberAvatarOverlap,
+                  m.isMe && styles.memberAvatarMe,
+                ]}
+              >
+                <Text style={m.isMe ? styles.memberAvatarTextMe : styles.memberAvatarText}>
+                  {m.initials}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.groupTrack}>
+            <View style={[styles.groupFill, { width: `${room.groupProgressPct}%` }]} />
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   log.debug('RoomsDetails', { rooms, refreshing, inviteCode });
 
   return (
@@ -113,7 +164,10 @@ const RoomsScreen = () => {
         </View>
       </SafeAreaView>
 
-      <ScrollView
+      <FlatList
+        data={rooms}
+        keyExtractor={(room) => String(room.id)}
+        renderItem={renderRoom}
         style={styles.content}
         contentContainerStyle={styles.contentInner}
         showsVerticalScrollIndicator={false}
@@ -125,98 +179,48 @@ const RoomsScreen = () => {
             tintColor={DS.colors.primary}
           />
         }
-      >
-        {/* ── Action row ─────────────────────────────────────── */}
-        <View style={styles.actionRow}>
-          <View style={styles.inviteField}>
-            <Icon name="key-outline" size={16} color={DS.colors.onSurfaceVariant} />
-            <TextInput
-              ref={codeInputRef}
-              style={styles.inviteInput}
-              value={inviteCode}
-              onChangeText={(t) => setInviteCode(t.toUpperCase())}
-              placeholder="Enter invite code"
-              placeholderTextColor={DS.colors.onSurfaceVariant}
-              maxLength={6}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              onSubmitEditing={handleJoinRoom}
-              returnKeyType="join"
-            />
-          </View>
-          <GradientPill onPress={handleCreateRoom} style={styles.newButton}>
-            <Icon name="add" size={17} color={DS.colors.onPrimary} />
-            <Text style={styles.newButtonText}>New</Text>
-          </GradientPill>
-        </View>
-
-        {/* ── Room list ──────────────────────────────────────── */}
-        {rooms.length > 0 ? (
+        ListHeaderComponent={
           <>
-            <Text style={styles.sectionLabel}>Your rooms</Text>
-            {rooms.map((room) => (
-              <TouchableOpacity
-                key={room.id}
-                style={styles.roomCard}
-                activeOpacity={0.85}
-                onPress={() => openRoom(room)}
-              >
-                <BookCoverGradient
-                  coverUrl={room.coverUrl}
-                  title={room.currentBookTitle}
-                  width={56}
-                  height={78}
-                  borderRadius={12}
-                  titleFontSize={8}
+            {/* ── Action row ─────────────────────────────────────── */}
+            <View style={styles.actionRow}>
+              <View style={styles.inviteField}>
+                <Icon name="key-outline" size={16} color={DS.colors.onSurfaceVariant} />
+                <TextInput
+                  ref={codeInputRef}
+                  style={styles.inviteInput}
+                  value={inviteCode}
+                  onChangeText={(t) => setInviteCode(t.toUpperCase())}
+                  placeholder="Enter invite code"
+                  placeholderTextColor={DS.colors.onSurfaceVariant}
+                  maxLength={6}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  onSubmitEditing={handleJoinRoom}
+                  returnKeyType="join"
                 />
-                <View style={styles.roomInfo}>
-                  <View style={styles.roomNameRow}>
-                    <Text style={styles.roomName} numberOfLines={1}>{room.name}</Text>
-                    {room.unreadCount > 0 && (
-                      <View style={styles.newBadge}>
-                        <Text style={styles.newBadgeText}>{room.unreadCount} new</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.roomMeta} numberOfLines={1}>
-                    {room.currentBookTitle || 'No book yet'}{room.status ? ` · ${room.status}` : ''}
-                  </Text>
-                  <View style={styles.memberRow}>
-                    <View style={styles.avatarStack}>
-                      {(room.members || []).slice(0, 3).map((m, i) => (
-                        <View
-                          key={m.userId}
-                          style={[
-                            styles.memberAvatar,
-                            i > 0 && styles.memberAvatarOverlap,
-                            m.isMe && styles.memberAvatarMe,
-                          ]}
-                        >
-                          <Text style={m.isMe ? styles.memberAvatarTextMe : styles.memberAvatarText}>
-                            {m.initials}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.groupTrack}>
-                      <View style={[styles.groupFill, { width: `${room.groupProgressPct}%` }]} />
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </>
-        ) : null}
+              </View>
+              <GradientPill onPress={handleCreateRoom} style={styles.newButton}>
+                <Icon name="add" size={17} color={DS.colors.onPrimary} />
+                <Text style={styles.newButtonText}>New</Text>
+              </GradientPill>
+            </View>
 
-        {/* ── Empty / invite state ───────────────────────────── */}
-        <View style={styles.inviteCard}>
-          <Icon name="mail-open-outline" size={28} color={DS.colors.onSurfaceVariant} />
-          <Text style={styles.inviteCardTitle}>Invite a friend</Text>
-          <Text style={styles.inviteCardBody}>
-            Rooms are invite-only. Share a code and read the same book on your own schedules.
-          </Text>
-        </View>
-      </ScrollView>
+            {rooms.length > 0 ? <Text style={styles.sectionLabel}>Your rooms</Text> : null}
+          </>
+        }
+        ListFooterComponent={
+          <>
+            {/* ── Empty / invite state ───────────────────────────── */}
+            <View style={styles.inviteCard}>
+              <Icon name="mail-open-outline" size={28} color={DS.colors.onSurfaceVariant} />
+              <Text style={styles.inviteCardTitle}>Invite a friend</Text>
+              <Text style={styles.inviteCardBody}>
+                Rooms are invite-only. Share a code and read the same book on your own schedules.
+              </Text>
+            </View>
+          </>
+        }
+      />
     </View>
   );
 };

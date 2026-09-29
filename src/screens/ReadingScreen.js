@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
+import { View, Text, StyleSheet, SectionList, StatusBar, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { useEffect, useCallback } from 'react';
@@ -82,6 +82,10 @@ const ReadingScreen = () => {
   // shelf is already sorted most-recently-read first, so the head of it is the
   // one row that gets the elevation and the play control.
   const mostRecentId = inProgress[0]?.id;
+  const sections = [
+    { title: 'In a room', data: roomBooks },
+    { title: 'Reading solo', data: soloBooks },
+  ].filter((section) => section.data.length > 0);
 
   // ── 3b: first run ─────────────────────────────────────────────────────
   // Nothing read yet, so there is no data on the screen at all — just the
@@ -163,11 +167,10 @@ const ReadingScreen = () => {
     return `${behind} ch. behind`;
   };
 
-  const renderRow = (book) => {
+  const renderRow = ({ item: book }) => {
     const isMostRecent = book.id === mostRecentId;
     return (
       <Pressable
-        key={book.id}
         onPress={() => openBook(book)}
         style={({ pressed }) => [
           styles.row,
@@ -248,22 +251,17 @@ const ReadingScreen = () => {
         </View>
       </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {roomBooks.length > 0 && (
-          <View style={styles.group}>
-            <Text style={styles.groupEyebrow}>In a room</Text>
-            {roomBooks.map(renderRow)}
-          </View>
+      <SectionList
+        sections={sections}
+        keyExtractor={(book) => String(book.id)}
+        renderItem={renderRow}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.groupEyebrow}>{section.title}</Text>
         )}
-
-        {soloBooks.length > 0 && (
-          <View style={styles.group}>
-            <Text style={styles.groupEyebrow}>Reading solo</Text>
-            {soloBooks.map(renderRow)}
-          </View>
-        )}
-
-        {finishedCount > 0 && (
+        stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        ListFooterComponent={finishedCount > 0 ? (
           <Pressable
             onPress={() => showToast('Your finished books are coming soon', 'info')}
             style={({ pressed }) => [styles.finishedLink, pressed && styles.pressed]}
@@ -274,8 +272,8 @@ const ReadingScreen = () => {
               Finished · {finishedCount} book{finishedCount > 1 ? 's' : ''}
             </Text>
           </Pressable>
-        )}
-      </ScrollView>
+        ) : null}
+      />
     </View>
   );
 };
@@ -367,15 +365,13 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   content: {
+    paddingHorizontal: 24,
     paddingBottom: 32,
   },
 
   // Groups
-  group: {
-    paddingHorizontal: 24,
-    paddingTop: 22,
-  },
   groupEyebrow: {
+    paddingTop: 22,
     fontSize: 11,
     fontFamily: DS.font.bold,
     color: DS.colors.onSurfaceVariant,

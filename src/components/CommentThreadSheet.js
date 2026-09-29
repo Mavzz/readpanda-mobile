@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  ScrollView,
+  FlatList,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -134,6 +134,38 @@ const CommentThreadSheet = ({
     setReplyTo(comment);
   };
 
+  const renderThread = ({ item: comment }) => {
+    const replies = comment.replies || [];
+    const showAll = expanded[comment.id];
+    const shown = showAll ? replies : replies.slice(0, VISIBLE_REPLIES);
+    const hidden = replies.length - shown.length;
+
+    return (
+      <View>
+        <CommentRow comment={comment} onLike={onLike} onReply={handleReply} />
+        {shown.map((reply) => (
+          <CommentRow
+            key={reply.id}
+            comment={reply}
+            isReply
+            onLike={onLike}
+            onReply={handleReply}
+          />
+        ))}
+        {hidden > 0 && (
+          <Pressable
+            onPress={() => setExpanded((e) => ({ ...e, [comment.id]: true }))}
+            style={styles.moreReplies}
+          >
+            <Text style={styles.moreRepliesText}>
+              {hidden} more repl{hidden === 1 ? 'y' : 'ies'}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -163,50 +195,22 @@ const CommentThreadSheet = ({
               </View>
             ) : null}
 
-            <ScrollView
+            <FlatList
+              data={comments}
+              keyExtractor={(comment) => String(comment.id)}
+              renderItem={renderThread}
+              // renderItem reads `expanded`, which the list can't see on its own.
+              extraData={expanded}
               style={styles.list}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-            >
-              {comments.length === 0 && (
+              ListEmptyComponent={
                 <Text style={styles.empty}>
                   Nothing here yet — say the first thing about this passage.
                 </Text>
-              )}
-
-              {comments.map((comment) => {
-                const replies = comment.replies || [];
-                const showAll = expanded[comment.id];
-                const shown = showAll ? replies : replies.slice(0, VISIBLE_REPLIES);
-                const hidden = replies.length - shown.length;
-
-                return (
-                  <View key={comment.id}>
-                    <CommentRow comment={comment} onLike={onLike} onReply={handleReply} />
-                    {shown.map((reply) => (
-                      <CommentRow
-                        key={reply.id}
-                        comment={reply}
-                        isReply
-                        onLike={onLike}
-                        onReply={handleReply}
-                      />
-                    ))}
-                    {hidden > 0 && (
-                      <Pressable
-                        onPress={() => setExpanded((e) => ({ ...e, [comment.id]: true }))}
-                        style={styles.moreReplies}
-                      >
-                        <Text style={styles.moreRepliesText}>
-                          {hidden} more repl{hidden === 1 ? 'y' : 'ies'}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </View>
-                );
-              })}
-            </ScrollView>
+              }
+            />
 
             {replyTo && (
               <View style={styles.replyingTo}>

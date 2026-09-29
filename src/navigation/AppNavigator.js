@@ -1,7 +1,8 @@
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MyTheme } from '../styles/global';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { AuthProvider } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import AuthStackNavigator from './AuthStackNavigator';
 import MainStackNavigator from './MainStackNavigator';
 import { Text } from 'react-native';
@@ -39,7 +40,7 @@ const linking = {
 };
 
 const AppContent = () => {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // readpanda://join/{CODE} — from the Room Detail QR. Not in `linking` above
   // because joining is an API call, not just a route.

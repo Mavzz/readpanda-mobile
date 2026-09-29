@@ -5,7 +5,7 @@ import { primaryButton as PrimaryButton } from '../components/Button';
 import ProfilePicture from '../components/ProfilePicture';
 import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
-import { useAuth } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import { logout } from '../services/auth';
 import { unregisterPushDevice } from '../hooks/usePushNotifications';
 import enhancedStorage from '../utils/enhancedStorage';
@@ -21,7 +21,9 @@ const ProfileSection = ({ title, children }) => (
 );
 
 const ProfileScreen = () => {
-  const { user, signOut, updateUser } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const signOut = useAuthStore((s) => s.signOut);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const username = user?.username;
   const navigation = useNavigation();
   const refreshToken = enhancedStorage.getRefreshToken();

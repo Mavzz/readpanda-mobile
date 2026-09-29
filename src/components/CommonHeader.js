@@ -15,13 +15,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { NotificationBadge } from './Badge';
 import NotificationList from './NotificationList';
-import { useAuth } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import useNotificationStore from '../stores/notificationStore';
 import { DS } from '../styles/global';
 
 
 const CommonHeader = ({ showSearch, navigation }) => {
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
 
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);

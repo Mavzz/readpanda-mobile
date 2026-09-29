@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect } from 'react';
+import { useEffect } from 'react';
 import useAuthStore from '../stores/authStore';
 import apiService from '../services/apiService';
 
-const AuthContext = createContext();
-
+// Auth state lives in useAuthStore — read it with a selector, e.g.
+// useAuthStore((s) => s.user), so a component only re-renders when the
+// fields it uses change. This provider just wires up the startup side effects.
 export const AuthProvider = ({ children }) => {
   const loadUser = useAuthStore((state) => state.loadUser);
 
@@ -19,15 +20,5 @@ export const AuthProvider = ({ children }) => {
     return () => apiService.setAuthFailureCallback(null);
   }, []);
 
-  const authStore = useAuthStore();
-
-  return (
-    <AuthContext.Provider value={authStore}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = () => {
-  return useContext(AuthContext);
+  return children;
 };

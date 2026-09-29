@@ -15,13 +15,14 @@ import { primaryButton as PrimaryButton, ssoButton as SSOButton } from '../compo
 import { SignUpType } from '../utils/Helper';
 import { googleSignUpLogin, emailLogin } from '../services/auth';
 import log from '../utils/logger';
-import { useAuth } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 import readpandaLogo from '../assets/readpandaLogo_New.png';
 
 const Login = ({ navigation }) => {
-  const { signIn, updateUser } = useAuth();
+  const signIn = useAuthStore((s) => s.signIn);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);

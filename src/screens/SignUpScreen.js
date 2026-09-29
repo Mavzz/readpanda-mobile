@@ -18,12 +18,13 @@ import {
 import { SignUpType } from '../utils/Helper';
 import log from '../utils/logger';
 import { googleSignUpLogin, emailSignUp } from '../services/auth';
-import { useAuth } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 
 const SignUp = ({ navigation }) => {
-  const { signIn, updateUser } = useAuth();
+  const signIn = useAuthStore((s) => s.signIn);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');

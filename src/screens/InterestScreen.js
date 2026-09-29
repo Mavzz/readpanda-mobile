@@ -12,12 +12,13 @@ import { useNavigation } from '@react-navigation/native';
 import { primaryButton as PrimaryButton } from '../components/Button';
 import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
-import { useAuth } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 
 const InterestScreen = () => {
-  const { user, updateUser } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const navigation = useNavigation();
   const username = user.username;
   const Interests = user.preferences;

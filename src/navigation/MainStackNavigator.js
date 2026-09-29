@@ -7,7 +7,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import InterestScreen from '../screens/InterestScreen';
 import CreateBucketScreen from '../screens/CreateBucketScreen';
 import CreateRoomScreen from '../screens/CreateRoomScreen';
-import RoomLobbyScreen from '../screens/RoomLobbyScreen';
+import RoomLobbyScreen from '../screens/roomLobby/RoomLobbyScreen';
 import { DS } from '../styles/global';
 
 const Stack = createStackNavigator();
