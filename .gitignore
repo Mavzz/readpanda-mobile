@@ -60,3 +60,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Environment — copy .env.example to .env
+/.env
+/.env.*
+!/.env.example
