@@ -37,4 +37,9 @@ RCT_EXPORT_VIEW_PROPERTY(onLikeComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRetryComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRoomPickerRequested, RCTDirectEventBlock)
 
+// Personal highlights. Private to the reader, so they exist in solo books too.
+RCT_EXPORT_VIEW_PROPERTY(highlights, NSArray)
+RCT_EXPORT_VIEW_PROPERTY(onCreateHighlight, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onRemoveHighlight, RCTDirectEventBlock)
+
 @end

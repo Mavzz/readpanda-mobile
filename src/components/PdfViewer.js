@@ -18,6 +18,7 @@ const PdfViewer = ({
   bookTitle,
   initialPage,
   threads,
+  highlights,
   hasRoom,
   canPickRoom,
   roomName,
@@ -35,6 +36,8 @@ const PdfViewer = ({
   onLikeComment,
   onRetryComment,
   onRoomPickerRequested,
+  onCreateHighlight,
+  onRemoveHighlight,
 }) => {
   const handlePageChanged = useCallback((e) => {
     const { currentPage, totalPages } = e.nativeEvent;
@@ -77,6 +80,15 @@ const PdfViewer = ({
     onRoomPickerRequested?.();
   }, [onRoomPickerRequested]);
 
+  const handleCreateHighlight = useCallback((e) => {
+    const { page, anchorText, bounds, fileHash } = e.nativeEvent;
+    onCreateHighlight?.({ page, anchorText, bounds, fileHash });
+  }, [onCreateHighlight]);
+
+  const handleRemoveHighlight = useCallback((e) => {
+    onRemoveHighlight?.(e.nativeEvent.key);
+  }, [onRemoveHighlight]);
+
   // Android has no reader yet; ManuscriptScreen shows its own message there.
   if (Platform.OS !== 'ios') {
     return null;
@@ -89,6 +101,7 @@ const PdfViewer = ({
       bookTitle={bookTitle || ''}
       initialPage={initialPage || 0}
       threads={threads || []}
+      highlights={highlights || []}
       hasRoom={!!hasRoom}
       canPickRoom={!!canPickRoom}
       roomName={roomName || ''}
@@ -106,6 +119,8 @@ const PdfViewer = ({
       onLikeComment={handleLikeComment}
       onRetryComment={handleRetryComment}
       onRoomPickerRequested={handleRoomPickerRequested}
+      onCreateHighlight={handleCreateHighlight}
+      onRemoveHighlight={handleRemoveHighlight}
     />
   );
 };

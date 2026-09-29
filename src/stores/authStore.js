@@ -7,6 +7,7 @@ import useRoomStore from './roomStore';
 import useBucketsStore from './bucketsStore';
 import useBooksStore from './booksStore';
 import useNotificationStore from './notificationStore';
+import useHighlightsStore from './highlightsStore';
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -65,6 +66,7 @@ const useAuthStore = create((set, get) => ({
       useBucketsStore.getState().clearBuckets();
       useBooksStore.getState().clearBooks();
       useNotificationStore.getState().clearNotifications();
+      useHighlightsStore.getState().clearHighlights();
       log.info('User signed out');
     } catch (e) {
       log.error('Failed to clear user data', e);
