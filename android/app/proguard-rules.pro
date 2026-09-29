@@ -8,3 +8,11 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# react-native-pdf renders through PdfiumAndroid, which is reached via JNI.
+-keep class com.shockwave.** { *; }
+
+# Credential Manager loads its Play Services provider reflectively
+# (Google sign-in via androidx.credentials + googleid).
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** { *; }

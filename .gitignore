@@ -4,6 +4,13 @@
 # Android
 google-services.json
 GoogleService-Info.plist
+.gradle/
+local.properties
+*.iml
+*.hprof
+.cxx/
+*.keystore
+!debug.keystore
 
 # dependencies
 node_modules/

@@ -1,5 +1,5 @@
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MyTheme } from '../styles/global';
 import { AuthProvider } from '../contexts/AuthContext';
 import useAuthStore from '../stores/authStore';
@@ -10,7 +10,7 @@ import Toaster from '../components/Toaster';
 import useInviteDeepLink from '../hooks/useInviteDeepLink';
 import usePushNotifications from '../hooks/usePushNotifications';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 // Needed so the invite deep link can navigate from outside a screen.
 const navigationRef = createNavigationContainerRef();

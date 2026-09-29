@@ -1,6 +1,4 @@
-import { createStackNavigator } from '@react-navigation/stack';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -10,23 +8,32 @@ import CreateRoomScreen from '../screens/CreateRoomScreen';
 import RoomLobbyScreen from '../screens/roomLobby/RoomLobbyScreen';
 import { DS } from '../styles/global';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
-const BackButton = ({ onPress, tintColor }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={styles.backButton}
-    accessibilityLabel="Go back"
-    accessibilityRole="button"
-    accessibilityHint="Navigates to the previous screen"
-  >
-    <Icon name="arrow-back" color={tintColor} size={24} />
-  </TouchableOpacity>
-);
+// Screens that use the system header. The back button is the platform's own
+// (chevron on iOS, arrow on Android): a custom headerLeft inside the native
+// header gets wrapped in the system's button chrome and sits off-centre.
+const nativeHeader = (title) => ({
+  headerShown: true,
+  title,
+  headerStyle: {
+    backgroundColor: DS.colors.surfaceContainerLow,
+  },
+  headerTintColor: DS.colors.onSurface,
+  headerTitleStyle: {
+    fontWeight: '600',
+  },
+  headerShadowVisible: false,
+  headerBackButtonDisplayMode: 'minimal',
+});
 
-const headerLeftBack = ({ onPress, tintColor }) => (
-  <BackButton onPress={onPress} tintColor={tintColor} />
-);
+// Create flows are designed as full-screen takeovers with their own × close,
+// not iOS page sheets — a sheet crowds their header against its rounded top.
+const createFlow = {
+  headerShown: false,
+  presentation: 'fullScreenModal',
+  contentStyle: { backgroundColor: DS.colors.background },
+};
 
 // Main Stack Navigator that wraps the Tab Navigator
 const MainStackNavigator = () => {
@@ -34,7 +41,7 @@ const MainStackNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: DS.colors.background },
+        contentStyle: { backgroundColor: DS.colors.background },
       }}
     >
       <Stack.Screen name="Tabs" component={TabNavigator} />
@@ -44,84 +51,18 @@ const MainStackNavigator = () => {
           bucket, a room — reaches it with a plain
           navigate('ManuscriptScreen'), since the name resolves upward from
           anywhere in the tree. */}
-      <Stack.Screen
-        name="ManuscriptScreen"
-        component={ManuscriptScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-          cardStyle: { backgroundColor: DS.colors.background },
-        }}
-      />
-      <Stack.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          headerShown: true,
-          title: 'Profile',
-          headerStyle: {
-            backgroundColor: DS.colors.surfaceContainerLow,
-          },
-          headerTintColor: DS.colors.onSurface,
-          headerTitleStyle: {
-            fontWeight: '600',
-          },
-          headerLeft: headerLeftBack,
-        }}
-      />
+      <Stack.Screen name="ManuscriptScreen" component={ManuscriptScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={nativeHeader('Profile')} />
       <Stack.Screen
         name="Interest"
         component={InterestScreen}
-        options={{
-          headerShown: true,
-          title: 'Select Interests',
-          headerStyle: {
-            backgroundColor: DS.colors.surfaceContainerLow,
-          },
-          headerTintColor: DS.colors.onSurface,
-          headerTitleStyle: {
-            fontWeight: '600',
-          },
-          headerLeft: headerLeftBack,
-        }}
+        options={nativeHeader('Select Interests')}
       />
-      <Stack.Screen
-        name="CreateBucketScreen"
-        component={CreateBucketScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-          presentation: 'modal',
-          cardStyle: { backgroundColor: DS.colors.background },
-        }}
-      />
-      <Stack.Screen
-        name="CreateRoomScreen"
-        component={CreateRoomScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-          presentation: 'modal',
-          cardStyle: { backgroundColor: DS.colors.background },
-        }}
-      />
-      <Stack.Screen
-        name="RoomLobbyScreen"
-        component={RoomLobbyScreen}
-        options={{
-          headerShown: false,
-          animationEnabled: true,
-          cardStyle: { backgroundColor: DS.colors.background },
-        }}
-      />
+      <Stack.Screen name="CreateBucketScreen" component={CreateBucketScreen} options={createFlow} />
+      <Stack.Screen name="CreateRoomScreen" component={CreateRoomScreen} options={createFlow} />
+      <Stack.Screen name="RoomLobbyScreen" component={RoomLobbyScreen} />
     </Stack.Navigator>
   );
 };
 
 export default MainStackNavigator;
-
-const styles = StyleSheet.create({
-  backButton: {
-    marginLeft: 8,
-  },
-});

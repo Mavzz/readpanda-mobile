@@ -133,7 +133,9 @@ const CreateRoomScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    // Bottom too: the Create button sits at the foot of a full-screen modal
+    // and has to clear the home indicator.
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
       <KeyboardAvoidingView
@@ -361,7 +363,7 @@ const styles = StyleSheet.create({
 
   // CTA
   cta: {
-    marginBottom: 28,
+    marginBottom: 12,
     paddingVertical: 16,
   },
   ctaText: {

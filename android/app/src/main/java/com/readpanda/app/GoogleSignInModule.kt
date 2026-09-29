@@ -22,7 +22,7 @@ class GoogleSignInModule(
 
     @ReactMethod
     fun signIn(promise: Promise) {
-        val activity: Activity = currentActivity ?: run {
+        val activity: Activity = reactContext.currentActivity ?: run {
             promise.reject("ACTIVITY_NULL", "Activity is null")
             return
         }

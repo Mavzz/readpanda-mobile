@@ -1,8 +1,10 @@
 import AppNavigator from "./src/navigation/AppNavigator";
 import SplashScreen from 'react-native-splash-screen';
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, Image, StyleSheet, View } from "react-native";
+import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import useAuthStore from './src/stores/authStore';
+import { initSecureStorage } from './src/services/secureStorage';
+import log from './src/utils/logger';
 
 const App = () => {
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -10,6 +12,23 @@ const App = () => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const minTimePassed = useRef(false);
   const authDone = useRef(false);
+  // Storage has to be open before anything reads it — the auth store's
+  // loadUser runs as soon as the navigator mounts. 'opening' | 'ready' | 'failed'
+  const [storage, setStorage] = useState('opening');
+
+  const openStorage = useCallback(() => {
+    setStorage('opening');
+    initSecureStorage()
+      .then(() => setStorage('ready'))
+      .catch((error) => {
+        log.error('Could not open secure storage:', error);
+        setStorage('failed');
+      });
+  }, []);
+
+  useEffect(() => {
+    openStorage();
+  }, [openStorage]);
 
   const tryFadeOut = useCallback(() => {
     if (minTimePassed.current && authDone.current) {
@@ -35,15 +54,24 @@ const App = () => {
   }, [tryFadeOut]);
 
   useEffect(() => {
-    if (!isLoading) {
+    // A failure has to lift the splash too, or it would hide the retry.
+    if (!isLoading || storage === 'failed') {
       authDone.current = true;
       tryFadeOut();
     }
-  }, [isLoading, tryFadeOut]);
+  }, [isLoading, storage, tryFadeOut]);
 
   return (
     <View style={styles.container}>
-      <AppNavigator />
+      {storage === 'ready' && <AppNavigator />}
+      {storage === 'failed' && (
+        <View style={styles.failed}>
+          <Text style={styles.failedText}>ReadPanda couldn&apos;t open its secure storage.</Text>
+          <Pressable onPress={openStorage} style={styles.retry} accessibilityRole="button">
+            <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
+        </View>
+      )}
       {splashVisible && (
         <Animated.View
           style={[styles.splash, { opacity: fadeAnim }]}
@@ -66,6 +94,30 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0b1326',
+  },
+  failed: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  failedText: {
+    fontSize: 15,
+    color: '#dae2fd',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retry: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    backgroundColor: '#ffddb8',
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0b1326',
   },
   splash: {
     ...StyleSheet.absoluteFillObject,

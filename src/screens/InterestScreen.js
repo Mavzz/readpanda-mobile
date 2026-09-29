@@ -25,8 +25,8 @@ const InterestScreen = () => {
   log.info(`InterestScreen loaded for user: ${username}`);
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
-  let status, response;
-  const { previousScreen, currentScreen } = useScreenTracking();
+  let status;
+  useScreenTracking();
 
   const toggleSelection = (category, preference_id) => {
     setIsUpdated(true);
@@ -71,7 +71,7 @@ const InterestScreen = () => {
     log.info('Updating user preferences');
     try {
       if (isUpdated) {
-        ({ status, response } = await PreferenceService.updateUserPreferences(username, interests));
+        ({ status } = await PreferenceService.updateUserPreferences(username, interests));
         if (status === 200 || status === 201) {
           log.info('User preferences updated successfully');
         } else {

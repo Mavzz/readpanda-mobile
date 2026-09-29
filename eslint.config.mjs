@@ -4,6 +4,8 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactNativePlugin from 'eslint-plugin-react-native';
 
 export default [
+  // Dead code kept for reference only; nothing imports it.
+  { ignores: ['src/not_in_use/**'] },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,mjs}'],
@@ -25,6 +27,8 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        require: 'readonly',
+        crypto: 'readonly', // polyfilled by react-native-get-random-values
       },
     },
     plugins: {
@@ -35,7 +39,7 @@ export default [
     rules: {
       // JavaScript rules
       'no-console': 'warn',
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
       'prefer-const': 'error',
       'no-var': 'error',
       

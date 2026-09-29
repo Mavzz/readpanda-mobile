@@ -12,11 +12,11 @@ import {
   Image,
 } from 'react-native';
 import { useEffect } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
@@ -157,7 +157,7 @@ const CreateBucketScreen = ({ navigation }) => {
       showToast('Please enter a bucket name.', 'error');
       return;
     }
-    const { status, response } = await saveBucket(name.trim(), selectedIds);
+    const { status } = await saveBucket(name.trim(), selectedIds);
     if (status === 200 || status === 201) {
       showToast(`Bucket "${name.trim()}" created!`, 'success');
       navigation.goBack();
@@ -190,7 +190,9 @@ const CreateBucketScreen = ({ navigation }) => {
   }, [fetchBooks]);
 
   return (
-    <View style={styles.container}>
+    // Full-screen modal: it has to clear the status bar itself. The bottom is
+    // left to the list, which scrolls under the home indicator.
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
       <KeyboardAvoidingView
@@ -251,7 +253,7 @@ const CreateBucketScreen = ({ navigation }) => {
           extraData={selectedIds}
         />
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 

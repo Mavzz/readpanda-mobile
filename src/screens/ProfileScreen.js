@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { primaryButton as PrimaryButton } from '../components/Button';
 import ProfilePicture from '../components/ProfilePicture';
 import log from '../utils/logger';
@@ -49,7 +49,9 @@ const ProfileScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    // The native header already clears the status bar; only the bottom needs
+    // insetting, for the home indicator.
+    <SafeAreaView style={styles.screen} edges={['bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
@@ -103,11 +105,14 @@ const ProfileScreen = () => {
               <Text style={styles.settingText}>Privacy Policy</Text>
             </TouchableOpacity>
           </ProfileSection>
+
+          {/* Last thing in the scroll rather than pinned under it: pinned, it
+              sliced the settings cards off mid-row. */}
+          <View style={styles.signOutContainer}>
+            <PrimaryButton title="Sign Out" onPress={handleSignOut} />
+          </View>
         </View>
       </ScrollView>
-      <View style={styles.signOutContainer}>
-        <PrimaryButton title="Sign Out" onPress={handleSignOut} />
-      </View>
     </SafeAreaView>
   );
 };
@@ -124,8 +129,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 28,
+    paddingBottom: 24,
   },
   header: {
     alignItems: 'center',
@@ -193,8 +198,7 @@ const styles = StyleSheet.create({
     color: DS.colors.onSurface,
   },
   signOutContainer: {
-    padding: 20,
-    width: '100%',
+    marginTop: 8,
   },
 });
 

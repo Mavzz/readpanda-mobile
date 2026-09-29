@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Image, TouchableOpacity, StyleSheet, Alert, Platform, Text } from 'react-native';
+import { View, Image, TouchableOpacity, StyleSheet, Alert, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import enhancedStorage from '../utils/enhancedStorage';
 import { DS } from '../styles/global';
@@ -13,7 +13,7 @@ try {
   const imagePicker = require('react-native-image-picker');
   launchImageLibrary = imagePicker.launchImageLibrary;
   launchCamera = imagePicker.launchCamera;
-} catch (error) {
+} catch {
   log.warn('react-native-image-picker not available, using fallback mode');
 }
 
@@ -114,7 +114,6 @@ const ProfilePicture = ({
       // Update user profile in storage
       const currentUser = enhancedStorage.getUserProfile();
       if (currentUser) {
-        const updatedUser = { ...currentUser, profilePicture: uri };
         enhancedStorage.updateUserProfile({ profilePicture: uri });
         log.info('Profile picture updated in storage');
       }

@@ -73,6 +73,8 @@ jobs:
         working-directory: ios
         run: pod install
 
+      # Ad-hoc signed ("Sign to Run Locally"), not unsigned: an unsigned app
+      # gets no Keychain access, and secure storage can't open without it.
       - name: Build for simulator
         run: |
           set -o pipefail
@@ -84,7 +86,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/DerivedData \
             ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             COMPILER_INDEX_STORE_ENABLE=NO \
             | xcbeautify --renderer github-actions
 

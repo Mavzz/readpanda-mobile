@@ -57,7 +57,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -84,6 +84,11 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // react-native-app-auth's redirect activity. Must match the scheme of
+        // redirectUrl in GoogleAuthService.js (iOS registers the same one in Info.plist).
+        manifestPlaceholders = [
+            appAuthRedirectScheme: 'com.googleusercontent.apps.439290157125-49ieeb2p2hcrbv0vdaq4qfqchg9i9v8i'
+        ]
     }
     signingConfigs {
         debug {
@@ -102,6 +107,7 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
@@ -122,6 +128,4 @@ dependencies {
     }
 }
 
-// This is needed for the React Native Gradle Plugin to work properly
-apply from: "../../node_modules/react-native/react.gradle"
 apply plugin: 'com.google.gms.google-services'

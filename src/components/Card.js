@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { cardStyles } from '../styles/global';
 import log from '../utils/logger';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 const NewBookCard = ({ book, onPress, style }) => {
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const retryTimer = useRef(null);
+
+  // A card scrolled out of a list shouldn't keep a retry pending.
+  useEffect(() => () => clearTimeout(retryTimer.current), []);
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -38,7 +41,7 @@ const NewBookCard = ({ book, onPress, style }) => {
 
     // Retry image loading up to 3 times with exponential backoff
     if (retryCount < 3) {
-      setTimeout(() => {
+      retryTimer.current = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         setImageError(false);
       }, Math.pow(2, retryCount) * 1000);

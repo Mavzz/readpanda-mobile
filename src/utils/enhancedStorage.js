@@ -1,13 +1,13 @@
-import StorageService, { mmkvStorage } from '../services/storageService';
+import StorageService from '../services/storageService';
+import { getStore, getTokens, setTokens, clearTokens } from '../services/secureStorage';
 import { STORAGE_CATEGORIES } from '../constants/storageConstants';
 import log from './logger';
 
 class EnhancedStorage {
-  // Auth related storage (MMKV)
+  // Auth: tokens in the Keychain (see secureStorage), the profile in MMKV.
   storeAuthData(authData) {
-    StorageService.setItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN, authData.token);
+    setTokens({ token: authData.token, refreshToken: authData.refreshToken });
     StorageService.setItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE, authData.userDetails);
-    StorageService.setItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN, authData.refreshToken);
   }
 
   getAuthData() {
@@ -23,7 +23,7 @@ class EnhancedStorage {
   }
 
   getAuthToken() {
-    return StorageService.getItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN);
+    return getTokens().token;
   }
 
   getUserProfile() {
@@ -31,15 +31,15 @@ class EnhancedStorage {
   }
 
   getRefreshToken() {
-    return StorageService.getItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN);
+    return getTokens().refreshToken;
   }
 
   updateAuthToken(newToken) {
-    StorageService.setItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN, newToken);
+    setTokens({ token: newToken });
   }
 
   updateRefreshToken(newRefreshToken) {
-    StorageService.setItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN, newRefreshToken);
+    setTokens({ refreshToken: newRefreshToken });
   }
 
   updateUserProfile(updates) {
@@ -51,9 +51,8 @@ class EnhancedStorage {
   }
 
   clearAuthData() {
-    StorageService.removeItem(STORAGE_CATEGORIES.MMKV.AUTH_TOKEN);
+    clearTokens();
     StorageService.removeItem(STORAGE_CATEGORIES.MMKV.USER_PROFILE);
-    StorageService.removeItem(STORAGE_CATEGORIES.MMKV.REFRESH_TOKEN);
   }
 
   // Everything below the auth keys belongs to ONE account. Two people signing
@@ -268,7 +267,7 @@ class EnhancedStorage {
   // Clear all storage
   clearAll() {
     // Clear MMKV
-    mmkvStorage.clearAll();
+    getStore().clearAll();
 
     // Clear SQLite (optional - usually you'd want to keep some data)
     //  StorageService.db.executeSql('DELETE FROM manuscripts');
