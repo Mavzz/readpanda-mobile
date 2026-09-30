@@ -3,30 +3,30 @@ import {
   View,
   StyleSheet,
   FlatList,
-  SafeAreaView,
   Pressable,
   Text,
   StatusBar,
 } from 'react-native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { primaryButton as PrimaryButton } from '../components/Button';
 import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
-import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from '../services/user_PreferencesService';
+import useAuthStore from '../stores/authStore';
+import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 
 const InterestScreen = () => {
-  const { user, updateUser } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const navigation = useNavigation();
   const username = user.username;
   const Interests = user.preferences;
   log.info(`InterestScreen loaded for user: ${username}`);
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
-  let status, response;
-  const { previousScreen, currentScreen } = useScreenTracking();
+  let status;
+  useScreenTracking();
 
   const toggleSelection = (category, preference_id) => {
     setIsUpdated(true);
@@ -71,20 +71,22 @@ const InterestScreen = () => {
     log.info('Updating user preferences');
     try {
       if (isUpdated) {
-        ({ status, response } = await PreferenceService.updateUserPreferences(username, interests));
+        ({ status } = await PreferenceService.updateUserPreferences(username, interests));
         if (status === 200 || status === 201) {
           log.info('User preferences updated successfully');
         } else {
           log.error('Failed to update user preferences with status:', status);
           throw new Error('Failed to update preferences');
         }
-        updateUser({ preferences: interests });
+        updateUser({ preferences: interests, isNewUser: false });
         log.info('First time user experience completed');
-        navigation.reset({ index: 0, routes: [{ name: 'HomeMain' }] });
       } else {
         log.info('No changes made to preferences, navigating to Home');
-        navigation.reset({ index: 0, routes: [{ name: 'HomeMain' }] });
+        // Skipping the picks still finishes onboarding — without this the
+        // persisted isNewUser sends the reader back here on every cold start.
+        updateUser({ isNewUser: false });
       }
+      navigation.goBack();
     } catch (error) {
       log.error('Error updating preferences:', error);
     } finally {

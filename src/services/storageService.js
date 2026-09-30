@@ -1,12 +1,6 @@
-import { MMKV } from 'react-native-mmkv';
 import SQLite from 'react-native-sqlite-storage';
 import log from '../utils/logger';
-import { SECRET_KEY } from '@env';
-
-export const mmkvStorage = new MMKV({
-  id: 'readpanda-storage',
-  encryptionKey: SECRET_KEY, // Use encryption key from environment
-});
+import { getStore } from './secureStorage';
 
 SQLite.enablePromise(true);
 SQLite.DEBUG(false);
@@ -138,7 +132,7 @@ class StorageService {
   // MMKV Methods for fast key-value storage
   setItem(key, value) {
     try {
-      mmkvStorage.set(key, JSON.stringify(value));
+      getStore().set(key, JSON.stringify(value));
     } catch (error) {
       console.error(`MMKV setItem error {${key}}, :{${value}}`, error);
     }
@@ -146,7 +140,7 @@ class StorageService {
 
   getItem(key) {
     try {
-      const value = mmkvStorage.getString(key);
+      const value = getStore().getString(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
       console.error('MMKV getItem error:', error);
@@ -156,7 +150,7 @@ class StorageService {
 
   removeItem(key) {
     try {
-      mmkvStorage.delete(key);
+      getStore().delete(key);
     } catch (error) {
       console.error('MMKV removeItem error:', error);
     }

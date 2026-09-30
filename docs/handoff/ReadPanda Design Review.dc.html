@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="module" src="https://cdn.jsdelivr.net/npm/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<style>
+body{margin:0;background:#eceae4;font-family:ui-sans-serif,system-ui,sans-serif;color:#1a1a1a}
+a{color:#8a5a1e;text-decoration:none}a:hover{color:#5f3d12;text-decoration:underline}
+.dv-turn{padding:44px 48px 64px}
+.dv-thd{display:flex;align-items:baseline;gap:12px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:800 22px/1.2 ui-sans-serif,system-ui;letter-spacing:-0.3px}
+.intro{display:flex;flex-wrap:wrap;gap:16px;margin:18px 0 8px;max-width:1700px}
+.ic{background:#fff;border-radius:12px;padding:18px 20px;flex:1;min-width:300px;max-width:430px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.ic h4{margin:0 0 8px;font:700 12px ui-sans-serif;text-transform:uppercase;letter-spacing:.8px;color:#8a6a3a}
+.ic p,.ic li{font:13px/1.55 ui-sans-serif;color:#3a3a3a;margin:0}
+.ic ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:5px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#6b6257;background:#f2efe8;padding:1px 5px;border-radius:4px}
+h3.blk{font:800 19px ui-sans-serif;letter-spacing:-0.2px;margin:58px 0 4px}
+.blk-sub{font:13.5px/1.5 ui-sans-serif;color:#5c574e;margin:0 0 26px;max-width:860px}
+.row{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.ph{display:flex;flex-direction:column;gap:10px;width:402px}
+.ph-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ph-name{font:700 14.5px ui-sans-serif}
+.ph-src{font:10.5px ui-monospace,Menlo,monospace;color:#8b8377}
+.notes{background:#fff;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.ni{display:flex;gap:9px;font:12.5px/1.5 ui-sans-serif;color:#2e2b26}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:4.5px}
+.d-r{background:#c74f42}.d-y{background:#cf9a3d}.d-g{background:#4d9a6c}
+.legend{display:flex;gap:18px;font:12px ui-sans-serif;color:#5c574e;margin:0 0 24px;align-items:center}
+.legend .dot{margin-top:0}
+.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px;width:402px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.1);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 13px/1.3 ui-sans-serif;color:#1a1a1a}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.ocap{font:12px/1.5 ui-sans-serif;color:#5c574e;margin:0}
+.dv-next{margin:30px 0 0;font:12.5px/1.5 ui-sans-serif;color:#5c574e}
+</style>
+</helmet>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">ReadPanda — design review</span></div>
+<p class="blk-sub" style="margin-bottom:18px">Recreated from <span class="mono">Mavzz/readpanda-mobile@master</span>, reviewed against your own <span class="mono">DESIGN.md</span> ("Nocturnal Sanctuary") and the product goal: a private, asynchronous book club for close friends.</p>
+<div class="intro">
+<div class="ic"><h4>Context &amp; assumptions</h4><ul>
+<li>All screens rebuilt from source (<span class="mono">src/screens</span>, <span class="mono">src/components</span>, <span class="mono">src/styles/global.js</span>) with mock data; covers are placeholders.</li>
+<li>Recreations use the system font — faithfully: the app never loads Manrope, though DESIGN.md mandates it.</li>
+<li>Skipped <span class="mono">not_in_use/</span> and Favorites (dead code).</li>
+</ul></div>
+<div class="ic"><h4>The headline finding</h4><p>The visual system is strong and mostly well-applied — but the product's core promise (reading together with friends, comments that unlock as you reach them) has <b>zero UI anywhere</b>. Three of four tabs are placeholder scaffolding, and two of them (<span class="mono">Join Room</span> / <span class="mono">My Rooms</span>) are near-duplicates.</p></div>
+<div class="ic"><h4>Top fixes, in order</h4><ul>
+<li>Merge Join Room + My Rooms → one <b>Rooms</b> tab (4 tabs → 3).</li>
+<li>Put the current read + friends' activity on Home.</li>
+<li>Load Manrope; kill zero-filled stats &amp; fake data.</li>
+<li>Sweep the DESIGN.md violations flagged below (1px borders, dividers, sub-24 radii, off-palette <span class="mono">#ccc</span>).</li>
+</ul></div>
+</div>
+<h3 class="blk">Current UI — recreated from source</h3>
+<p class="blk-sub">Each phone is rebuilt from the actual styles in the repo; notes below each one.</p>
+<div class="legend"><span class="dot d-r"></span>issue<span class="dot d-y"></span>nit<span class="dot d-g"></span>working well</div>
+<div class="row">
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Login</span><span class="ph-src">screens/LoginScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;justify-content:center;background:#0b1326;padding:0 32px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="margin-bottom:32px">
+<div style="font-size:36px;font-weight:700;color:#dae2fd;letter-spacing:-0.5px;margin-bottom:8px">Login</div>
+<div style="display:flex;font-size:15px"><span style="color:#d6c3b2">Don't have an account?</span><span style="color:#ffddb8;font-weight:600">&nbsp;Sign up!</span></div>
+</div>
+<div style="background:#060d20;padding:16px 20px;border-radius:24px;font-size:16px;color:#d6c3b2;margin-bottom:16px">Username</div>
+<div style="background:#060d20;padding:16px 20px;border-radius:24px;font-size:16px;color:#d6c3b2;margin-bottom:16px">Password</div>
+<div style="margin-top:8px;background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:16px;text-align:center;color:#472a00;font-size:16px;font-weight:700;margin-bottom:16px">Login</div>
+<div style="display:flex;align-items:center;margin:16px 0">
+<div style="flex:1;height:1px;background:#514537;opacity:0.3"></div>
+<span style="margin:0 12px;color:#d6c3b2;font-size:14px">or</span>
+<div style="flex:1;height:1px;background:#514537;opacity:0.3"></div>
+</div>
+<div style="background:#222a3e;border-radius:9999px;padding:16px;text-align:center;color:#ffddb8;font-size:15px;font-weight:600">Sign In with Google</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-g"></span><span>Sunken inputs, full-radius gradient CTA and tonal divider all match DESIGN.md.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>No brand moment — <span class="mono">readpandaLogo_New.png</span> exists in assets but is never used; the first screen reads generic. See <a class="dv-oid" href="#1d">1d</a>.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Errors surface via system <span class="mono">Alert.alert</span>, breaking the nocturnal aesthetic — the in-app Toaster already exists, use it here.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Sign Up</span><span class="ph-src">screens/SignUpScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;justify-content:center;background:#0b1326;padding:40px 32px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="margin-bottom:32px">
+<div style="font-size:36px;font-weight:700;color:#dae2fd;letter-spacing:-0.5px;margin-bottom:8px">Sign Up</div>
+<div style="display:flex;font-size:15px"><span style="color:#d6c3b2">Already have an account?</span><span style="color:#ffddb8;font-weight:600">&nbsp;Login!</span></div>
+</div>
+<div style="background:#060d20;padding:16px 20px;border-radius:24px;font-size:16px;color:#d6c3b2;margin-bottom:16px">Username</div>
+<div style="background:#060d20;padding:16px 20px;border-radius:24px;font-size:16px;color:#d6c3b2;margin-bottom:16px">Email</div>
+<div style="background:#060d20;padding:16px 20px;border-radius:24px;font-size:16px;color:#d6c3b2;margin-bottom:16px">Password</div>
+<div style="background:#060d20;padding:16px 20px;border-radius:24px;font-size:16px;color:#d6c3b2;margin-bottom:16px">Confirm Password</div>
+<div style="margin-top:8px;background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:16px;text-align:center;color:#472a00;font-size:16px;font-weight:700;margin-bottom:16px">Sign Up</div>
+<div style="display:flex;align-items:center;margin:16px 0">
+<div style="flex:1;height:1px;background:#514537;opacity:0.3"></div>
+<span style="margin:0 12px;color:#d6c3b2;font-size:14px">or</span>
+<div style="flex:1;height:1px;background:#514537;opacity:0.3"></div>
+</div>
+<div style="background:#222a3e;border-radius:9999px;padding:16px;text-align:center;color:#ffddb8;font-size:15px;font-weight:600">Sign Up with Google</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-g"></span><span>Consistent with Login — same field, CTA and divider treatments.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Placeholder-only fields: once filled, the label is gone. Add floating/above-field labels for the 4-field stack.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Password rules are unstated and validation only fires on submit via system alert.</span></div>
+</div>
+</div>
+
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Interest picker</span><span class="ph-src">screens/InterestScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding:94px 20px 30px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:flex-end;margin-bottom:24px">
+<span style="font-size:28px;font-weight:700;color:#dae2fd;letter-spacing:-0.3px">What's your</span>
+<span style="font-size:28px;font-weight:700;color:#ffddb8;letter-spacing:-0.3px">&nbsp;flavour?</span>
+</div>
+<div style="margin-bottom:28px">
+<div style="font-size:14px;font-weight:700;color:#dae2fd;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px">Fiction</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+<div style="background:#ffddb8;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:700;color:#472a00;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Fantasy</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Psychological Thriller</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Romance</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Historical Fiction</div>
+<div style="background:#ffddb8;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:700;color:#472a00;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sci-Fi</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mystery</div>
+</div>
+</div>
+<div style="margin-bottom:28px">
+<div style="font-size:14px;font-weight:700;color:#dae2fd;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px">Non-fiction</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Memoir</div>
+<div style="background:#ffddb8;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:700;color:#472a00;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Popular Science</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">History</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Self-help</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">True Crime</div>
+<div style="background:#222a3e;border-radius:9999px;padding:8px 12px;font-size:13px;font-weight:500;color:#d6c3b2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Philosophy</div>
+</div>
+</div>
+<div style="margin-top:auto;background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:16px;text-align:center;color:#472a00;font-size:16px;font-weight:700">Done!</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>Chips render through <span class="mono">FlatList numColumns={3}</span>, which forces a rigid 3-column grid — long names like "Psychological Thriller" truncate. The <span class="mono">chipContainer</span> already has <span class="mono">flexWrap</span>; render chips directly so they wrap naturally at their own width.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>"Done!" is the only exit — new users can't skip. Add a quiet "Skip for now" ghost link.</span></div>
+<div class="ni"><span class="dot d-g"></span><span>Two-tone headline and chip states (high-surface → primary) are exactly per system.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Home — Explore Books</span><span class="ph-src">screens/HomeScreen.js + CommonHeader.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;gap:12px;height:60px;padding:0 16px;background:rgba(23,31,51,0.7);flex:none">
+<div style="width:38px;height:38px;border-radius:50%;background:#222a3e;box-shadow:0 0 0 3px #222a3e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-weight:700;font-size:13px">MA</div>
+<div style="flex:1;display:flex;align-items:center;gap:8px;background:#060d20;border-radius:24px;height:40px;padding:0 12px;color:#d6c3b2"><ion-icon name="search" style="font-size:18px"></ion-icon><span style="font-size:15px">Search books...</span></div>
+<div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#d6c3b2"><ion-icon name="notifications-outline" style="font-size:24px"></ion-icon><div style="position:absolute;right:2px;top:2px;min-width:20px;height:20px;border-radius:9999px;background:#ffb4ab;box-shadow:0 0 0 1.5px #171f33;display:flex;align-items:center;justify-content:center;color:#472a00;font-size:12px;font-weight:700">2</div></div>
+</div>
+<div style="flex:1;overflow:hidden">
+<div style="padding:20px 20px 8px">
+<div style="font-size:20px;font-weight:700;color:#dae2fd;letter-spacing:-0.3px;margin-bottom:14px">My Buckets</div>
+<div style="display:flex;align-items:center;gap:12px;background:#131b2e;border-radius:12px;border:1px dashed #514537;padding:16px 20px;margin-bottom:14px;color:#ffddb8"><ion-icon name="add-circle-outline" style="font-size:24px"></ion-icon><span style="font-size:14px;font-weight:500;color:#d6c3b2">Create a new bucket</span></div>
+<div style="display:flex;gap:12px;overflow:hidden;padding-bottom:8px">
+<div style="flex:none;width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:136px;height:170px;border-radius:32px;background:linear-gradient(160deg,#2e3a54,#151d32);display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;margin-bottom:10px"><span style="font-family:Georgia,serif;font-size:14px;line-height:1.25;color:rgba(218,226,253,0.85)">The Midnight Library</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center">Weekend Reads</div>
+<div style="font-size:13px;font-weight:500;color:#d6c3b2;margin-top:4px">4 books</div>
+</div>
+<div style="flex:none;width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:136px;height:170px;border-radius:32px;background:#222a3e;display:flex;align-items:center;justify-content:center;margin-bottom:10px;color:#ffddb8"><ion-icon name="folder" style="font-size:48px"></ion-icon></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center">Book Club '26</div>
+<div style="font-size:13px;font-weight:500;color:#d6c3b2;margin-top:4px">2 books</div>
+</div>
+<div style="flex:none;width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box"></div>
+</div>
+</div>
+<div style="padding:0 20px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<span style="font-size:18px;font-weight:700;color:#ffddb8">Curated Picks</span>
+<span style="font-size:13px;font-weight:500;color:#d6c3b2">See All (2)</span>
+</div>
+<div style="display:flex;justify-content:space-between">
+<div style="width:48%;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:100%;aspect-ratio:0.72;border-radius:32px;background:linear-gradient(160deg,#41333f,#1c1826);display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;margin-bottom:10px"><span style="font-family:Georgia,serif;font-size:15px;line-height:1.25;color:rgba(218,226,253,0.85)">Tomorrow, and Tomorrow</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;width:100%">Recommended</div>
+</div>
+<div style="width:48%;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:100%;aspect-ratio:0.72;border-radius:32px;background:linear-gradient(160deg,#27403c,#131f24);display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;margin-bottom:10px"><span style="font-family:Georgia,serif;font-size:15px;line-height:1.25;color:rgba(218,226,253,0.85)">Sea of Tranquility</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;width:100%">New Arrivals</div>
+</div>
+</div>
+</div>
+</div>
+<div style="display:flex;background:#131b2e;padding:8px 0 25px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="book" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Explore Books</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="chatbubbles" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Join Room</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="bookmarks" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Current Read</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="people" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">My Rooms</span></div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>Two competing section-header styles on one screen: "My Buckets" (20px, text color) vs "Curated Picks" (18px, primary). Pick one and reserve primary for actions.</span></div>
+<div class="ni"><span class="dot d-r"></span><span>The create-bucket card breaks DESIGN.md twice: 1px dashed border ("no 1px lines") and <span class="mono">radius.sm</span> = 12 ("never below md").</span></div>
+<div class="ni"><span class="dot d-r"></span><span>For a friends-first reading app, Home has zero social signal — no current read, no room activity, no friends. See <a class="dv-oid" href="#1a">1a</a>.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>"See All (2)" is plain text with no press handler — a dead affordance. The perfect 2-col grid also contradicts DESIGN.md's "no generic grids".</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Header "glass" is 70%-opacity color with no blur (RN has no <span class="mono">backdrop-blur</span>) — reads as a flat gray band. Use BlurView or go opaque.</span></div>
+<div class="ni"><span class="dot d-y"></span><span><span class="mono">radius.xl</span> (48px) on 160px-wide cards swallows the corners — DESIGN.md's "3rem" assumed web scale; 24–28px reads the same on mobile.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Notifications sheet</span><span class="ph-src">components/NotificationList.js + Badge.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;position:relative;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="position:absolute;inset:0;background:rgba(6,13,32,0.7)"></div>
+<div style="margin-top:auto;position:relative;background:#222a3e;border-radius:48px 48px 0 0;max-height:80%;padding-top:20px;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px">
+<span style="font-size:18px;font-weight:600;color:#dae2fd">Notifications</span>
+<ion-icon name="close" style="font-size:24px;color:#d6c3b2"></ion-icon>
+</div>
+<div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="background:#171f33;border-left:3px solid #ffddb8;border-radius:48px;display:flex;align-items:center;padding:16px">
+<div style="width:40px;height:40px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;justify-content:center;margin-right:12px;color:#ffddb8;flex:none"><ion-icon name="book-outline" style="font-size:24px"></ion-icon></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:4px">New book added</div>
+<div style="font-size:14px;color:#d6c3b2;margin-bottom:6px">"Sea of Tranquility" is now in the library</div>
+<div style="font-size:12px;color:#d6c3b2;opacity:0.7">Aug 26, 09:12 AM</div>
+</div>
+<div style="width:8px;height:8px;border-radius:9999px;background:#ffddb8;margin-left:8px;flex:none"></div>
+</div>
+<div style="background:#131b2e;border-radius:48px;display:flex;align-items:center;padding:16px">
+<div style="width:40px;height:40px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;justify-content:center;margin-right:12px;color:#ffddb8;flex:none"><ion-icon name="notifications-outline" style="font-size:24px"></ion-icon></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:4px">Welcome to ReadPanda</div>
+<div style="font-size:14px;color:#d6c3b2;margin-bottom:6px">Set your interests to get better picks</div>
+<div style="font-size:12px;color:#d6c3b2;opacity:0.7">Aug 24, 06:40 PM</div>
+</div>
+</div>
+<div style="height:120px"></div>
+</div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>Unread = 3px left accent border — the exact pattern DESIGN.md forbids (and a dated trope). The unread dot + higher surface tone already carry the meaning.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Badge text is <span class="mono">onPrimary</span> on <span class="mono">error</span> (#472a00 on #ffb4ab) — ~4:1 at 12px; use #2b0800-ish or bump size.</span></div>
+<div class="ni"><span class="dot d-g"></span><span>Sheet radius, dim layer and icon capsules feel right for the system.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Join Room tab</span><span class="ph-src">screens/JoinRoomScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 16px;background:rgba(23,31,51,0.7);flex:none">
+<div style="width:38px;height:38px;border-radius:50%;background:#222a3e;box-shadow:0 0 0 3px #222a3e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-weight:700;font-size:13px">MA</div>
+<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#d6c3b2"><ion-icon name="notifications-outline" style="font-size:24px"></ion-icon></div>
+</div>
+<div style="flex:1;overflow:hidden;padding:20px">
+<div style="font-size:28px;font-weight:700;color:#dae2fd;letter-spacing:-0.3px;margin-bottom:8px">Join Reading Room</div>
+<div style="font-size:14px;color:#d6c3b2;line-height:20px;margin-bottom:24px">Connect with other readers and discuss books together</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px;margin-bottom:16px">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:12px">Create a New Room</div>
+<div style="font-size:16px;color:#d6c3b2;line-height:24px;margin-bottom:12px">Start your own reading room and invite friends to join the conversation.</div>
+<div style="background:#ffddb8;border-radius:9999px;padding:16px 24px;text-align:center;color:#472a00;font-size:16px;font-weight:700;margin:8px 0">Create Room</div>
+</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px;margin-bottom:16px">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:12px">Join Existing Room</div>
+<div style="font-size:16px;color:#d6c3b2;line-height:24px;margin-bottom:12px">Enter a room code or browse available reading rooms to join.</div>
+<div style="background:#222a3e;border-radius:9999px;padding:16px 24px;text-align:center;color:#ffddb8;font-size:16px;font-weight:600;margin:8px 0">Browse Rooms</div>
+</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px">
+<div style="display:flex;flex-direction:column;align-items:center;padding:24px 20px;color:#ccc"><ion-icon name="people" style="font-size:64px"></ion-icon>
+<div style="font-size:20px;font-weight:600;color:#d6c3b2;margin:16px 0 8px">No Active Rooms</div>
+<div style="font-size:16px;color:#d6c3b2;text-align:center;line-height:24px;opacity:0.7">You haven't joined any reading rooms yet. Create one or join an existing room to start connecting with other readers.</div>
+</div>
+</div>
+</div>
+<div style="display:flex;background:#131b2e;padding:8px 0 25px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="book" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Explore Books</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="chatbubbles" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Join Room</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="bookmarks" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Current Read</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="people" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">My Rooms</span></div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>The whole tab says the same thing three ways (two explainer cards + an empty state) and both CTAs are <span class="mono">TODO</span>s. Until rooms work, this tab damages trust in the app.</span></div>
+<div class="ni"><span class="dot d-r"></span><span>Empty-state icon is hardcoded <span class="mono">#ccc</span> — a light-mode gray from outside the palette (also on Current Read and My Rooms).</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Flat-primary button here vs gradient primary on auth screens — two "primary" treatments in one app. One <span class="mono">Button.js</span> everywhere.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Current Read tab</span><span class="ph-src">screens/CurrentReadScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 16px;background:rgba(23,31,51,0.7);flex:none">
+<div style="width:38px;height:38px;border-radius:50%;background:#222a3e;box-shadow:0 0 0 3px #222a3e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-weight:700;font-size:13px">MA</div>
+<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#d6c3b2"><ion-icon name="notifications-outline" style="font-size:24px"></ion-icon></div>
+</div>
+<div style="flex:1;overflow:hidden;padding:20px">
+<div style="font-size:28px;font-weight:700;color:#dae2fd;letter-spacing:-0.3px;margin-bottom:8px">Current Read</div>
+<div style="font-size:14px;color:#d6c3b2;line-height:20px;margin-bottom:24px">Continue your reading journey</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px;margin-bottom:16px">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:12px">Currently Reading</div>
+<div style="display:flex;flex-direction:column;align-items:center;padding:24px 20px;color:#ccc"><ion-icon name="book-outline" style="font-size:64px"></ion-icon>
+<div style="font-size:20px;font-weight:600;color:#d6c3b2;margin:16px 0 8px">No Current Read</div>
+<div style="font-size:16px;color:#d6c3b2;text-align:center;line-height:24px;opacity:0.7;margin-bottom:24px">You haven't started reading any book yet. Go to Explore Books to find something interesting!</div>
+<div style="background:#ffddb8;border-radius:9999px;padding:16px 24px;text-align:center;color:#472a00;font-size:16px;font-weight:700;align-self:stretch">Browse Books</div>
+</div>
+</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:12px">Reading Statistics</div>
+<div style="display:flex;justify-content:space-around;margin-top:16px">
+<div style="display:flex;flex-direction:column;align-items:center"><span style="font-size:28px;font-weight:700;color:#ffddb8">0</span><span style="font-size:14px;color:#d6c3b2;line-height:20px">Books Read</span></div>
+<div style="display:flex;flex-direction:column;align-items:center"><span style="font-size:28px;font-weight:700;color:#ffddb8">0</span><span style="font-size:14px;color:#d6c3b2;line-height:20px">Pages Read</span></div>
+<div style="display:flex;flex-direction:column;align-items:center"><span style="font-size:28px;font-weight:700;color:#ffddb8">0</span><span style="font-size:14px;color:#d6c3b2;line-height:20px">Hours Read</span></div>
+</div>
+</div>
+</div>
+<div style="display:flex;background:#131b2e;padding:8px 0 25px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="book" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Explore Books</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="chatbubbles" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Join Room</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="bookmarks" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Current Read</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="people" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">My Rooms</span></div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>A zero-filled stats row (0 · 0 · 0) is data slop — it makes the app feel dead. Hide stats until there's data; the empty state alone is honest.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>The reading-progress store already tracks page + recents (<span class="mono">readingProgressStore.js</span>) but this screen never reads it — the "Continue reading" moment is the app's strongest hook. See <a class="dv-oid" href="#1b">1b</a>.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>"Recent Activity" (below the fold) is one sentence of placeholder body text — cut it.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">My Rooms tab</span><span class="ph-src">screens/MyRoomsScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 16px;background:rgba(23,31,51,0.7);flex:none">
+<div style="width:38px;height:38px;border-radius:50%;background:#222a3e;box-shadow:0 0 0 3px #222a3e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-weight:700;font-size:13px">MA</div>
+<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#d6c3b2"><ion-icon name="notifications-outline" style="font-size:24px"></ion-icon></div>
+</div>
+<div style="flex:1;overflow:hidden;padding:20px">
+<div style="font-size:28px;font-weight:700;color:#dae2fd;letter-spacing:-0.3px;margin-bottom:8px">My Rooms</div>
+<div style="font-size:14px;color:#d6c3b2;line-height:20px;margin-bottom:24px">Your reading rooms and discussions</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px;margin-bottom:16px">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:12px">Active Rooms</div>
+<div style="display:flex;flex-direction:column;align-items:center;padding:24px 20px;color:#ccc"><ion-icon name="chatbubbles-outline" style="font-size:64px"></ion-icon>
+<div style="font-size:20px;font-weight:600;color:#d6c3b2;margin:16px 0 8px">No Rooms Yet</div>
+<div style="font-size:16px;color:#d6c3b2;text-align:center;line-height:24px;opacity:0.7">You haven't joined or created any reading rooms yet. Start connecting with other readers!</div>
+</div>
+</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px">
+<div style="font-size:16px;font-weight:600;color:#dae2fd;margin-bottom:12px">Quick Actions</div>
+<div style="background:#ffddb8;border-radius:9999px;padding:16px 24px;text-align:center;color:#472a00;font-size:16px;font-weight:700;margin:8px 0">Create New Room</div>
+<div style="background:#222a3e;border-radius:9999px;padding:16px 24px;text-align:center;color:#ffddb8;font-size:16px;font-weight:600;margin:8px 0">Browse &amp; Join Rooms</div>
+</div>
+</div>
+<div style="display:flex;background:#131b2e;padding:8px 0 25px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="book" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Explore Books</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="chatbubbles" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Join Room</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="bookmarks" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">Current Read</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="people" style="font-size:24px"></ion-icon><span style="font-size:11px;font-weight:500">My Rooms</span></div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>Near-duplicate of Join Room: both tabs carry create/join CTAs and an empty state, and this one's buttons just navigate to Join Room. Merge into a single <b>Rooms</b> tab (see <a class="dv-oid" href="#1c">1c</a>) — 4 tabs → 3, one clear mental model.</span></div>
+<div class="ni"><span class="dot d-r"></span><span>Another 0 · 0 · 0 stats row + a "Room History" placeholder section below the fold — same data-slop pattern.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Profile</span><span class="ph-src">screens/ProfileScreen.js + ProfilePicture.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;background:#131b2e;flex:none;color:#dae2fd"><ion-icon name="arrow-back" style="font-size:24px"></ion-icon><span style="font-size:17px;font-weight:600">Profile</span></div>
+<div style="flex:1;overflow:hidden;padding:40px 20px 0">
+<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:32px">
+<div style="position:relative;width:100px;height:100px;margin-bottom:16px">
+<div style="width:100px;height:100px;border-radius:50%;background:#222a3e;box-shadow:0 0 0 3px #222a3e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-weight:700;font-size:35px">MA</div>
+<div style="position:absolute;right:-2px;bottom:-2px;width:25px;height:25px;border-radius:50%;background:#ffddb8;box-shadow:0 0 0 2px #0b1326;display:flex;align-items:center;justify-content:center;color:#fff"><ion-icon name="camera" style="font-size:15px"></ion-icon></div>
+</div>
+<div style="font-size:24px;font-weight:700;color:#dae2fd;letter-spacing:-0.3px">Welcome, maya!</div>
+</div>
+<div style="margin-bottom:20px">
+<div style="font-size:13px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Reading Statistics</div>
+<div style="background:#131b2e;border-radius:48px;padding:20px;display:flex;justify-content:space-around">
+<div style="display:flex;flex-direction:column;align-items:center"><span style="font-size:28px;font-weight:700;color:#ffddb8">12</span><span style="font-size:13px;color:#d6c3b2;margin-top:4px">Books Read</span></div>
+<div style="display:flex;flex-direction:column;align-items:center"><span style="font-size:28px;font-weight:700;color:#ffddb8">3</span><span style="font-size:13px;color:#d6c3b2;margin-top:4px">Currently Reading</span></div>
+</div>
+</div>
+<div style="margin-bottom:20px">
+<div style="font-size:13px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Account Settings</div>
+<div style="background:#131b2e;border-radius:48px;padding:0 20px">
+<div style="padding:16px 0;border-bottom:1px solid rgba(81,69,55,0.15);font-size:16px;color:#dae2fd">Edit Profile</div>
+<div style="padding:16px 0;border-bottom:1px solid rgba(81,69,55,0.15);font-size:16px;color:#dae2fd">Edit Preferences</div>
+<div style="padding:16px 0;border-bottom:1px solid rgba(81,69,55,0.15);font-size:16px;color:#dae2fd">Notification Preferences</div>
+<div style="padding:16px 0;font-size:16px;color:#dae2fd">Privacy Settings</div>
+</div>
+</div>
+</div>
+<div style="padding:20px;flex:none">
+<div style="background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:16px;text-align:center;color:#472a00;font-size:16px;font-weight:700">Sign Out</div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>Stats are hardcoded fake data (12 books, 3 reading) — worse than showing nothing; wire to <span class="mono">readingProgressStore</span> or drop.</span></div>
+<div class="ni"><span class="dot d-r"></span><span>1px dividers between settings rows — DESIGN.md explicitly forbids dividers; use spacing or tone shifts.</span></div>
+<div class="ni"><span class="dot d-r"></span><span>Bug: "Edit Preferences" navigates to route <span class="mono">'InterestScreen'</span>, but the stack registers it as <span class="mono">'Interest'</span> — this press will throw.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Rows lack chevrons/press states, and 3 of 4 settings + all 3 About rows are dead. "Sign Out" as the most prominent (gradient) button on the page is an odd emphasis.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Bucket / genre grid</span><span class="ph-src">screens/BucketBooksScreen.js + Card.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;padding:16px 20px;gap:12px;flex:none">
+<ion-icon name="arrow-back" style="font-size:24px;color:#dae2fd"></ion-icon>
+<span style="flex:1;font-size:22px;font-weight:700;color:#dae2fd">⭐&nbsp; Recommended</span>
+<span style="font-size:14px;color:#d6c3b2">6 books</span>
+</div>
+<div style="flex:1;overflow:hidden;padding:0 20px">
+<div style="display:flex;justify-content:space-between;margin-bottom:16px">
+<div style="width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:116px;height:160px;border-radius:32px;background:linear-gradient(160deg,#41333f,#1c1826);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;margin-bottom:12px"><span style="font-family:Georgia,serif;font-size:12px;line-height:1.25;color:rgba(218,226,253,0.85)">Tomorrow, and Tomorrow</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;line-height:18px">Tomorrow, and Tomorrow…</div>
+<div style="font-size:12px;color:#d6c3b2;margin:4px 0 8px">Gabrielle Zevin</div>
+<div style="display:flex;align-items:center;width:100%;gap:8px"><div style="flex:1;height:3px;background:#222a3e;border-radius:9999px;overflow:hidden"><div style="width:62%;height:100%;background:#ffddb8;border-radius:9999px"></div></div><span style="font-size:11px;font-weight:500;color:#d6c3b2">62%</span></div>
+</div>
+<div style="width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:116px;height:160px;border-radius:32px;background:linear-gradient(160deg,#27403c,#131f24);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;margin-bottom:12px"><span style="font-family:Georgia,serif;font-size:12px;line-height:1.25;color:rgba(218,226,253,0.85)">Sea of Tranquility</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;line-height:18px">Sea of Tranquility</div>
+<div style="font-size:12px;color:#d6c3b2;margin-top:4px">Emily St. John Mandel</div>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between">
+<div style="width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:116px;height:160px;border-radius:32px;background:linear-gradient(160deg,#2e3a54,#151d32);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;margin-bottom:12px"><span style="font-family:Georgia,serif;font-size:12px;line-height:1.25;color:rgba(218,226,253,0.85)">The Midnight Library</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;line-height:18px">The Midnight Library</div>
+<div style="font-size:12px;color:#d6c3b2;margin-top:4px">Matt Haig</div>
+</div>
+<div style="width:160px;height:260px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:116px;height:160px;border-radius:32px;background:linear-gradient(160deg,#4a3a28,#211a12);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;margin-bottom:12px"><span style="font-family:Georgia,serif;font-size:12px;line-height:1.25;color:rgba(218,226,253,0.85)">Piranesi</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;line-height:18px">Piranesi</div>
+<div style="font-size:12px;color:#d6c3b2;margin-top:4px">Susanna Clarke</div>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-g"></span><span>Cards, progress bar and hierarchy are faithful to the system and read well.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Emoji baked into the title string ("⭐ Recommended") — the system doesn't use emoji; keep icons to Ionicons.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Fixed 160px cards inside 48% wrappers leave uneven gutters on wider phones; let the card fill its column.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Create bucket (modal)</span><span class="ph-src">screens/CreateBucketScreen.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;padding:16px 20px;gap:12px;flex:none">
+<ion-icon name="close" style="font-size:24px;color:#dae2fd"></ion-icon>
+<span style="flex:1;font-size:20px;font-weight:700;color:#dae2fd">New Bucket</span>
+<span style="background:#ffddb8;padding:8px 18px;border-radius:12px;color:#472a00;font-weight:700;font-size:14px">Save</span>
+</div>
+<div style="padding:0 20px;margin-bottom:20px">
+<div style="font-size:13px;color:#d6c3b2;margin-bottom:8px;font-weight:500">Bucket Name</div>
+<div style="background:#222a3e;border-radius:12px;border:1px solid #514537;padding:12px 16px;font-size:16px;color:#dae2fd">Weekend Reads<span style="opacity:0.8">|</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;margin-bottom:12px">
+<span style="font-size:16px;font-weight:600;color:#dae2fd">Pick Books</span>
+<span style="font-size:13px;color:#ffddb8;font-weight:500">1 selected</span>
+</div>
+<div style="flex:1;overflow:hidden;padding:0 20px">
+<div style="display:flex;justify-content:space-between">
+<div style="position:relative;width:170px;border:2px solid #ffddb8;border-radius:12px;opacity:0.85;box-sizing:border-box">
+<div style="width:100%;height:256px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:116px;height:160px;border-radius:32px;background:linear-gradient(160deg,#2e3a54,#151d32);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;margin-bottom:12px"><span style="font-family:Georgia,serif;font-size:12px;line-height:1.25;color:rgba(218,226,253,0.85)">The Midnight Library</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;line-height:18px">The Midnight Library</div>
+<div style="font-size:12px;color:#d6c3b2;margin-top:4px">Matt Haig</div>
+</div>
+<div style="position:absolute;top:8px;right:8px;background:#0b1326;border-radius:12px;color:#ffddb8;display:flex"><ion-icon name="checkmark-circle" style="font-size:24px"></ion-icon></div>
+</div>
+<div style="width:170px;box-sizing:border-box">
+<div style="width:100%;height:256px;background:#131b2e;border-radius:48px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center">
+<div style="width:116px;height:160px;border-radius:32px;background:linear-gradient(160deg,#4a3a28,#211a12);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;margin-bottom:12px"><span style="font-family:Georgia,serif;font-size:12px;line-height:1.25;color:rgba(218,226,253,0.85)">Piranesi</span></div>
+<div style="font-size:14px;font-weight:600;color:#dae2fd;text-align:center;line-height:18px">Piranesi</div>
+<div style="font-size:12px;color:#d6c3b2;margin-top:4px">Susanna Clarke</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>The name input uses <span class="mono">surfaceContainerHigh</span> + a 1px solid border — Login's sunken-lowest treatment is the system-correct one. Same screen, third border violation: the 2px selection outline.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Selection outline is radius 12 wrapped around a radius-48 card — the shapes fight. A check badge + tone shift (or scale-down) is enough.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Save is a 12px-radius rectangle — every other button in the app is a full pill.</span></div>
+</div>
+</div>
+
+<div class="ph">
+<div class="ph-h"><span class="ph-name">Manuscript reader</span><span class="ph-src">screens/ManuscriptScreen.js + PdfViewer.js</span></div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:-apple-system,system-ui,sans-serif">
+<div style="display:flex;align-items:center;padding:10px 8px;flex:none">
+<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon name="arrow-back" style="font-size:24px"></ion-icon></div>
+<span style="flex:1;font-size:17px;font-weight:600;color:#dae2fd;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The Midnight Library</span>
+<div style="width:40px"></div>
+</div>
+<div style="flex:1;background:#525659;display:flex;justify-content:center;padding:16px;overflow:hidden">
+<div style="background:#fdfdfb;width:100%;max-width:330px;border-radius:2px;padding:34px 28px;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,0.4)">
+<div style="font-family:Georgia,serif;font-size:17px;color:#222;margin-bottom:18px;font-weight:700">Chapter Seven</div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="height:8px;background:#d8d6d0;border-radius:2px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px;width:88%"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px;width:64%"></div>
+<div style="height:10px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px;width:92%"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px;width:70%"></div>
+<div style="height:10px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px;width:85%"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px"></div>
+<div style="height:8px;background:#d8d6d0;border-radius:2px;width:55%"></div>
+</div>
+<div style="margin-top:26px;font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#999;text-align:center">— native PDF render (iOS only) —</div>
+</div>
+</div>
+</div>
+</x-import>
+<div class="notes">
+<div class="ni"><span class="dot d-r"></span><span>The core promise — comments anchored to passages that unlock when friends reach them (per your README) — has no UI here or anywhere. This screen is where ReadPanda stops being a PDF viewer. See <a class="dv-oid" href="#1b">1b</a>.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>No progress indicator — DESIGN.md defines a signature glowing progress bar "floating at the very top" that is never used in the app.</span></div>
+<div class="ni"><span class="dot d-y"></span><span>Android gets a bare apology string in hardcoded <span class="mono">#555</span>; the reader chrome (gray PDF desk) also ignores the nocturnal palette.</span></div>
+</div>
+</div>
+
+</div>
+
+<h3 class="blk">Review summary</h3>
+<p class="blk-sub">Grouped by the concerns you flagged.</p>
+<div class="intro" style="margin-top:0">
+<div class="ic"><h4>System adherence</h4><ul>
+<li>Manrope is mandated but never loaded — the whole app runs on system fonts.</li>
+<li>Border violations: dashed create-card, notification left-accent, Create-Bucket input + selection outline, Profile dividers, badge stroke.</li>
+<li><span class="mono">radius.sm</span> (12) used on 5+ elements despite the "never below md" rule; meanwhile 48px on small cards over-rounds. Suggest a mobile scale: 16 / 24 / 28 / full.</li>
+<li>Off-palette grays: <span class="mono">#ccc</span> (3 screens), <span class="mono">#555</span>, <span class="mono">#fff</span> icons.</li>
+</ul></div>
+<div class="ic"><h4>Navigation &amp; IA</h4><ul>
+<li>Join Room + My Rooms are one tab pretending to be two. Merge → <b>Home · Reading · Rooms</b>.</li>
+<li>"Explore Books" tab actually holds the whole library + buckets — name it Home or Library.</li>
+<li>Profile route bug: <span class="mono">navigate('InterestScreen')</span> vs registered <span class="mono">'Interest'</span>.</li>
+<li>Search is visible but alerts "not implemented" — hide it until real.</li>
+</ul></div>
+<div class="ic"><h4>Contrast &amp; accessibility</h4><ul>
+<li>Body pairs are strong (#dae2fd / #d6c3b2 on navy ≈ 9–11:1). Good foundation.</li>
+<li>Weak spots: badge text 12px at ~4:1, metadata at 0.7 opacity ≈ 3.4:1, 11px tab labels.</li>
+<li>Placeholder-only form fields lose their labels once filled.</li>
+<li>Long-press to delete a bucket is undiscoverable — add an explicit affordance.</li>
+</ul></div>
+<div class="ic"><h4>The social gap</h4><ul>
+<li>Nothing in the UI shows a friend, a room, or a comment — the reason the app exists.</li>
+<li>Async-first framing is the differentiator: show <i>where friends are in the book</i> and <i>comments waiting ahead</i>, not chat.</li>
+<li>Stores exist (<span class="mono">roomStore</span>, <span class="mono">messageStore</span>, <span class="mono">readingProgressStore</span>) — the redesigns below give them a surface.</li>
+</ul></div>
+</div>
+
+<h3 class="blk">Redesign directions — moderate evolution</h3>
+<p class="blk-sub">Same Nocturnal Sanctuary system, correctly applied (Manrope loaded, no borders, tonal layering, one primary button) — and the social core made visible. IA: <b>Home · Reading · Rooms</b>.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Home — "Tonight" with your book &amp; your people</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:'Manrope',sans-serif">
+<div style="flex:1;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px 6px">
+<div>
+<div style="font-size:13px;font-weight:500;color:#d6c3b2">Good evening</div>
+<div style="font-size:26px;font-weight:800;color:#dae2fd;letter-spacing:-0.5px">Maya</div>
+</div>
+<div style="display:flex;align-items:center;gap:14px">
+<div style="position:relative;color:#d6c3b2;display:flex"><ion-icon name="notifications-outline" style="font-size:24px"></ion-icon><div style="position:absolute;right:-4px;top:-4px;width:16px;height:16px;border-radius:9999px;background:#ffb95f;display:flex;align-items:center;justify-content:center;color:#2b1800;font-size:10px;font-weight:800">2</div></div>
+<div style="width:38px;height:38px;border-radius:50%;background:#222a3e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-weight:700;font-size:13px">MA</div>
+</div>
+</div>
+<div style="padding:26px 24px 0">
+<div style="position:relative;background:#131b2e;border-radius:28px;padding:20px 20px 20px 128px;min-height:172px;box-sizing:border-box;box-shadow:0 20px 40px rgba(11,19,38,0.4)">
+<div style="position:absolute;left:-8px;top:-14px;width:112px;height:156px;border-radius:16px;background:linear-gradient(160deg,#2e3a54,#151d32);box-shadow:0 16px 32px rgba(6,13,32,0.6);display:flex;align-items:flex-end;padding:10px;box-sizing:border-box;transform:rotate(-2deg)"><span style="font-family:Georgia,serif;font-size:13px;line-height:1.25;color:rgba(218,226,253,0.85)">The Midnight Library</span></div>
+<div style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Continue reading</div>
+<div style="font-size:20px;font-weight:800;color:#dae2fd;letter-spacing:-0.3px;line-height:1.2;margin-bottom:4px">The Midnight Library</div>
+<div style="font-size:13px;font-weight:500;color:#d6c3b2;margin-bottom:12px">Chapter 7 of 21 · 62%</div>
+<div style="height:4px;background:#222a3e;border-radius:9999px;overflow:hidden;margin-bottom:12px"><div style="width:62%;height:100%;background:linear-gradient(90deg,#ffddb8,#e8c49a);border-radius:9999px;box-shadow:0 0 8px rgba(255,221,184,0.6)"></div></div>
+<div style="display:flex;align-items:center;gap:8px">
+<div style="display:flex">
+<div style="width:22px;height:22px;border-radius:50%;background:#2d3654;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#dae2fd;font-size:9px;font-weight:700">PR</div>
+<div style="width:22px;height:22px;border-radius:50%;background:#4a3a28;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-size:9px;font-weight:700;margin-left:-7px">TO</div>
+</div>
+<span style="font-size:12px;font-weight:600;color:#d6c3b2">Priya &amp; Tom are ahead — <span style="color:#ffddb8">5 comments waiting</span></span>
+</div>
+</div>
+<div style="background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:15px;text-align:center;color:#472a00;font-size:15px;font-weight:800;margin-top:14px;box-shadow:0 8px 24px rgba(255,185,95,0.25)">Pick up where you left off</div>
+</div>
+<div style="padding:26px 24px 0">
+<div style="font-size:16px;font-weight:800;color:#dae2fd;letter-spacing:-0.2px;margin-bottom:12px">Your rooms tonight</div>
+<div style="display:flex;gap:10px;overflow:hidden">
+<div style="flex:none;display:flex;align-items:center;gap:10px;background:#171f33;border-radius:9999px;padding:8px 16px 8px 8px">
+<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(160deg,#2e3a54,#151d32);display:flex;align-items:center;justify-content:center;color:#ffddb8"><ion-icon name="chatbubbles" style="font-size:15px"></ion-icon></div>
+<div><div style="font-size:13px;font-weight:700;color:#dae2fd">Midnight Club</div><div style="font-size:11px;font-weight:600;color:#ffb95f">3 new comments</div></div>
+</div>
+<div style="flex:none;display:flex;align-items:center;gap:10px;background:#171f33;border-radius:9999px;padding:8px 16px 8px 8px">
+<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(160deg,#27403c,#131f24);display:flex;align-items:center;justify-content:center;color:#ffddb8"><ion-icon name="chatbubbles" style="font-size:15px"></ion-icon></div>
+<div><div style="font-size:13px;font-weight:700;color:#dae2fd">Sci-fi Pals</div><div style="font-size:11px;font-weight:600;color:#d6c3b2">quiet today</div></div>
+</div>
+</div>
+</div>
+<div style="padding:26px 24px 0">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+<span style="font-size:16px;font-weight:800;color:#dae2fd;letter-spacing:-0.2px">Curated for you</span>
+<span style="font-size:12px;font-weight:700;color:#ffddb8">See all</span>
+</div>
+<div style="display:flex;gap:12px">
+<div style="width:58%;background:#131b2e;border-radius:24px;padding:12px;box-sizing:border-box">
+<div style="width:100%;aspect-ratio:0.78;border-radius:16px;background:linear-gradient(160deg,#41333f,#1c1826);display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;margin-bottom:10px"><span style="font-family:Georgia,serif;font-size:15px;line-height:1.25;color:rgba(218,226,253,0.85)">Tomorrow, and Tomorrow</span></div>
+<div style="font-size:13px;font-weight:700;color:#dae2fd">Recommended</div>
+<div style="font-size:11px;font-weight:500;color:#d6c3b2">10 books</div>
+</div>
+<div style="width:42%;background:#131b2e;border-radius:24px;padding:12px;box-sizing:border-box;align-self:flex-end">
+<div style="width:100%;aspect-ratio:0.78;border-radius:16px;background:linear-gradient(160deg,#27403c,#131f24);display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;margin-bottom:10px"><span style="font-family:Georgia,serif;font-size:13px;line-height:1.25;color:rgba(218,226,253,0.85)">Sea of Tranquility</span></div>
+<div style="font-size:13px;font-weight:700;color:#dae2fd">New arrivals</div>
+<div style="font-size:11px;font-weight:500;color:#d6c3b2">10 books</div>
+</div>
+</div>
+</div>
+</div>
+<div style="display:flex;background:rgba(23,31,51,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:10px 0 26px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="book" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:700">Home</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="bookmarks-outline" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:600">Reading</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="people-outline" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:600">Rooms</span></div>
+</div>
+</div>
+</x-import>
+<p class="ocap">One section-header style; overlapped cover per DESIGN.md; 60/40 asymmetric picks; friends + rooms surfaced on Home; real glass tab bar (3 tabs); buckets move inside Library ("See all").</p>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Reading — async book club made visible</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:'Manrope',sans-serif">
+<div style="height:4px;margin:0 0 0;background:#171f33;flex:none"><div style="width:62%;height:100%;background:linear-gradient(90deg,#ffddb8,#e8c49a);box-shadow:0 0 10px rgba(255,221,184,0.7)"></div></div>
+<div style="flex:1;overflow:hidden">
+<div style="display:flex;gap:16px;padding:22px 24px 0;align-items:center">
+<div style="width:72px;height:100px;border-radius:14px;background:linear-gradient(160deg,#2e3a54,#151d32);flex:none;display:flex;align-items:flex-end;padding:8px;box-sizing:border-box;box-shadow:0 12px 24px rgba(6,13,32,0.6)"><span style="font-family:Georgia,serif;font-size:10px;line-height:1.25;color:rgba(218,226,253,0.85)">The Midnight Library</span></div>
+<div style="min-width:0">
+<div style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Reading now</div>
+<div style="font-size:22px;font-weight:800;color:#dae2fd;letter-spacing:-0.4px;line-height:1.15">The Midnight Library</div>
+<div style="font-size:13px;font-weight:500;color:#d6c3b2;margin-top:4px">Chapter 7 of 21 · with Midnight Club</div>
+</div>
+</div>
+<div style="margin:22px 24px 0;background:#131b2e;border-radius:24px;padding:18px 20px">
+<div style="font-size:13px;font-weight:800;color:#dae2fd;margin-bottom:14px">Where everyone is</div>
+<div style="position:relative;height:6px;background:#222a3e;border-radius:9999px;margin:0 6px 26px">
+<div style="position:absolute;left:0;top:0;height:100%;width:62%;background:linear-gradient(90deg,#ffddb8,#e8c49a);border-radius:9999px"></div>
+<div style="position:absolute;left:62%;top:-9px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#ffddb8;box-shadow:0 0 0 3px #131b2e;display:flex;align-items:center;justify-content:center;color:#472a00;font-size:9px;font-weight:800">ME</div>
+<div style="position:absolute;left:78%;top:-9px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#2d3654;box-shadow:0 0 0 3px #131b2e;display:flex;align-items:center;justify-content:center;color:#dae2fd;font-size:9px;font-weight:800">PR</div>
+<div style="position:absolute;left:91%;top:-9px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#4a3a28;box-shadow:0 0 0 3px #131b2e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-size:9px;font-weight:800">TO</div>
+</div>
+<div style="font-size:12px;font-weight:600;color:#d6c3b2">You're 3 chapters behind Tom. No spoilers — comments unlock as you read.</div>
+</div>
+<div style="margin:24px 24px 0">
+<div style="font-size:13px;font-weight:800;color:#dae2fd;margin-bottom:12px">Unlocked at Chapter 6</div>
+<div style="background:rgba(23,31,51,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:20px;padding:16px;margin-bottom:10px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<div style="width:24px;height:24px;border-radius:50%;background:#2d3654;display:flex;align-items:center;justify-content:center;color:#dae2fd;font-size:9px;font-weight:800">PR</div>
+<span style="font-size:12px;font-weight:700;color:#dae2fd">Priya</span><span style="font-size:11px;color:#d6c3b2">· p. 148</span>
+</div>
+<div style="font-size:12px;font-style:italic;color:#d6c3b2;border-radius:12px;background:#0b1326;padding:10px 12px;margin-bottom:8px;font-family:Georgia,serif">"Never underestimate the big importance of small things."</div>
+<div style="font-size:13px;color:#dae2fd;line-height:1.45">This line wrecked me. Maya you're going to love this chapter 🥲</div>
+</div>
+<div style="border-radius:20px;background:#0e1730;padding:16px;display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:50%;background:#171f33;display:flex;align-items:center;justify-content:center;color:#d6c3b2;flex:none"><ion-icon name="lock-closed" style="font-size:16px"></ion-icon></div>
+<div>
+<div style="font-size:13px;font-weight:700;color:#dae2fd">2 comments waiting at Chapter 9</div>
+<div style="font-size:12px;font-weight:500;color:#d6c3b2">Keep reading to unlock them</div>
+</div>
+</div>
+</div>
+<div style="margin:20px 24px 0;background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:15px;text-align:center;color:#472a00;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(255,185,95,0.25)">Continue Chapter 7</div>
+</div>
+<div style="display:flex;background:rgba(23,31,51,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:10px 0 26px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="book-outline" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:600">Home</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="bookmarks" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:700">Reading</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="people-outline" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:600">Rooms</span></div>
+</div>
+</div>
+</x-import>
+<p class="ocap">Replaces the empty Current Read tab. The signature glow progress bar (from DESIGN.md, previously unused); friends' positions as pace markers; the unlock model made legible — unlocked comments in glass cards, locked ones teased without spoilers.</p>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Rooms — Join + My Rooms merged</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#0b1326;padding-top:54px;box-sizing:border-box;font-family:'Manrope',sans-serif">
+<div style="flex:1;overflow:hidden">
+<div style="padding:22px 24px 0">
+<div style="font-size:26px;font-weight:800;color:#dae2fd;letter-spacing:-0.5px;margin-bottom:4px">Rooms</div>
+<div style="font-size:13.5px;font-weight:500;color:#d6c3b2;margin-bottom:18px">Private clubs with your people — no set meeting time.</div>
+<div style="display:flex;gap:10px;margin-bottom:26px">
+<div style="flex:1;display:flex;align-items:center;gap:8px;background:#060d20;border-radius:24px;padding:13px 16px;color:#d6c3b2"><ion-icon name="key-outline" style="font-size:16px"></ion-icon><span style="font-size:14px;font-weight:500">Enter invite code</span></div>
+<div style="background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:13px 20px;color:#472a00;font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px"><ion-icon name="add" style="font-size:17px"></ion-icon>New</div>
+</div>
+<div style="font-size:13px;font-weight:800;color:#dae2fd;margin-bottom:12px">Your rooms</div>
+<div style="background:#131b2e;border-radius:24px;padding:16px;display:flex;gap:14px;margin-bottom:12px">
+<div style="width:56px;height:78px;border-radius:12px;background:linear-gradient(160deg,#2e3a54,#151d32);flex:none;display:flex;align-items:flex-end;padding:6px;box-sizing:border-box"><span style="font-family:Georgia,serif;font-size:8px;line-height:1.25;color:rgba(218,226,253,0.85)">The Midnight Library</span></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+<span style="font-size:15px;font-weight:800;color:#dae2fd">Midnight Club</span>
+<span style="background:#ffb95f;color:#2b1800;font-size:10px;font-weight:800;border-radius:9999px;padding:3px 8px">3 new</span>
+</div>
+<div style="font-size:12px;font-weight:500;color:#d6c3b2;margin-bottom:10px">The Midnight Library · Ch. 7 of 21</div>
+<div style="display:flex;align-items:center;gap:8px">
+<div style="display:flex">
+<div style="width:20px;height:20px;border-radius:50%;background:#ffddb8;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#472a00;font-size:8px;font-weight:800">ME</div>
+<div style="width:20px;height:20px;border-radius:50%;background:#2d3654;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#dae2fd;font-size:8px;font-weight:800;margin-left:-6px">PR</div>
+<div style="width:20px;height:20px;border-radius:50%;background:#4a3a28;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#ffddb8;font-size:8px;font-weight:800;margin-left:-6px">TO</div>
+</div>
+<div style="flex:1;height:3px;background:#222a3e;border-radius:9999px;overflow:hidden"><div style="width:62%;height:100%;background:linear-gradient(90deg,#ffddb8,#e8c49a)"></div></div>
+</div>
+</div>
+</div>
+<div style="background:#131b2e;border-radius:24px;padding:16px;display:flex;gap:14px;margin-bottom:12px">
+<div style="width:56px;height:78px;border-radius:12px;background:linear-gradient(160deg,#27403c,#131f24);flex:none;display:flex;align-items:flex-end;padding:6px;box-sizing:border-box"><span style="font-family:Georgia,serif;font-size:8px;line-height:1.25;color:rgba(218,226,253,0.85)">Sea of Tranquility</span></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+<span style="font-size:15px;font-weight:800;color:#dae2fd">Sci-fi Pals</span>
+</div>
+<div style="font-size:12px;font-weight:500;color:#d6c3b2;margin-bottom:10px">Sea of Tranquility · starting Sept 1</div>
+<div style="display:flex;align-items:center;gap:8px">
+<div style="display:flex">
+<div style="width:20px;height:20px;border-radius:50%;background:#ffddb8;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#472a00;font-size:8px;font-weight:800">ME</div>
+<div style="width:20px;height:20px;border-radius:50%;background:#41333f;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#dae2fd;font-size:8px;font-weight:800;margin-left:-6px">SA</div>
+<div style="width:20px;height:20px;border-radius:50%;background:#2d3654;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#dae2fd;font-size:8px;font-weight:800;margin-left:-6px">JJ</div>
+<div style="width:20px;height:20px;border-radius:50%;background:#171f33;box-shadow:0 0 0 2px #131b2e;display:flex;align-items:center;justify-content:center;color:#d6c3b2;font-size:8px;font-weight:800;margin-left:-6px">+2</div>
+</div>
+<div style="flex:1;height:3px;background:#222a3e;border-radius:9999px"></div>
+</div>
+</div>
+</div>
+<div style="border-radius:24px;background:#0e1730;padding:20px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;margin-top:8px">
+<div style="color:#d6c3b2;display:flex"><ion-icon name="mail-open-outline" style="font-size:28px"></ion-icon></div>
+<div style="font-size:13px;font-weight:700;color:#dae2fd">Invite a friend</div>
+<div style="font-size:12px;font-weight:500;color:#d6c3b2;max-width:240px">Rooms are invite-only. Share a code and read the same book on your own schedules.</div>
+</div>
+</div>
+</div>
+<div style="display:flex;background:rgba(23,31,51,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:10px 0 26px;flex:none">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="book-outline" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:600">Home</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2"><ion-icon name="bookmarks-outline" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:600">Reading</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8"><ion-icon name="people" style="font-size:23px"></ion-icon><span style="font-size:11px;font-weight:700">Rooms</span></div>
+</div>
+</div>
+</x-import>
+<p class="ocap">One tab instead of two: join-by-code + create live in the header row; each room card shows the book, who's in it, unread comments and group pace. Private-first copy replaces "connect with other readers".</p>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Login — the brand moment</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;justify-content:center;background:#0b1326;padding:0 32px;box-sizing:border-box;font-family:'Manrope',sans-serif">
+<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:26px">
+<img src="src/assets/readpandaLogo_New.png" alt="ReadPanda" style="width:190px;height:190px;object-fit:cover;border-radius:50%;margin-bottom:2px">
+<div style="font-size:28px;font-weight:800;color:#dae2fd;letter-spacing:-0.5px;text-align:center;line-height:1.2">Your book club,<br>on everyone's schedule</div>
+<div style="font-size:14px;font-weight:500;color:#d6c3b2;margin-top:8px;text-align:center">Read together. Comment freely. No spoilers.</div>
+</div>
+<div style="background:#060d20;padding:15px 20px;border-radius:24px;font-size:15px;color:#d6c3b2;margin-bottom:12px">Username</div>
+<div style="background:#060d20;padding:15px 20px;border-radius:24px;font-size:15px;color:#d6c3b2;margin-bottom:18px">Password</div>
+<div style="background:linear-gradient(135deg,#ffddb8,#ffb95f);border-radius:9999px;padding:15px;text-align:center;color:#472a00;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(255,185,95,0.25)">Step inside</div>
+<div style="display:flex;align-items:center;margin:18px 0">
+<div style="flex:1;height:1px;background:rgba(81,69,55,0.3)"></div>
+<span style="margin:0 12px;color:#d6c3b2;font-size:13px">or</span>
+<div style="flex:1;height:1px;background:rgba(81,69,55,0.3)"></div>
+</div>
+<div style="background:#222a3e;border-radius:9999px;padding:15px;text-align:center;color:#ffddb8;font-size:14px;font-weight:700">Continue with Google</div>
+<div style="text-align:center;margin-top:22px;font-size:14px"><span style="color:#d6c3b2">New here?</span> <span style="color:#ffddb8;font-weight:700">Create an account</span></div>
+</div>
+</x-import>
+<p class="ocap">The logo you already have (lamp-lit panda under a blanket — it IS the Nocturnal Sanctuary) finally used; value-prop headline sells the async club; Manrope loaded; same field/CTA system otherwise.</p>
+</div>
+
+</div>
+<p class="dv-next">Try next: "apply <a class="dv-oid" href="#1a">1a</a>'s header style to every tab" · "design the reader with inline comments from <a class="dv-oid" href="#1b">1b</a>" · "show the create-room flow for <a class="dv-oid" href="#1c">1c</a>"</p>
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,78 @@
+sequenceDiagram
+    %% Home flow 1 of 2 — Loading "Tonight"
+    %% Participants map to:
+    %%   HS   src/screens/HomeScreen.js
+    %%   BS   src/stores/bucketsStore.js
+    %%   RS   src/stores/roomStore.js
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   CS   src/stores/commentsStore.js
+    %%   FR   src/hooks/useFirstRunRecommendation.js
+    %%   ES   src/utils/enhancedStorage.js
+    %%   NS   src/stores/notificationStore.js
+    autonumber
+    actor R as Reader
+    participant HS as HomeScreen
+    participant RPS as readingProgressStore
+    participant ES as enhancedStorage
+    participant BS as bucketsStore
+    participant RS as roomStore
+    participant CS as commentsStore
+    participant FR as useFirstRunRecommendation
+    participant NS as notificationStore
+    participant SRV as Server
+
+    R->>HS: Home tab mounts
+    HS->>RPS: loadActiveBook() — synchronous, before any await
+    RPS->>ES: getCurrentReadingPosition()
+    ES-->>RPS: last-read book + progress, or nothing
+    RPS->>RPS: activeBook (or null), activeBookLoaded = true, loadShelf()
+    Note over HS: Reading storage first decides hero vs.<br/>first-run without waiting on the network
+
+    HS->>BS: fetchCuratedBuckets()
+    BS->>SRV: GET /home/our-picks
+    SRV-->>BS: buckets (2-book previews)
+    HS->>BS: fetchCustomBuckets()
+    BS->>SRV: GET /users/me/buckets
+    SRV-->>BS: buckets
+    HS->>RS: fetchRooms()
+    RS->>SRV: GET /room/my-rooms
+    SRV-->>RS: [rooms] or null
+    RS->>RS: normalizeRoom, roomsLoaded = true
+    RS->>RPS: reconcileRooms(rooms) — see rooms-03
+    HS->>NS: refreshUnreadCount()
+    NS->>SRV: GET /notifications/unread/count?username=…
+    SRV-->>NS: {unread_count} → bell badge
+
+    HS->>RPS: loadActiveBook(), refreshMemberProgress()
+    loop each roomId on the hero and shelf
+        RPS->>SRV: GET /room/{id}/progress
+        SRV-->>RPS: book_id, members[{user_id, progress_pct}]
+        RPS->>RPS: remoteProgress[bookId], applyMemberProgress()
+    end
+    opt hero has a roomId
+        HS->>CS: loadComments(roomId, bookId) — comments-01
+    end
+
+    HS->>FR: curatedBuckets, user.preferences
+    FR->>ES: getUserPreference("first_run_pick")
+    opt no cached pick
+        FR->>FR: seedCollection → first book of bucket matching top interest
+        FR->>ES: storeUserPreference("first_run_pick")
+    end
+
+    HS->>HS: pick hero state
+    alt activeBook
+        HS-->>R: Continue / Start reading hero, friends ahead, comments waiting
+        opt a room reads a different book
+            HS-->>R: "Room is reading X" swap card
+            R->>HS: tap swap
+            HS->>RPS: attachRoom(room, {force: true})
+        end
+    else no book, a room awaiting a book
+        HS-->>R: room-nudge hero — "Choose the book" or "Waiting on creator"
+    else no book, no rooms (first run)
+        HS-->>R: recommendation hero, browse / create room
+    end
+    HS-->>R: rooms list or join-by-code, 2 curated cards
+
+    Note over HS: useFocusEffect on every return to the tab:<br/>loadActiveBook() + refreshMemberProgress().<br/>Pull-to-refresh reruns the full loadHome(true)

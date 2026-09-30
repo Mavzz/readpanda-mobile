@@ -1,0 +1,57 @@
+sequenceDiagram
+    %% Comments flow 4 of 4 — Retry and like
+    %% Both are optimistic-first. Retry is idempotent on clientId;
+    %% like rolls back if the write is refused.
+    %% Participants map to:
+    %%   SH  ios/CommentSheetView.swift
+    %%   NV  ios/RNPdfViewer.swift (RNPdfView)
+    %%   JS  src/components/PdfViewer.js
+    %%   MS  src/screens/ManuscriptScreen.js
+    %%   ST  src/stores/commentsStore.js
+    %%   API src/services/commentsService.js
+    autonumber
+    actor R as Reader
+    participant SH as CommentSheetView
+    participant NV as RNPdfView
+    participant JS as PdfViewer.js
+    participant MS as ManuscriptScreen.js
+    participant ST as commentsStore
+    participant API as commentsService
+    participant SRV as Server
+
+    rect rgb(245, 242, 236)
+    Note over R,SRV: Retry a failed comment
+    R->>SH: tap "Couldn't send, Retry"
+    SH->>NV: commentSheet(didRetry: comment)
+    NV->>JS: onRetryComment(clientId)
+    JS->>MS: onRetryComment(clientId)
+    MS->>ST: retryComment(bookId, clientId)
+    ST->>ST: locate the comment and its thread, mark pending=true failed=false
+    ST-->>MS: byBook updated, sheet re-renders with a spinner
+    ST->>API: createComment with the SAME clientId
+    API->>SRV: POST /room/{roomId}/book/{bookId}/comments
+    Note over SRV: Idempotent on clientId. If an earlier attempt<br/>landed, the original row comes back<br/>instead of a duplicate
+    SRV-->>ST: 201 saved row
+    ST->>ST: swap by clientId
+    ST-->>MS: byBook updated, sheet re-renders clean
+    end
+
+    rect rgb(240, 244, 248)
+    Note over R,SRV: Like a comment
+    R->>SH: tap heart
+    SH->>NV: commentSheet(didLike: comment)
+    NV->>JS: onLikeComment(commentId)
+    JS->>MS: onLikeComment(commentId)
+    MS->>ST: toggleLike(bookId, commentId)
+    ST->>ST: write(!wasLiked) locally, adjust likes count
+    ST-->>MS: byBook updated, heart fills instantly
+    ST->>API: likeComment or unlikeComment
+    API->>SRV: POST or DELETE /comments/{id}/like
+    alt 200 or 204
+        SRV-->>ST: ok
+    else refused
+        SRV-->>ST: error
+        ST->>ST: write(wasLiked), roll back
+        ST-->>MS: byBook updated, heart reverts
+    end
+    end

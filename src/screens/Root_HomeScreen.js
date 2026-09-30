@@ -1,10 +1,10 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import MainTabNavigator from '../navigation/MainTabNavigator';
 import log from '../utils/logger';
 
 const Root = () => {
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
   
   log.info(`Root screen loaded for user: ${user?.username}`);
   

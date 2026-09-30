@@ -1,0 +1,48 @@
+sequenceDiagram
+    %% Comments flow 1 of 4 — Load
+    %% Entering the reader: fetch the conversation and draw it on the page.
+    %% Participants map to:
+    %%   MS  src/screens/ManuscriptScreen.js
+    %%   ST  src/stores/commentsStore.js
+    %%   API src/services/commentsService.js
+    %%   JS  src/components/PdfViewer.js
+    %%   NV  ios/RNPdfViewer.swift (RNPdfView)
+    %%   SH  ios/CommentSheetView.swift
+    %% Props and events between NV and JS pass through the
+    %% RCT_EXPORT_VIEW_PROPERTY declarations in ios/RNPdfViewer.m.
+    autonumber
+    actor R as Reader
+    participant MS as ManuscriptScreen.js
+    participant ST as commentsStore
+    participant API as commentsService
+    participant SRV as Server
+    participant JS as PdfViewer.js
+    participant NV as RNPdfView
+    participant SH as CommentSheetView
+
+    R->>MS: navigate to ManuscriptScreen
+    MS->>MS: resolve roomId from shelf + last-used preference
+    Note over MS: Solo book has no roomId,<br/>so no conversation to fetch
+
+    MS->>ST: loadComments(roomId, bookId)
+    ST->>API: fetchBookComments(roomId, bookId)
+    API->>SRV: GET /room/{roomId}/book/{bookId}/comments
+    SRV-->>API: 200 threads + locked_count + unlocked_unread_count
+    Note over SRV: Spoiler rule applied server-side.<br/>Pages ahead of the reader arrive<br/>as a bare locked_count
+    API-->>ST: status, response
+    ST->>ST: map toThread, sortThreads by page then createdAt
+    ST-->>MS: byBook updated
+
+    MS->>MS: nativeThreads useMemo
+    MS->>JS: threads, hasRoom, roomName, unreadTotal, lockedCount
+    JS->>NV: props via RCT_EXPORT_VIEW_PROPERTY
+
+    NV->>NV: parsedThreads = map ReaderThread(NSDictionary)
+    NV->>NV: scrubber.commentPages = unique pages
+    NV->>NV: scheduleOverlayRefresh, 50ms debounce
+    NV->>SH: update(threads, roomName, submitting)
+    Note over SH: Stores data, then guards on isOpen.<br/>Closed sheet stays current, does not render
+
+    NV->>NV: refreshOverlays
+    Note over NV: Per thread: skip if fileHash differs from<br/>documentHash, else findString the anchor text<br/>or fall back to normalized bounds
+    NV->>R: highlights + gutter dots + scrubber ticks

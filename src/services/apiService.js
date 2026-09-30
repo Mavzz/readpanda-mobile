@@ -1,5 +1,5 @@
 import { getBackendUrl } from '../utils/Helper';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import log from '../utils/logger';
 
 // Error types for better handling
@@ -54,8 +54,8 @@ class ApiService {
      * Check if user has valid authentication tokens
      */
   hasValidTokens() {
-    const accessToken = enhanceedStorage.getAuthToken();
-    const refreshToken = enhanceedStorage.getRefreshToken();
+    const accessToken = enhancedStorage.getAuthToken();
+    const refreshToken = enhancedStorage.getRefreshToken();
     return !!(accessToken && refreshToken);
   }
 
@@ -66,7 +66,7 @@ class ApiService {
     log.error(`Authentication failure: ${reason}`);
 
     // Clear all auth data
-    enhanceedStorage.clearAuthData();
+    enhancedStorage.clearAuthData();
 
     // Call auth failure callback if set (usually signOut from AuthContext)
     if (this.authCallback) {
@@ -94,8 +94,8 @@ class ApiService {
     this.isRefreshing = true;
 
     try {
-      const accessToken = enhanceedStorage.getAuthToken();
-      const refreshToken = enhanceedStorage.getRefreshToken();
+      const accessToken = enhancedStorage.getAuthToken();
+      const refreshToken = enhancedStorage.getRefreshToken();
 
       // Check if both tokens are missing
       if (!accessToken && !refreshToken) {
@@ -114,16 +114,23 @@ class ApiService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
         },
+        body: JSON.stringify({
+          refreshToken: refreshToken,
+        }),
       });
 
       if (tokenResponse.status === 200) {
-        const { token } = await tokenResponse.json();
-        enhanceedStorage.updateAuthToken(token);
-        this.processQueue(null, token);
+        const { accessToken, refreshToken: rotatedRefreshToken } = await tokenResponse.json();
+        enhancedStorage.updateAuthToken(accessToken);
+        // The backend rotates the refresh token on every use — persist the
+        // new one so the next refresh doesn't fail against a stale value.
+        if (rotatedRefreshToken) {
+          enhancedStorage.updateRefreshToken(rotatedRefreshToken);
+        }
+        this.processQueue(null, accessToken);
         log.info('Token refreshed successfully');
-        return token;
+        return accessToken;
       } else if (tokenResponse.status === 401 || tokenResponse.status === 403) {
         // Refresh token is invalid or expired
         await this.handleAuthenticationFailure(`Refresh token invalid or expired (status: ${tokenResponse.status})`);
@@ -198,14 +205,21 @@ class ApiService {
 
       const response = await fetch(url, fetchOptions);
 
-      // Check for token-related errors
-      if (response.status === 401 || response.status === 498) {
+      // skipAuthRetry marks requests that never carried one of our own JWTs
+      // to begin with (login/signup/Google auth) — a 401/498 there means
+      // "these credentials/this token are invalid", not "our access token
+      // expired", so refreshing our app token and retrying can't help and
+      // only masks the real error (or, if a stale app session happens to
+      // exist, actively breaks the request by swapping in the wrong
+      // Authorization header). Treat it as a plain non-retryable 4xx instead.
+      const isAuthError = response.status === 401 || response.status === 498;
+      if (isAuthError && !requestConfig.skipAuthRetry) {
         log.warn(`Token error (${response.status}) detected, attempting refresh and retry`);
         return this.handleTokenError(requestConfig, attempt);
       }
 
       // Handle other client errors (4xx) - don't retry
-      if (response.status >= 400 && response.status < 500 && response.status !== 401 && response.status !== 498) {
+      if (response.status >= 400 && response.status < 500) {
         const errorText = await response.text();
         throw new Error(`Client error ${response.status}: ${errorText}`);
       }
@@ -222,6 +236,11 @@ class ApiService {
           const errorText = await response.text();
           throw new Error(`Server error ${response.status} after ${this.maxRetries} attempts: ${errorText}`);
         }
+      }
+
+      if (response.status === 204) {
+        log.info('Request successful');
+        return { status: response.status, response: null };
       }
 
       // Success - parse response
@@ -249,38 +268,43 @@ class ApiService {
   }
 
   /**
-     * GET request with retry capabilities
+     * GET request with retry capabilities.
+     * options: { skipAuthRetry } — see executeRequest.
      */
-  async get(url, headers = {}) {
-    return this.executeRequest({ url, method: 'GET', headers });
+  async get(url, headers = {}, options = {}) {
+    return this.executeRequest({ url, method: 'GET', headers, ...options });
   }
 
   /**
-     * POST request with retry capabilities
+     * POST request with retry capabilities.
+     * options: { skipAuthRetry } — see executeRequest.
      */
-  async post(url, body = {}, headers = {}) {
-    return this.executeRequest({ url, method: 'POST', headers, body });
+  async post(url, body = {}, headers = {}, options = {}) {
+    return this.executeRequest({ url, method: 'POST', headers, body, ...options });
   }
 
   /**
-     * PUT request with retry capabilities
+     * PUT request with retry capabilities.
+     * options: { skipAuthRetry } — see executeRequest.
      */
-  async put(url, body = {}, headers = {}) {
-    return this.executeRequest({ url, method: 'PUT', headers, body });
+  async put(url, body = {}, headers = {}, options = {}) {
+    return this.executeRequest({ url, method: 'PUT', headers, body, ...options });
   }
 
   /**
-     * DELETE request with retry capabilities
+     * DELETE request with retry capabilities.
+     * options: { skipAuthRetry } — see executeRequest.
      */
-  async delete(url, headers = {}) {
-    return this.executeRequest({ url, method: 'DELETE', headers });
+  async delete(url, headers = {}, options = {}) {
+    return this.executeRequest({ url, method: 'DELETE', headers, ...options });
   }
 
   /**
-     * PATCH request with retry capabilities
+     * PATCH request with retry capabilities.
+     * options: { skipAuthRetry } — see executeRequest.
      */
-  async patch(url, body = {}, headers = {}) {
-    return this.executeRequest({ url, method: 'PATCH', headers, body });
+  async patch(url, body = {}, headers = {}, options = {}) {
+    return this.executeRequest({ url, method: 'PATCH', headers, body, ...options });
   }
 }
 

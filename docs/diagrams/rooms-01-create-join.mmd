@@ -1,0 +1,57 @@
+sequenceDiagram
+    %% Rooms flow 1 of 3 — Create a room, or join one
+    %% Participants map to:
+    %%   CR   src/screens/CreateRoomScreen.js
+    %%   RMS  src/screens/RoomsScreen.js
+    %%   DL   src/hooks/useInviteDeepLink.js
+    %%   RS   src/stores/roomStore.js
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   LB   src/screens/RoomLobbyScreen.js
+    autonumber
+    actor R as Reader
+    participant CR as CreateRoomScreen
+    participant RMS as RoomsScreen
+    participant DL as useInviteDeepLink
+    participant RS as roomStore
+    participant RPS as readingProgressStore
+    participant SRV as Server
+    participant LB as RoomLobbyScreen
+
+    rect rgba(120,120,200,0.08)
+    Note over R,LB: Create — from Rooms "New", Home first-run, or SoloBook "start a room" (seedBook)
+    R->>CR: name + privacy (invite-only default)
+    R->>CR: "Create room"
+    CR->>RS: saveRoom({name, description: "", isPrivate})
+    RS->>SRV: POST /room/create
+    SRV-->>RS: 201 room + invite_code
+    RS->>RS: append normalizeRoom(room)
+    opt seedBook passed
+        CR->>RS: setRoomReading(id, {currentBook: seedBook}) — rooms-02
+        Note over CR: Best effort. Failure is logged,<br/>room still opens
+    end
+    CR->>LB: navigation.replace(RoomLobbyScreen, room)
+    end
+
+    rect rgba(120,200,120,0.08)
+    Note over R,LB: Join — invite code typed in Rooms, or readpanda://join/CODE
+    alt typed code
+        R->>RMS: code (uppercased, max 6) + submit
+        RMS->>RS: joinRoomByCode(code)
+    else deep link / QR
+        R->>DL: open readpanda://join/CODE
+        DL->>DL: parseInviteCode (4–12 alnum)
+        DL->>RS: joinRoomByCode(code) — held until signed in
+    end
+    RS->>SRV: POST /room/join {invite_code}
+    alt 200 / 201
+        SRV-->>RS: room
+        RS->>RS: upsert into rooms
+        RS->>RPS: attachRoom(room, {adopt: true})
+        Note over RPS: Adopts the room's book if the reader<br/>has no active book, re-attaches if it's<br/>the same book, else only tags the stored<br/>entry. See rooms-03 for attach rules
+        RS-->>LB: toast "Joined X", navigate RoomLobbyScreen
+    else 404
+        RS-->>R: "No room found for that code"
+    else 409
+        RS-->>R: "You're already in this room" (no navigation)
+    end
+    end

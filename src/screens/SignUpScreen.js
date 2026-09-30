@@ -7,10 +7,10 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   primaryButton as PrimaryButton,
   ssoButton as SSOButton,
@@ -18,12 +18,13 @@ import {
 import { SignUpType } from '../utils/Helper';
 import log from '../utils/logger';
 import { googleSignUpLogin, emailSignUp } from '../services/auth';
-import { useAuth } from '../contexts/AuthContext';
-import { PreferenceService } from '../services/user_PreferencesService';
+import useAuthStore from '../stores/authStore';
+import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 
 const SignUp = ({ navigation }) => {
-  const { signIn, updateUser } = useAuth();
+  const signIn = useAuthStore((s) => s.signIn);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');

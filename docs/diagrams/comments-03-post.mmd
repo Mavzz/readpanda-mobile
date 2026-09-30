@@ -1,0 +1,95 @@
+sequenceDiagram
+    %% Comments flow 3 of 4 — Posting a comment
+    %% The main flow. Five renders per post; the optimistic row is on screen
+    %% before the request is made.
+    %% Participants map to:
+    %%   SH  ios/CommentSheetView.swift
+    %%   NV  ios/RNPdfViewer.swift (RNPdfView)
+    %%   JS  src/components/PdfViewer.js
+    %%   MS  src/screens/ManuscriptScreen.js
+    %%   ST  src/stores/commentsStore.js
+    %%   API src/services/commentsService.js
+    autonumber
+    actor R as Reader
+    participant SH as CommentSheetView
+    participant NV as RNPdfView
+    participant JS as PdfViewer.js
+    participant MS as ManuscriptScreen.js
+    participant ST as commentsStore
+    participant API as commentsService
+    participant SRV as Server
+
+    Note over R,SH: Sheet is already open on a .thread or a .draft
+
+    R->>SH: tap send
+    SH->>SH: trim body, guard on empty or submitting
+    SH->>NV: commentSheet(didSubmit: body, parentId: replyTo?.id)
+    SH->>SH: clear composer, replyTo = nil, render (1)
+    Note over SH: Commits on the tap, not on the network
+
+    NV->>NV: switch on sheet.target
+    Note over NV: .thread pulls page/anchorText/bounds/fileHash<br/>off the resolved thread.<br/>.draft uses values captured at selection time
+    NV->>NV: clearSelection on the PDF
+    NV->>JS: onSubmitComment nativeEvent
+    JS->>MS: onSubmitComment({page, anchorText, bounds, fileHash, parentId, body})
+
+    MS->>MS: setSubmitting(true)
+    MS->>NV: submitting = true
+    NV->>SH: update then render (2)
+    SH->>R: send button shows spinner, disabled
+
+    MS->>ST: addComment({roomId, bookId, page, anchorText, anchorBounds, parentId, body, fileHash})
+
+    ST->>ST: clientId = cmt_ base36 time + random
+    ST->>ST: anchorKey = parentId ? null : "pending:" + clientId
+    ST->>ST: build optimistic comment, pending=true, id=clientId
+
+    alt reply, parentId set
+        ST->>ST: append to that root's replies
+    else comment on a passage that already has a thread
+        ST->>ST: append to t.comments, matched on page + anchorText
+    else brand-new passage
+        ST->>ST: fabricate a thread with the client-invented anchorKey
+    end
+
+    ST-->>MS: byBook updated, synchronous set
+    MS->>MS: nativeThreads useMemo
+    MS->>NV: threads prop
+    NV->>NV: re-parse, update scrubber ticks, scheduleOverlayRefresh
+    NV->>SH: update then render (3)
+    SH->>SH: target.resolve, draft matched on page + anchorText
+    Note over SH: Same rule addComment used to place it,<br/>so they agree by construction
+    SH->>R: comment visible, spinner in its actions row
+
+    ST->>API: createComment(roomId, bookId, {..., clientId})
+    API->>SRV: POST /room/{roomId}/book/{bookId}/comments
+
+    alt 201 Created
+        SRV-->>API: saved row + anchor.key
+        API-->>ST: status, response
+        ST->>ST: swap optimistic by clientId, pending=false
+        ST->>ST: thread.anchorKey = response.anchor.key
+        Note over ST: Server owns the anchor key. The client's<br/>"pending:..." key is replaced here
+        ST-->>MS: byBook updated
+        MS->>NV: threads prop
+        NV->>SH: update then render (4)
+        SH->>R: spinner gone, real id so likes work, real timestamp
+        Note over SH: Survives the key swap because a draft<br/>tracks page + text, not the key
+    else non-201 or network error
+        SRV-->>API: error
+        API-->>ST: failure
+        ST->>ST: set pending=false, failed=true by clientId
+        ST-->>MS: byBook updated
+        MS->>NV: threads prop
+        NV->>SH: update then render (4)
+        SH->>R: row shows "Couldn't send, Retry"
+        ST--xMS: rethrow
+        MS->>R: showToast "Couldn't post that, tap retry on the comment"
+        Note over MS: The sheet has already moved on,<br/>so the toast carries the news
+    end
+
+    MS->>MS: finally setSubmitting(false)
+    MS->>NV: submitting = false
+    NV->>SH: update then render (5)
+    NV->>NV: debounced refreshOverlays fires
+    NV->>R: highlight + gutter dot appear for the new thread

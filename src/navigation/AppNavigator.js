@@ -1,13 +1,19 @@
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MyTheme } from '../styles/global';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { AuthProvider } from '../contexts/AuthContext';
+import useAuthStore from '../stores/authStore';
 import AuthStackNavigator from './AuthStackNavigator';
-import MainTabNavigator from './MainTabNavigator';
+import MainStackNavigator from './MainStackNavigator';
 import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
+import useInviteDeepLink from '../hooks/useInviteDeepLink';
+import usePushNotifications from '../hooks/usePushNotifications';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
+
+// Needed so the invite deep link can navigate from outside a screen.
+const navigationRef = createNavigationContainerRef();
 
 const linking = {
   prefixes: ['readpanda://'],
@@ -22,10 +28,9 @@ const linking = {
       },
       Main: {
         screens: {
-          'Explore Books': 'Home',
-          'Join Room': 'JoinRoom',
-          'Current Read': 'CurrentRead',
-          'My Rooms': 'MyRooms',
+          Home: 'Home',
+          Reading: 'Reading',
+          Rooms: 'Rooms',
           Profile: 'Profile',
         },
       },
@@ -35,13 +40,23 @@ const linking = {
 };
 
 const AppContent = () => {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // readpanda://join/{CODE} — from the Room Detail QR. Not in `linking` above
+  // because joining is an API call, not just a route.
+  useInviteDeepLink({ isAuthenticated, navigationRef });
+  usePushNotifications({ isAuthenticated, navigationRef });
 
   return (
-    <NavigationContainer theme={MyTheme} linking={linking} fallback={<Text>Loading...</Text>}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={MyTheme}
+      linking={linking}
+      fallback={<Text>Loading...</Text>}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="Main" component={MainStackNavigator} />
         ) : (
           <Stack.Screen name="Auth" component={AuthStackNavigator} />
         )}

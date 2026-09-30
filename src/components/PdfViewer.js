@@ -1,162 +1,113 @@
-import React, { useState, useCallback } from 'react';
-import {
-  requireNativeComponent,
-  Platform,
-  ActivityIndicator,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { requireNativeComponent, Platform } from 'react-native';
 import log from '../utils/logger';
 
-const LINKING_ERROR =
-  'The native module for PDF Viewer is not available. Make sure: \n\n' +
-  Platform.select({ ios: '- You have run \'pod install\' in the \'ios\' directory and restarted your project.\n', default: '' });
+// The reader is native (ios/RNPdfViewer.swift): the page, the chrome around
+// it, the passage highlights, the gutter, the scrubber and the thread sheet
+// are all drawn there. What is left here is the bridge — props down, events
+// unwrapped on the way back up — so nothing downstream has to know the shape
+// of a `nativeEvent`.
+//
+// The name 'RNPdfViewer' must exactly match the RCT_EXTERN_MODULE name in
+// RNPdfViewer.m.
+const RNPdfViewerComponent = Platform.OS === 'ios' ? requireNativeComponent('RNPdfViewer') : null;
 
-// The name 'RNPdfViewer' must exactly match the RCT_EXPORT_MODULE name from RNPdfViewerManager.m
-const RNPdfViewerComponent = Platform.select({
-  ios: requireNativeComponent('RNPdfViewer'),
-  default: () => {
-    if (__DEV__) {
-      console.warn(LINKING_ERROR);
-    }
-    return null; // Return null on unsupported platforms
-  },
-});
-
-const PdfViewer = ({ pdfUrl, pdfTitle, style, initialPage, onPageChanged, onLoadComplete, onError }) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(initialPage || 0);
-
-  const handleLoadComplete = useCallback((event) => {
-    const { totalPages: pages } = event.nativeEvent;
-    log.info(`PDF loaded: ${pdfTitle} (${pages} pages)`);
-    setTotalPages(pages);
-    setLoading(false);
-    setError(null);
-    onLoadComplete?.(pages);
-  }, [pdfTitle, onLoadComplete]);
-
-  const handlePageChanged = useCallback((event) => {
-    const { currentPage: page, totalPages: pages } = event.nativeEvent;
-    setCurrentPage(page);
-    setTotalPages(pages);
-    onPageChanged?.(page, pages);
+const PdfViewer = ({
+  style,
+  pdfUrl,
+  bookTitle,
+  initialPage,
+  threads,
+  hasRoom,
+  canPickRoom,
+  roomName,
+  unreadTotal,
+  lockedCount,
+  submitting,
+  openThreadKey,
+  onPageChanged,
+  onLoadComplete,
+  onError,
+  onBack,
+  onSearch,
+  onThreadOpened,
+  onSubmitComment,
+  onLikeComment,
+  onRetryComment,
+  onRoomPickerRequested,
+}) => {
+  const handlePageChanged = useCallback((e) => {
+    const { currentPage, totalPages } = e.nativeEvent;
+    onPageChanged?.(currentPage, totalPages);
   }, [onPageChanged]);
 
-  const handleError = useCallback((event) => {
-    const { message } = event.nativeEvent;
-    log.error(`PDF error for ${pdfTitle}: ${message}`);
-    setLoading(false);
-    setError(message);
+  const handleLoadComplete = useCallback((e) => {
+    const { totalPages, fileHash } = e.nativeEvent;
+    log.info(`PDF loaded: ${bookTitle} — ${totalPages} pages`);
+    onLoadComplete?.(totalPages, fileHash);
+  }, [bookTitle, onLoadComplete]);
+
+  const handleError = useCallback((e) => {
+    const { message } = e.nativeEvent;
+    log.error(`PDF error for ${bookTitle}: ${message}`);
     onError?.(message);
-  }, [pdfTitle, onError]);
+  }, [bookTitle, onError]);
 
-  const handleRetry = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    // Force re-render by toggling a key isn't needed — we re-mount via error state clear
-  }, []);
+  const handleBack = useCallback(() => onBack?.(), [onBack]);
+  const handleSearch = useCallback(() => onSearch?.(), [onSearch]);
 
+  const handleThreadOpened = useCallback((e) => {
+    onThreadOpened?.(e.nativeEvent.anchorKey);
+  }, [onThreadOpened]);
+
+  const handleSubmitComment = useCallback((e) => {
+    const { page, anchorText, bounds, fileHash, parentId, body } = e.nativeEvent;
+    onSubmitComment?.({ page, anchorText, bounds, fileHash, parentId: parentId || null, body });
+  }, [onSubmitComment]);
+
+  const handleLikeComment = useCallback((e) => {
+    onLikeComment?.(e.nativeEvent.commentId);
+  }, [onLikeComment]);
+
+  const handleRetryComment = useCallback((e) => {
+    onRetryComment?.(e.nativeEvent.clientId);
+  }, [onRetryComment]);
+
+  const handleRoomPickerRequested = useCallback(() => {
+    onRoomPickerRequested?.();
+  }, [onRoomPickerRequested]);
+
+  // Android has no reader yet; ManuscriptScreen shows its own message there.
   if (Platform.OS !== 'ios') {
-    return <RNPdfViewerComponent />;
-  }
-
-  if (!pdfUrl) {
     return null;
   }
 
-  if (error) {
-    return (
-      <View style={[style, styles.centeredContainer]}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
-    <View style={style}>
-      <RNPdfViewerComponent
-        style={StyleSheet.absoluteFill}
-        pdfDetails={{ url: pdfUrl, title: pdfTitle }}
-        initialPage={initialPage || 0}
-        onLoadComplete={handleLoadComplete}
-        onPageChanged={handlePageChanged}
-        onError={handleError}
-      />
-      {loading && (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#4A90D9" />
-          <Text style={styles.loadingText}>Loading PDF...</Text>
-        </View>
-      )}
-      {!loading && totalPages > 0 && (
-        <View style={styles.pageIndicator}>
-          <Text style={styles.pageText}>
-            {currentPage + 1} / {totalPages}
-          </Text>
-        </View>
-      )}
-    </View>
+    <RNPdfViewerComponent
+      style={style}
+      pdfDetails={{ url: pdfUrl || '' }}
+      bookTitle={bookTitle || ''}
+      initialPage={initialPage || 0}
+      threads={threads || []}
+      hasRoom={!!hasRoom}
+      canPickRoom={!!canPickRoom}
+      roomName={roomName || ''}
+      unreadTotal={unreadTotal || 0}
+      lockedCount={lockedCount || 0}
+      submitting={!!submitting}
+      openThreadKey={openThreadKey || ''}
+      onPageChanged={handlePageChanged}
+      onLoadComplete={handleLoadComplete}
+      onError={handleError}
+      onBack={handleBack}
+      onSearch={handleSearch}
+      onThreadOpened={handleThreadOpened}
+      onSubmitComment={handleSubmitComment}
+      onLikeComment={handleLikeComment}
+      onRetryComment={handleRetryComment}
+      onRoomPickerRequested={handleRoomPickerRequested}
+    />
   );
 };
 
-const styles = StyleSheet.create({
-  loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
-  },
-  centeredContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#D32F2F',
-    textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 24,
-  },
-  retryButton: {
-    backgroundColor: '#4A90D9',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  pageIndicator: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  pageText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-});
-
-const MemoizedPdfViewer = React.memo(PdfViewer);
-
-export default MemoizedPdfViewer;
+export default React.memo(PdfViewer);

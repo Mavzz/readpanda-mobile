@@ -1,0 +1,53 @@
+sequenceDiagram
+    %% Comments flow 2 of 4 — Opening a thread
+    %% Three entry points, one funnel, and the read receipt that follows.
+    %% Participants map to:
+    %%   NV  ios/RNPdfViewer.swift (RNPdfView)
+    %%   SH  ios/CommentSheetView.swift
+    %%   JS  src/components/PdfViewer.js
+    %%   MS  src/screens/ManuscriptScreen.js
+    %%   ST  src/stores/commentsStore.js
+    %%   API src/services/commentsService.js
+    autonumber
+    actor R as Reader
+    participant NV as RNPdfView
+    participant SH as CommentSheetView
+    participant JS as PdfViewer.js
+    participant MS as ManuscriptScreen.js
+    participant ST as commentsStore
+    participant API as commentsService
+    participant SRV as Server
+
+    alt tap a gutter dot
+        R->>NV: handleGutterTap, anchorKey from accessibilityIdentifier
+    else JS drives it, e.g. from a notification
+        MS->>NV: openThreadKey prop
+    else tap the header bubble icon
+        R->>NV: readerHeaderDidTapComment
+        Note over NV: Reuses the page-level thread if one exists,<br/>otherwise opens a .draft with empty anchorText
+    end
+
+    NV->>NV: openThread(anchorKey)
+    NV->>NV: scrollTo(anchorKey), go(to: selection) or go(to: page)
+    NV->>SH: open(target: .thread(anchorKey))
+
+    SH->>SH: reset replyTo, expanded, composer text, scroll offset
+    SH->>SH: render
+    SH->>SH: thread = target.resolve(in: threads)
+    SH->>SH: header = "N comments, Page X", quote block, room chip
+    SH->>SH: rebuildList(comments)
+    Note over SH: All roots, first 2 replies each,<br/>"N more replies" button for the rest
+    SH->>R: slide container up over 0.28s
+
+    NV->>JS: onThreadOpened(anchorKey)
+    JS->>MS: onThreadOpened(anchorKey)
+    MS->>ST: markThreadRead(bookId, anchorKey)
+    ST->>ST: set read=true, unreadCount=0, recount book total
+    ST-->>MS: byBook updated
+    MS->>NV: threads + unreadTotal props
+    NV->>NV: refreshOverlays redraws dot smaller and untinted
+    NV->>SH: update then render, unread dots clear
+
+    ST->>API: markCommentsRead(roomId, bookId, ids)
+    API->>SRV: POST /room/{roomId}/book/{bookId}/comments/read
+    Note over ST,SRV: Fire and forget. Dots are already clear locally,<br/>a lost receipt costs a reappearing dot, not correctness
