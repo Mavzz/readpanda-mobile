@@ -1,0 +1,62 @@
+sequenceDiagram
+    %% Reading flow 1 of 2 — The Reading shelf and its detail screens
+    %% Participants map to:
+    %%   RD   src/screens/ReadingScreen.js (4a)
+    %%   RB   src/screens/RoomBookScreen.js (1b)
+    %%   SB   src/screens/SoloBookScreen.js (4b)
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   CS   src/stores/commentsStore.js
+    %%   ES   src/utils/enhancedStorage.js
+    autonumber
+    actor R as Reader
+    participant RD as ReadingScreen
+    participant RPS as readingProgressStore
+    participant ES as enhancedStorage
+    participant CS as commentsStore
+    participant SRV as Server
+    participant RB as RoomBookScreen
+    participant SB as SoloBookScreen
+
+    R->>RD: Reading tab (mount, and every focus)
+    RD->>RPS: loadActiveBook(), loadShelf()
+    RPS->>ES: getReadingPositions() — per-user key
+    ES-->>RPS: {bookId: {book, progress, timestamp}}
+    RPS->>RPS: shelf = toShelfBook each, newest lastReadAt first
+    RD->>RPS: refreshMemberProgress()
+    loop each distinct roomId on hero + shelf
+        RPS->>SRV: GET /room/{id}/progress
+        SRV-->>RPS: members' progress_pct
+        RPS->>RPS: remoteProgress, rebuild pace tracks
+    end
+    RD->>CS: refreshComments(shelf) — loadComments per room book
+    CS->>SRV: GET /room/{roomId}/book/{bookId}/comments (each)
+
+    alt nothing in progress
+        RD-->>R: 3b first run — "Pick a book" → Home/Library, or join by code
+    else
+        RD-->>R: "With your rooms" rows, "On your own" rows, finished count
+        Note over RD: 100% books drop off the shelf into<br/>"Finished · N" (tapping it is a toast stub)
+    end
+
+    alt tap ▶ on the most recent row
+        RD->>RD: navigate ManuscriptScreen — reading-02
+    else tap a row with a room
+        RD->>RB: navigate RoomBookScreen {bookId}
+        RB->>RPS: loadShelf(), fetchMemberProgress(roomId)
+        RB->>CS: loadComments(roomId, bookId)
+        RB-->>R: pace track, chapters behind, threads + locked count
+        Note over RB: Threads can be opened, liked, replied to<br/>and retried here too — same store calls as<br/>the reader (comments-02..04)
+        R->>RB: Continue
+        RB->>RB: navigate ManuscriptScreen
+    else tap a solo row
+        RD->>SB: navigate SoloBookScreen {bookId}
+        SB->>RPS: loadShelf()
+        SB->>ES: getUserPreference(solo_upsell_dismissed_{bookId})
+        alt Continue
+            SB->>SB: navigate ManuscriptScreen
+        else "Start a room with this book"
+            SB->>SB: navigate CreateRoomScreen {seedBook} — rooms-01
+        else dismiss upsell
+            SB->>ES: storeUserPreference(…dismissed, true)
+        end
+    end

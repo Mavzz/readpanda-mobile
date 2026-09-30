@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
+import useReadingProgressStore from './readingProgressStore';
+import useCommentsStore from './commentsStore';
+import useRoomStore from './roomStore';
+import useBucketsStore from './bucketsStore';
+import useBooksStore from './booksStore';
+import useNotificationStore from './notificationStore';
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -11,7 +17,7 @@ const useAuthStore = create((set, get) => ({
 
   loadUser: async () => {
     try {
-      const authData = enhanceedStorage.getAuthData();
+      const authData = enhancedStorage.getAuthData();
 
       if (authData && authData.token && authData.userProfile) {
         set({
@@ -39,7 +45,7 @@ const useAuthStore = create((set, get) => ({
         refreshToken: userData.refreshToken,
         isAuthenticated: true,
       });
-      enhanceedStorage.storeAuthData(userData);
+      enhancedStorage.storeAuthData(userData);
     } catch (e) {
       log.error('Failed to save user data', e);
     }
@@ -48,7 +54,17 @@ const useAuthStore = create((set, get) => ({
   signOut: async () => {
     try {
       set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
-      enhanceedStorage.clearAuthData();
+      enhancedStorage.clearAuthData();
+      // Stored state is keyed per account, but the in-memory stores aren't —
+      // without this the next person to sign in on this device inherits the
+      // previous reader's hero, rooms, buckets and inbox until something
+      // reloads them.
+      useReadingProgressStore.getState().clearProgress();
+      useCommentsStore.getState().clearComments();
+      useRoomStore.getState().clearRooms();
+      useBucketsStore.getState().clearBuckets();
+      useBooksStore.getState().clearBooks();
+      useNotificationStore.getState().clearNotifications();
       log.info('User signed out');
     } catch (e) {
       log.error('Failed to clear user data', e);
@@ -62,7 +78,7 @@ const useAuthStore = create((set, get) => ({
     const updatedUser = { ...user, ...updates };
     log.info('Updating user data', { updatedUser });
     try {
-      enhanceedStorage.updateUserProfile(updates);
+      enhancedStorage.updateUserProfile(updates);
       set({ user: updatedUser });
       log.info('User data updated', { username: updatedUser.username });
     } catch (e) {

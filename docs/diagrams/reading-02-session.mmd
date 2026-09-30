@@ -1,0 +1,59 @@
+sequenceDiagram
+    %% Reading flow 2 of 2 — A reading session and where progress goes
+    %% The native reader and comment layer are covered in comments-01..04;
+    %% this is the progress side of the same screen.
+    %% Participants map to:
+    %%   MS   src/screens/ManuscriptScreen.js
+    %%   NV   ios/RNPdfViewer.swift via src/components/PdfViewer.js
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   ES   src/utils/enhancedStorage.js (MMKV)
+    %%   SQL  src/services/storageService.js (SQLite)
+    %%   PRS  src/services/progressService.js
+    autonumber
+    actor R as Reader
+    participant MS as ManuscriptScreen
+    participant NV as Native PDF reader
+    participant RPS as readingProgressStore
+    participant ES as enhancedStorage
+    participant SQL as storageService (SQLite)
+    participant PRS as progressService
+    participant SRV as Server
+
+    R->>MS: navigate {book} — from Home, shelf, lobby, bucket
+    MS->>RPS: loadProgress(book_id)
+    RPS->>ES: getReadingPosition(book_id) if not in memory
+    ES-->>RPS: {currentPage, totalPages}
+    MS->>MS: seed currentPageRef / totalPagesRef from it
+    MS->>RPS: setCurrentBook(book), addToRecentBooks(book)
+    MS->>MS: roomId = remembered commentRoom pref, else first shelf room
+    alt Android
+        MS-->>R: "PDF viewing is currently only supported on iOS"
+    else iOS
+        MS->>NV: source, initialPage, threads
+        NV-->>MS: onLoadComplete(total, fileHash)
+        loop page turns
+            NV-->>MS: onPageChanged(page, total)
+            MS->>MS: currentPageRef, totalPagesRef — no store write
+        end
+    end
+
+    alt back (unmount)
+        R->>MS: back
+    else app goes inactive / background
+        R->>MS: home, app switcher, lock
+        Note over MS: iOS gives no unmount when the app is<br/>swiped away, so AppState is the last chance
+    end
+    MS->>MS: persistPosition() — skip if page and total unchanged since last save
+    MS->>RPS: saveProgress(bookId, {page, total, lastReadAt}, book)
+    RPS->>RPS: keep room context — from activeBook if same book, else stored entry
+    RPS->>RPS: total 0 (left before PDF loaded)? keep the known length
+    RPS->>ES: saveReadingProgress(id, progress, storedBook)
+    ES->>ES: MMKV positions {lastBookId, books[id]} — synchronous
+    ES-)SQL: saveReadingProgress(username, …) — async, best effort
+    RPS->>RPS: activeBook = this book, memberProgress, loadShelf()
+    RPS-)PRS: putReadingProgress(bookId, progress)
+    PRS->>SRV: PUT /progress/{bookId} {current_page, total_pages}
+    Note over RPS,SRV: Fire-and-forget. Local MMKV is what this device<br/>renders. The PUT only feeds the pace<br/>tracks of other members. Failure is logged, never retried
+    opt unmount
+        MS->>RPS: setCurrentBook(null)
+    end

@@ -1,0 +1,73 @@
+sequenceDiagram
+    %% Rooms flow 3 of 3 — Leaving or deleting a room, and what happens to the book
+    %% Participants map to:
+    %%   LB   src/screens/RoomLobbyScreen.js
+    %%   RS   src/stores/roomStore.js
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   ES   src/utils/enhancedStorage.js (reading positions, per user)
+    autonumber
+    actor R as Reader
+    participant LB as RoomLobbyScreen
+    participant RS as roomStore
+    participant SRV as Server
+    participant RPS as readingProgressStore
+    participant ES as enhancedStorage
+
+    alt creator → "Delete room"
+        R->>LB: confirm Alert
+        LB->>RS: deleteRoom(id)
+        RS->>RS: remember name, remove optimistically
+        RS->>SRV: DELETE /room/{id}
+    else member → "Leave room"
+        R->>LB: confirm Alert
+        LB->>RS: leaveRoom(id)
+        RS->>RS: remember name, remove optimistically
+        RS->>SRV: DELETE /room/{id}/members/me
+    end
+
+    alt 200 / 204
+        SRV-->>RS: ok
+        RS->>RPS: detachRoom(id, name)
+        loop every stored book belonging to the room (by id, else name)
+            alt started (totalPages > 0)
+                RPS->>ES: updateReadingPositionBook → solo, room fields null
+            else never opened
+                RPS->>ES: clearReadingPosition(bookId)
+            end
+        end
+        RPS->>RPS: loadShelf()
+        alt hero belonged to the room and was not started
+            RPS->>RPS: activeBook = null → loadActiveBook() falls back
+        else hero belonged and was started
+            RPS->>RPS: hero keeps page, drops room, memberProgress []
+        end
+        LB-->>R: toast, goBack()
+    else 403 / error
+        SRV-->>RS: error
+        RS->>RS: restore previous rooms
+        LB-->>R: "Only the creator can delete" / "Delete it instead"
+    end
+
+    rect rgba(200,160,80,0.08)
+    Note over RS,ES: Reconcile — catches rooms deleted on another device
+    RS->>SRV: GET /room/my-rooms (any successful fetchRooms)
+    SRV-->>RS: rooms
+    RS->>RPS: reconcileRooms(rooms)
+    RPS->>RPS: loadActiveBook()
+    RPS->>ES: storedBooks() — every room a book claims
+    loop each claimed room not in the list
+        RPS->>RPS: detachRoom(id, name) — as above
+    end
+    Note over RPS: Only runs on a 200. A failed fetch<br/>must not read as "all your rooms are gone"
+    end
+
+    rect rgba(80,160,200,0.08)
+    Note over RS,ES: attachRoom rules (join, lobby detail, Home swap)
+    alt hero is the room's book
+        RPS->>RPS: startBook with room context, page kept
+    else no hero and adopt, or force
+        RPS->>RPS: startBook(room book)
+    else reading something else
+        RPS->>ES: tag stored entry with room, fetchMemberProgress
+    end
+    end

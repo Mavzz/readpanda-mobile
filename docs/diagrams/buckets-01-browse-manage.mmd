@@ -1,0 +1,79 @@
+sequenceDiagram
+    %% Buckets flow 1 of 1 — Browse, create, open and edit buckets
+    %% Participants map to:
+    %%   HS   src/screens/HomeScreen.js
+    %%   LIB  src/screens/LibraryScreen.js (+ UserBuckets, CuratedBuckets)
+    %%   CB   src/screens/CreateBucketScreen.js
+    %%   BB   src/screens/BucketBooksScreen.js
+    %%   BS   src/stores/bucketsStore.js
+    %%   BKS  src/stores/booksStore.js
+    autonumber
+    actor R as Reader
+    participant HS as HomeScreen
+    participant LIB as LibraryScreen
+    participant CB as CreateBucketScreen
+    participant BB as BucketBooksScreen
+    participant BS as bucketsStore
+    participant BKS as booksStore
+    participant SRV as Server
+
+    R->>LIB: "See all" / first-run "Browse"
+    LIB->>BS: fetchCuratedBuckets()
+    BS->>SRV: GET /home/our-picks
+    LIB->>BS: fetchCustomBuckets()
+    BS->>SRV: GET /users/me/buckets
+    LIB-->>R: My Buckets + Curated Picks
+
+    rect rgba(120,200,120,0.08)
+    Note over R,SRV: Create
+    R->>CB: "+" in My Buckets (modal)
+    CB->>BKS: fetchBooks()
+    BKS->>SRV: GET /books/all
+    R->>CB: name + select books
+    CB->>BS: saveBucket(name, bookIds)
+    BS->>SRV: POST /users/me/buckets {Name, book_ids}
+    alt 200 / 201
+        SRV-->>BS: {bucket}
+        BS->>BS: append to customBuckets
+        CB-->>R: toast, goBack
+    else
+        CB-->>R: "Error creating bucket."
+    end
+    end
+
+    rect rgba(120,120,200,0.08)
+    Note over R,SRV: Open
+    alt from My Buckets
+        LIB->>BB: navigate {books_preview, name, bucket_id, isCustom: true}
+        BB->>BS: fetchBucketBooks(id)
+        BS->>SRV: GET /users/me/buckets/{id}/books
+        SRV-->>BB: full list replaces the preview
+    else from Curated (Library or Home cards)
+        HS->>BB: navigate {books_preview, name, bucket_id, isCustom: false}
+        BB->>BS: fetchCuratedBucketBooks(id)
+        BS->>SRV: GET /home/our-picks/{id}/books
+        SRV-->>BB: full list replaces the preview
+    end
+    Note over BB: The 2-book preview renders first,<br/>so the screen is never empty while loading
+    R->>BB: tap a book
+    BB->>BB: navigate ManuscriptScreen {book}
+    end
+
+    rect rgba(200,120,120,0.08)
+    Note over R,SRV: Edit (custom buckets only)
+    opt remove a book
+        R->>BB: remove
+        BB->>BB: drop locally, count - 1
+        BB->>BS: removeBookFromBucket(bucketId, bookId)
+        BS->>BS: optimistic preview/count update
+        BS->>SRV: DELETE /users/me/buckets/{id}/books/{bookId}
+        SRV-->>BS: 200/204, else revert + toast
+    end
+    opt delete bucket
+        R->>LIB: trash → confirm
+        LIB->>BS: deleteBucket(id)
+        BS->>BS: optimistic remove
+        BS->>SRV: DELETE /users/me/buckets/{id}
+        SRV-->>BS: 200/204 toast, else revert + toast
+    end
+    end

@@ -1,0 +1,40 @@
+sequenceDiagram
+    %% Auth flow 4 of 4 — Sign out
+    %% Participants map to:
+    %%   PR   src/screens/ProfileScreen.js
+    %%   AU   src/services/auth.js
+    %%   AS   src/stores/authStore.js
+    %%   ES   src/utils/enhancedStorage.js
+    %%   RPS  src/stores/readingProgressStore.js
+    %%   CS   src/stores/commentsStore.js
+    %%   OS   roomStore, bucketsStore, booksStore, notificationStore
+    %%   NAV  src/navigation/AppNavigator.js
+    autonumber
+    actor U as User
+    participant PR as ProfileScreen
+    participant AU as auth.js
+    participant SRV as Server
+    participant AS as authStore
+    participant ES as enhancedStorage
+    participant RPS as readingProgressStore
+    participant CS as commentsStore
+    participant OS as Other stores
+    participant NAV as AppContent
+
+    U->>PR: "Sign Out"
+    PR->>ES: getRefreshToken() (read at render)
+    PR->>SRV: unregisterPushDevice() → DELETE /users/me/devices/{fcm token}
+    Note over PR: First, while the access token is still<br/>stored. Best effort — the server also moves<br/>a token to whoever registers it next
+    PR->>AU: logout(username, refreshToken)
+    AU->>SRV: POST /auth/logout?username=…, Bearer refreshToken {skipAuthRetry}
+    SRV-->>AU: status (logged, not checked)
+    PR->>AS: signOut()
+    AS->>AS: user, tokens = null, isAuthenticated = false
+    AS->>ES: clearAuthData() — token, profile, refresh token
+    AS->>RPS: clearProgress() — in-memory only
+    AS->>CS: clearComments()
+    AS->>OS: clearRooms() (+ roomsLoaded = false), clearBuckets(),<br/>clearBooks(), clearNotifications()
+    Note over ES: Reading positions and preferences stay<br/>in MMKV, scoped by username, so the same<br/>reader gets them back on next sign-in
+    AS-->>NAV: isAuthenticated false
+    NAV->>NAV: unmount Main, mount Auth → Login
+    Note over AS: The same signOut runs when a refresh<br/>token is rejected (auth-03), so a forced<br/>sign-out clears exactly as much

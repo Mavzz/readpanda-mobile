@@ -1,0 +1,97 @@
+sequenceDiagram
+    %% Home flow 2 of 2 — Push and the in-app notification inbox
+    %% Participants map to:
+    %%   PN   src/hooks/usePushNotifications.js (mounted in AppContent)
+    %%   FCM  @react-native-firebase/messaging (iOS only — no Android config)
+    %%   HS   src/screens/HomeScreen.js (bell + Modal)
+    %%   NL   src/components/NotificationList.js
+    %%   NS   src/stores/notificationStore.js
+    %%   SVC  src/services/notificationService.js
+    %%   BKS  src/stores/booksStore.js (via src/utils/readerBook.js)
+    %%   SRV  api-go — handlers/notifications.go, internal/notify
+    autonumber
+    actor R as Reader
+    participant PN as usePushNotifications
+    participant FCM as Firebase Messaging
+    participant HS as HomeScreen
+    participant NL as NotificationList
+    participant NS as notificationStore
+    participant SVC as NotificationService
+    participant BKS as booksStore
+    participant SRV as Server
+
+    rect rgba(120,120,200,0.08)
+    Note over R,SRV: Push — set up once signed in
+    PN->>FCM: requestPermission()
+    alt granted
+        PN->>FCM: getToken()
+        PN->>SVC: registerDevice(token, platform)
+        SVC->>SRV: POST /users/me/devices {token, platform}
+        SRV->>SRV: upsert device_tokens on token (moves it between accounts)
+        PN->>FCM: onTokenRefresh → register again
+        PN->>FCM: onMessage, onNotificationOpenedApp, getInitialNotification
+    else denied, or Android (no Firebase app)
+        PN->>PN: log and stop — push off
+    end
+    end
+
+    rect rgba(200,160,80,0.08)
+    Note over R,SRV: A notification is created — e.g. a book is published
+    SRV->>SRV: notify.ToAllUsersExcept(publisher) — INSERT one inbox row per user
+    SRV-)FCM: background fan-out to each recipient's device_tokens<br/>data {type, notification_id, book_id}
+    Note over SRV: Unregistered tokens are deleted. With push<br/>unconfigured the rows are still written
+    alt app in the foreground
+        FCM-->>PN: onMessage
+        PN-->>R: toast with the body
+        PN->>NS: refreshUnreadCount()
+    else push tapped (background or cold start)
+        FCM-->>PN: opened notification
+        PN->>NS: fetchNotifications(), markAsRead(notification_id)
+        opt type NEW_BOOK
+            PN->>BKS: findReaderBook(book_id)
+            PN->>PN: navigate Main → ManuscriptScreen {book}<br/>(waits for the navigator on a cold start)
+        end
+    end
+    Note over PN,NS: Push never stores its own copy — the server<br/>list behind GET /notifications is the only inbox
+    end
+
+    Note over HS: Bell hidden on first run. Badge is<br/>unreadCount, refreshed on every loadHome
+    R->>HS: tap bell
+    HS->>HS: open Modal
+    HS->>NS: fetchNotifications()
+    NS->>SVC: getNotifications()
+    SVC->>SRV: GET /notifications (user from the token)
+    SRV-->>SVC: [{id, type, title, message, book_id, is_read, created_at}] — [] when empty
+    SVC->>SVC: toNotification — is_read→read, book_id→bookId, created_at→timestamp
+    SVC-->>NS: list, or [] on error
+    NS->>NS: unreadCount = count of !read
+    NS-->>NL: notifications
+
+    R->>NL: tap a notification
+    opt not yet read
+        NL->>NS: markAsRead(id)
+        NS->>NS: flip read + recount now (optimistic)
+        NS->>SVC: markAsRead(id)
+        SVC->>SRV: PUT /notifications/{id}/read
+        alt 204
+            SRV-->>SVC: ok
+        else error / 404
+            SVC-->>NS: false
+            NS->>NS: put the dot back
+        end
+    end
+    alt type NEW_BOOK with bookId
+        NL->>BKS: findReaderBook — find by id in books
+        opt not loaded
+            NL->>BKS: fetchBooks() → GET /books/all
+        end
+        NL->>HS: onClose → hide Modal
+        alt found
+            NL->>NL: navigate ManuscriptScreen {book: {book_id, title, cover, manuscript_url}}
+        else
+            NL-->>R: toast "That book isn't available right now"
+        end
+    else anything else
+        R->>NL: close
+        NL->>HS: onClose → hide Modal
+    end

@@ -1,0 +1,61 @@
+sequenceDiagram
+    %% Auth flow 1 of 4 — Log in (email or Google)
+    %% Participants map to:
+    %%   LS   src/screens/LoginScreen.js
+    %%   AU   src/services/auth.js
+    %%   GA   src/services/GoogleAuthService.js (iOS, react-native-app-auth)
+    %%   GSM  NativeModules.GoogleSignInModule (Android)
+    %%   API  src/services/apiService.js
+    %%   PS   src/services/preferencesService.js
+    %%   AS   src/stores/authStore.js
+    %%   ES   src/utils/enhancedStorage.js
+    autonumber
+    actor U as User
+    participant LS as LoginScreen
+    participant AU as auth.js
+    participant GA as GoogleAuthService / GoogleSignInModule
+    participant API as apiService
+    participant SRV as Server
+    participant AS as authStore
+    participant ES as enhancedStorage
+    participant PS as PreferenceService
+
+    alt "Step inside" (email)
+        U->>LS: username + password
+        LS->>LS: both fields filled? else Alert, stop
+        LS->>AU: emailLogin(username, password)
+        AU->>API: POST /auth/login {skipAuthRetry}
+        API->>SRV: POST /auth/login
+        SRV-->>API: 200 accessToken, refreshToken, username, email
+    else "Continue with Google"
+        U->>LS: tap Google
+        LS->>AU: googleSignUpLogin()
+        alt iOS
+            AU->>GA: signInWithGoogle() → authorize()
+            GA-->>AU: idToken
+        else Android
+            AU->>GA: GoogleSignInModule.signIn()
+            GA-->>AU: token
+        end
+        AU->>API: POST /auth/google, Bearer Google token {skipAuthRetry}
+        API->>SRV: POST /auth/google
+        SRV-->>API: 200/201 accessToken, refreshToken, username, email, picture
+    end
+    Note over API: skipAuthRetry: a 401 here means bad<br/>credentials, not an expired app token,<br/>so no refresh-and-retry (see auth-03)
+    API-->>AU: status, response
+    AU-->>LS: status, response (response null on failure)
+
+    alt response.accessToken and 200/201
+        LS->>AS: signIn(userData) — isNewUser false, preferences {}
+        AS->>AS: user, token, refreshToken, isAuthenticated = true
+        AS->>ES: storeAuthData(userData)
+        Note over AS: isAuthenticated flips now — AppContent<br/>swaps Auth stack for Main before the<br/>preferences call below returns
+        LS->>PS: fetchUserPreferences(username)
+        PS->>API: GET /user/preferences?username=… (authenticated)
+        API-->>PS: 200 preferences
+        PS-->>LS: response
+        LS->>AS: updateUser({…userDetails, preferences})
+        AS->>ES: updateUserProfile(updates)
+    else failure or thrown error
+        LS-->>U: Alert "Login failed"
+    end

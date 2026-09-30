@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { TextInput, StyleSheet, View, Keyboard } from 'react-native';
+import React, { useState } from 'react';
+import { TextInput, StyleSheet, Keyboard, Alert } from 'react-native';
 import { iconButton as IconButton } from '../components/Button';
 import log from '../utils/logger';
 import Animated, {
@@ -21,7 +21,7 @@ const SearchBar = () => {
     setSearchText('');
     Keyboard.dismiss();
     log.info('Search functionality is not yet implemented.');
-    alert('Search functionality is not yet implemented.');
+    Alert.alert('Search functionality is not yet implemented.');
   };
 
   const clearSearch = () => {

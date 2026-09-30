@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import { NotificationService } from '../services/notificationService';
 
-const useNotificationStore = create((set) => ({
+const useNotificationStore = create((set, get) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,
@@ -21,18 +21,20 @@ const useNotificationStore = create((set) => ({
   },
 
   markAsRead: async (notificationId) => {
+    // Optimistic — the dot goes the moment it's tapped — and put back if the
+    // server didn't take it, so the badge never claims a read it doesn't hold.
+    const previous = get().notifications;
+    const apply = (notifications) => set({
+      notifications,
+      unreadCount: notifications.filter((n) => !n.read).length,
+    });
+    apply(previous.map((n) => (n.id === notificationId ? { ...n, read: true } : n)));
     try {
       const success = await NotificationService.markAsRead(notificationId);
-      if (success) {
-        set((state) => {
-          const updated = state.notifications.map((n) =>
-            n.id === notificationId ? { ...n, read: true } : n,
-          );
-          return {
-            notifications: updated,
-            unreadCount: updated.filter((n) => !n.read).length,
-          };
-        });
+      if (!success) {
+        apply(get().notifications.map((n) => (
+          n.id === notificationId ? { ...n, read: previous.find((p) => p.id === n.id)?.read ?? n.read } : n
+        )));
       }
     } catch (error) {
       log.error('Error marking notification as read:', error);

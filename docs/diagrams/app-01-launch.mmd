@@ -1,0 +1,65 @@
+sequenceDiagram
+    %% App flow 1 of 1 — Cold launch
+    %% From process start to the first real screen: splash, session restore,
+    %% navigator choice, and a cold-start invite link.
+    %% Participants map to:
+    %%   APP  App.js
+    %%   AC   src/contexts/AuthContext.js (AuthProvider)
+    %%   AS   src/stores/authStore.js
+    %%   ES   src/utils/enhancedStorage.js (MMKV, encrypted)
+    %%   NAV  src/navigation/AppNavigator.js (AppContent)
+    %%   DL   src/hooks/useInviteDeepLink.js
+    %%   PN   src/hooks/usePushNotifications.js
+    autonumber
+    actor U as User
+    participant APP as App.js
+    participant AC as AuthProvider
+    participant AS as authStore
+    participant ES as enhancedStorage
+    participant NAV as AppContent
+    participant DL as useInviteDeepLink
+    participant PN as usePushNotifications
+
+    U->>APP: launch app
+    APP->>APP: SplashScreen.hide() — native splash off
+    APP->>APP: render JS splash overlay, start 600ms min timer
+    APP->>AC: mount AppNavigator → AuthProvider
+
+    AC->>AS: loadUser()
+    AS->>ES: getAuthData()
+    ES-->>AS: token, userProfile, refreshToken
+    alt token and userProfile present
+        AS->>AS: set user, token, refreshToken, isAuthenticated = true
+    else nothing stored
+        AS->>AS: isAuthenticated stays false
+    end
+    AS->>AS: isLoading = false
+    Note over AS: No network call here. A stored but<br/>expired token is only discovered on the<br/>first authenticated request (auth-03)
+
+    AS-->>NAV: isAuthenticated
+    alt isAuthenticated
+        NAV->>NAV: mount "Main" → MainStackNavigator → Tabs → Home
+    else
+        NAV->>NAV: mount "Auth" → AuthStackNavigator → Login
+    end
+
+    NAV->>DL: useInviteDeepLink(isAuthenticated, navigationRef)
+    DL->>DL: Linking.getInitialURL()
+    opt opened by readpanda://join/CODE
+        alt authenticated
+            DL->>DL: joinRoomByCode(CODE) — see rooms-01
+        else not signed in
+            DL->>DL: pendingCode = CODE
+            DL-->>U: toast "Sign in to join that room"
+            Note over DL: Re-runs when isAuthenticated flips<br/>and replays pendingCode
+        end
+    end
+
+    NAV->>PN: usePushNotifications(isAuthenticated)
+    opt authenticated
+        PN->>PN: request permission, subscribe — see home-02
+    end
+
+    AS-->>APP: isLoading false
+    APP->>APP: once 600ms elapsed AND auth done — fade overlay 400ms
+    APP-->>U: first screen visible

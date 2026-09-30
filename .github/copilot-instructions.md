@@ -69,8 +69,8 @@ showToast('Welcome back!', 'success', 4000);
 
 ### Firebase Setup
 - **Messaging**: `@react-native-firebase/messaging` for push notifications
-- **Permission Flow**: `checkNotificationPermission()` in Helper.js handles setup
-- **Message Handling**: Integrated with local notification storage system
+- **Permission Flow**: `usePushNotifications` (mounted in `AppContent`) requests permission once signed in and registers the FCM token via `POST /users/me/devices`; `ProfileScreen` unregisters it on sign-out. iOS only, Android has no Firebase config
+- **Message Handling**: Pushes only refresh `notificationStore` from `GET /notifications` — the server list is the one inbox, with no local copy
 
 ### OAuth Flow
 - **Google Auth**: Uses `react-native-app-auth` with deep linking
@@ -98,7 +98,7 @@ showToast('Welcome back!', 'success', 4000);
 ### Environment Variables
 ```javascript
 // Always use @env imports
-import { SECRET_KEY, API_VERSION } from "@env";
+import { API_VERSION } from "@env";
 
 // Dynamic IP detection for local development
 const backendUrl = await getBackendUrl("/books/all");
@@ -139,3 +139,10 @@ navigation.navigate('Profile'); // From MainStack
 ```
 
 This codebase emphasizes social reading features, hybrid storage architecture, and smooth user experience with animations and real-time notifications.
+
+<!-- mermaid-ai-skills:start -->
+## Mermaid Diagrams
+
+When the user asks to create, edit, or visualize a diagram, follow the
+instructions in `.github/instructions/mermaid.instructions.md`.
+<!-- mermaid-ai-skills:end -->

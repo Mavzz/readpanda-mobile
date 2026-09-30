@@ -1,5 +1,5 @@
 import apiService from './apiService';
-import enhanceedStorage from '../utils/enhanceedStorage';
+import enhancedStorage from '../utils/enhancedStorage';
 import { AuthError, AUTH_ERRORS } from './apiService';
 
 /**
@@ -35,7 +35,7 @@ export const makePublicPatchRequest = async (url, body = {}, headers = {}) => {
 // ========== AUTHENTICATED REQUESTS (require valid tokens) ==========
 
 export const makeAuthenticatedGetRequest = async (url) => {
-  const token = enhanceedStorage.getAuthToken();
+  const token = enhancedStorage.getAuthToken();
 
   if (!token) {
     throw new AuthError(AUTH_ERRORS.NO_TOKENS, 'No authentication token available for GET request');
@@ -49,7 +49,7 @@ export const makeAuthenticatedGetRequest = async (url) => {
 };
 
 export const makeAuthenticatedPostRequest = async (url, body) => {
-  const token = enhanceedStorage.getAuthToken();
+  const token = enhancedStorage.getAuthToken();
 
   if (!token) {
     throw new AuthError(AUTH_ERRORS.NO_TOKENS, 'No authentication token available for POST request');
@@ -63,7 +63,7 @@ export const makeAuthenticatedPostRequest = async (url, body) => {
 };
 
 export const makeAuthenticatedPutRequest = async (url, body) => {
-  const token = enhanceedStorage.getAuthToken();
+  const token = enhancedStorage.getAuthToken();
 
   if (!token) {
     throw new AuthError(AUTH_ERRORS.NO_TOKENS, 'No authentication token available for PUT request');
@@ -77,7 +77,7 @@ export const makeAuthenticatedPutRequest = async (url, body) => {
 };
 
 export const makeAuthenticatedDeleteRequest = async (url) => {
-  const token = enhanceedStorage.getAuthToken();
+  const token = enhancedStorage.getAuthToken();
 
   if (!token) {
     throw new AuthError(AUTH_ERRORS.NO_TOKENS, 'No authentication token available for DELETE request');
@@ -91,7 +91,7 @@ export const makeAuthenticatedDeleteRequest = async (url) => {
 };
 
 export const makeAuthenticatedPatchRequest = async (url, body) => {
-  const token = enhanceedStorage.getAuthToken();
+  const token = enhancedStorage.getAuthToken();
 
   if (!token) {
     throw new AuthError(AUTH_ERRORS.NO_TOKENS, 'No authentication token available for PATCH request');

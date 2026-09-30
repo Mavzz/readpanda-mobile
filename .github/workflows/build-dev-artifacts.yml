@@ -1,0 +1,103 @@
+name: Build Simulator & Emulator Apps
+
+# Produces standalone (JS bundled, no Metro needed) builds that can be
+# downloaded from the run's "Artifacts" section and installed locally:
+#   iOS:     unzip ReadPanda-Simulator.zip && xcrun simctl install booted ReadPanda.app
+#   Android: adb install ReadPanda-emulator.apk
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  ios-simulator:
+    name: iOS Simulator (.app)
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "yarn"
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Create .env file
+        env:
+          LOCAL_IP: ${{ secrets.LOCAL_IP || '127.0.0.1' }}
+          API_VERSION: ${{ secrets.API_VERSION || '/api/v1' }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL || '' }}
+        run: |
+          echo "Local_IP=${LOCAL_IP}" > .env
+          echo "API_VERSION=${API_VERSION}" >> .env
+          echo "BACKEND_URL=${BACKEND_URL}" >> .env
+
+      - name: Create GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO: ${{ secrets.GOOGLE_SERVICE_INFO }}
+        run: |
+          if [ -z "$GOOGLE_SERVICE_INFO" ]; then
+            echo "::error::Missing GOOGLE_SERVICE_INFO secret (contents of GoogleService-Info.plist)"
+            exit 1
+          fi
+          echo "$GOOGLE_SERVICE_INFO" > ios/GoogleService-Info.plist
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      # Ad-hoc signed ("Sign to Run Locally"), not unsigned: an unsigned app
+      # gets no Keychain access, and secure storage can't open without it.
+      - name: Build for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace ios/ReadPanda.xcworkspace \
+            -scheme ReadPanda \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | xcbeautify --renderer github-actions
+
+      - name: Package .app
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent \
+            build/DerivedData/Build/Products/Release-iphonesimulator/ReadPanda.app \
+            dist/ReadPanda-Simulator.zip
+
+      - name: Upload iOS simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReadPanda-iOS-Simulator
+          path: dist/ReadPanda-Simulator.zip
+          retention-days: 14

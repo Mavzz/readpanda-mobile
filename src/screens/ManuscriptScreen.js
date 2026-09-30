@@ -1,102 +1,266 @@
 // src/screens/ManuscriptScreen.js
-import React, { useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, TouchableOpacity, } from 'react-native';
+import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, AppState } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 import PdfViewer from '../components/PdfViewer';
+import PickerSheet from '../components/PickerSheet';
 import log from '../utils/logger';
 import useReadingProgressStore from '../stores/readingProgressStore';
+import useCommentsStore from '../stores/commentsStore';
+import useRoomStore from '../stores/roomStore';
+import enhancedStorage from '../utils/enhancedStorage';
+import { showToast } from '../components/Toaster';
 import { DS } from '../styles/global';
+
+// The reader itself lives in ios/RNPdfViewer.swift — page, chrome, scrubber,
+// highlights, gutter and thread sheet. What is left here is the wiring the
+// native side has no business knowing: which room this book is being read in,
+// where the reader got to, and the comments store behind it all.
+
+// The room a book was last commented in. A book can sit in more than one room;
+// the reader picks once and the choice sticks, rather than being asked on every
+// selection.
+const lastRoomKey = (bookId) => `commentRoom:${bookId}`;
 
 const ManuscriptScreen = ({ route, navigation }) => {
   const { book } = route.params;
-  const pdfUrl = book.manuscript_url
-    || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'; // TODO: remove test fallback
   const setCurrentBook = useReadingProgressStore((s) => s.setCurrentBook);
   const addToRecentBooks = useReadingProgressStore((s) => s.addToRecentBooks);
   const saveProgress = useReadingProgressStore((s) => s.saveProgress);
   const loadProgress = useReadingProgressStore((s) => s.loadProgress);
+  const shelf = useReadingProgressStore((s) => s.shelf);
 
-  const currentPageRef = useRef(0);
-  const totalPagesRef = useRef(0);
+  // Subscribing to the data, not only to the actions: the actions have stable
+  // identities, so a screen that reads them alone never re-renders when
+  // comments arrive.
+  const byBook = useCommentsStore((s) => s.byBook);
+  const loadComments = useCommentsStore((s) => s.loadComments);
+  const addComment = useCommentsStore((s) => s.addComment);
+  const retryComment = useCommentsStore((s) => s.retryComment);
+  const toggleLike = useCommentsStore((s) => s.toggleLike);
+  const markThreadRead = useCommentsStore((s) => s.markThreadRead);
+  const rooms = useRoomStore((s) => s.rooms);
+
   const savedProgress = loadProgress(book.book_id);
   const initialPage = savedProgress?.currentPage || 0;
+  // Seeded from the saved position, not 0: a save that lands before the PDF
+  // reports its first page (backgrounding right after opening) must not send
+  // the reader back to page one.
+  const currentPageRef = useRef(initialPage);
+  const totalPagesRef = useRef(savedProgress?.totalPages || 0);
+
+  const fileHashRef = useRef('');
+  const [submitting, setSubmitting] = useState(false);
+  const [roomPickerOpen, setRoomPickerOpen] = useState(false);
+  const [roomId, setRoomId] = useState(null);
+
+  // The book carries no room through navigation — eight screens push this one
+  // and none of them know about rooms. The shelf already stores it.
+  const shelfRooms = useMemo(
+    () => shelf.filter((b) => b.id === book.book_id && b.roomId).map((b) => ({ id: b.roomId, name: b.roomName })),
+    [shelf, book.book_id],
+  );
+
+  useEffect(() => {
+    if (roomId || shelfRooms.length === 0) {
+      return;
+    }
+    const remembered = enhancedStorage.getUserPreference(lastRoomKey(book.book_id));
+    const match = shelfRooms.find((r) => r.id === remembered);
+    setRoomId(match?.id || shelfRooms[0].id);
+  }, [shelfRooms, roomId, book.book_id]);
+
+  const entry = byBook[book.book_id];
+  const threads = useMemo(() => entry?.threads || [], [entry]);
+  const roomName =
+    shelfRooms.find((r) => r.id === roomId)?.name ||
+    rooms?.find((r) => r.id === roomId)?.name ||
+    '';
 
   log.info(`ManuscriptScreen loaded for book: ${book.title}`);
-  log.info('pdfDetails:', {
-    url: pdfUrl,
-    title: book.title,
-    resumeFromPage: initialPage,
-  });
+
+  // The last position handed to saveProgress, so leaving the foreground twice
+  // (inactive, then background) doesn't write and publish the same page twice.
+  const lastSavedRef = useRef(null);
+
+  const persistPosition = useCallback(() => {
+    const currentPage = currentPageRef.current;
+    const totalPages = totalPagesRef.current;
+    const last = lastSavedRef.current;
+    if (last && last.currentPage === currentPage && last.totalPages === totalPages) {
+      return;
+    }
+    lastSavedRef.current = { currentPage, totalPages };
+    saveProgress(
+      book.book_id,
+      { currentPage, totalPages, lastReadAt: Date.now() },
+      book,
+    );
+  }, [book, saveProgress]);
 
   useEffect(() => {
     setCurrentBook(book);
     addToRecentBooks(book);
 
     return () => {
-      saveProgress(book.book_id, {
-        currentPage: currentPageRef.current,
-        totalPages: totalPagesRef.current,
-        lastReadAt: Date.now(),
-      });
+      persistPosition();
       setCurrentBook(null);
     };
-  }, [book, setCurrentBook, addToRecentBooks, saveProgress]);
+  }, [book, setCurrentBook, addToRecentBooks, persistPosition]);
 
+  // Unmount alone isn't enough: a reader who swipes the app away from the
+  // switcher never unmounts this screen. 'inactive' is the last event iOS
+  // reliably delivers before that, so save on it as well as on 'background'.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'inactive' || state === 'background') {
+        persistPosition();
+      }
+    });
+    return () => subscription.remove();
+  }, [persistPosition]);
+
+  // Solo books have no room and therefore no conversation to fetch.
+  useEffect(() => {
+    if (roomId) {
+      loadComments(roomId, book.book_id);
+    }
+  }, [roomId, book.book_id, loadComments]);
+
+  // Page position is the reader's business; it only comes back here so the
+  // shelf knows where the book was left.
   const handlePageChanged = useCallback((page, total) => {
     currentPageRef.current = page;
     totalPagesRef.current = total;
   }, []);
 
-  const handleLoadComplete = useCallback((total) => {
+  const handleLoadComplete = useCallback((total, hash) => {
     totalPagesRef.current = total;
-    log.info(`PDF loaded: ${book.title} — ${total} pages`);
-  }, [book.title]);
+    fileHashRef.current = hash || '';
+  }, []);
 
   const handleError = useCallback((message) => {
     log.error(`PDF error for ${book.title}: ${message}`);
   }, [book.title]);
 
-  const renderContent = () => {
-    if (Platform.OS !== 'ios') {
-      return <Text style={styles.platformMessage}>PDF viewing is currently only supported on iOS.</Text>;
+  // Threads as the native side wants them: the anchor it draws, and the
+  // conversation it shows in the sheet. Solo books send none.
+  const nativeThreads = useMemo(() => {
+    if (!roomId) {
+      return [];
     }
+    return threads.map((t) => ({
+      anchorKey: t.anchorKey,
+      page: t.page,
+      anchorText: t.anchorText,
+      bounds: t.anchorBounds || [],
+      unreadCount: t.unreadCount,
+      fileHash: t.fileHash,
+      comments: t.comments,
+    }));
+  }, [threads, roomId]);
 
-    if (!pdfUrl) {
-      return (
-        <View style={styles.messageContainer}>
-          <Icon name="document-text-outline" size={48} color={DS.colors.onSurfaceVariant} />
-          <Text style={styles.messageTitle}>No manuscript available</Text>
-          <Text style={styles.messageSubtitle}>This book doesn't have a PDF file yet.</Text>
-        </View>
-      );
+  // Opening a thread marks it read.
+  const handleThreadOpened = useCallback((anchorKey) => {
+    markThreadRead(book.book_id, anchorKey);
+  }, [book.book_id, markThreadRead]);
+
+  const handleSubmitComment = useCallback(async ({ page, anchorText, bounds, fileHash, parentId, body }) => {
+    if (!roomId) {
+      return;
     }
+    setSubmitting(true);
+    try {
+      await addComment({
+        roomId,
+        bookId: book.book_id,
+        page,
+        anchorText,
+        anchorBounds: bounds,
+        parentId,
+        body,
+        fileHash: fileHash || fileHashRef.current,
+      });
+    } catch {
+      // The comment is still on screen, flagged for retry — the toast just
+      // says so, since the sheet has already moved on.
+      showToast('Couldn\'t post that — tap retry on the comment', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [roomId, book.book_id, addComment]);
 
+  const handleLike = useCallback((commentId) => {
+    toggleLike(book.book_id, commentId);
+  }, [book.book_id, toggleLike]);
+
+  const handleRetry = useCallback((clientId) => {
+    retryComment(book.book_id, clientId);
+  }, [book.book_id, retryComment]);
+
+  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
+
+  const handleRoomPicker = useCallback(() => setRoomPickerOpen(true), []);
+
+  // The reader is native and iOS-only, so Android gets the message — and,
+  // since the chrome is native too, its own way back out.
+  if (Platform.OS !== 'ios') {
     return (
-      <PdfViewer
-        pdfUrl={pdfUrl}
-        pdfTitle={book.title}
-        style={styles.pdf}
-        initialPage={initialPage}
-        onPageChanged={handlePageChanged}
-        onLoadComplete={handleLoadComplete}
-        onError={handleError}
-      />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.fallbackBack}
+          accessibilityLabel="Back"
+        >
+          <Icon name="chevron-back" size={26} color={DS.colors.onSurface} />
+        </TouchableOpacity>
+        <Text style={styles.platformMessage}>
+          PDF viewing is currently only supported on iOS.
+        </Text>
+      </SafeAreaView>
     );
-  };
+  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color={DS.colors.onSurface} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{book.title}</Text>
-        <View style={styles.backButton} />
-      </View>
-      <View style={styles.content}>
-        {renderContent()}
-      </View>
+      <PdfViewer
+        style={styles.reader}
+        pdfUrl={book.manuscript_url}
+        bookTitle={book.title}
+        initialPage={initialPage}
+        threads={nativeThreads}
+        hasRoom={!!roomId}
+        canPickRoom={shelfRooms.length > 1}
+        roomName={roomName}
+        unreadTotal={roomId ? entry?.unreadCount || 0 : 0}
+        lockedCount={roomId ? entry?.lockedCount || 0 : 0}
+        submitting={submitting}
+        onPageChanged={handlePageChanged}
+        onLoadComplete={handleLoadComplete}
+        onError={handleError}
+        onBack={handleBack}
+        onThreadOpened={handleThreadOpened}
+        onSubmitComment={handleSubmitComment}
+        onLikeComment={handleLike}
+        onRetryComment={handleRetry}
+        onRoomPickerRequested={handleRoomPicker}
+      />
+
+      {/* Only asked when the book really is in more than one room. */}
+      <PickerSheet
+        visible={roomPickerOpen}
+        title="Comment in which room?"
+        subtitle="This book is being read in more than one."
+        items={shelfRooms.map((r) => ({ id: r.id, title: r.name || 'Room', isBucket: true }))}
+        onSelect={(item) => {
+          setRoomId(item.id);
+          enhancedStorage.storeUserPreference(lastRoomKey(book.book_id), item.id);
+          setRoomPickerOpen(false);
+        }}
+        onClose={() => setRoomPickerOpen(false)}
+      />
     </View>
   );
 };
@@ -106,55 +270,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+  reader: {
+    flex: 1,
   },
-  backButton: {
+  fallbackBack: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    color: DS.colors.onSurface,
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  pdf: {
-    flex: 1,
-    width: Dimensions.get('window').width,
-  },
-  messageContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  messageTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: DS.colors.onSurface,
-    marginTop: 16,
-  },
-  messageSubtitle: {
-    fontSize: 14,
-    color: DS.colors.onSurfaceVariant,
-    marginTop: 8,
-    textAlign: 'center',
+    marginLeft: 8,
+    marginTop: 10,
   },
   platformMessage: {
     fontSize: 18,
-    color: '#555',
+    color: DS.colors.onSurfaceVariant,
     textAlign: 'center',
     marginTop: 50,
+    paddingHorizontal: 32,
   },
 });
 
