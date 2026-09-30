@@ -68,7 +68,8 @@ struct ReadPandaWidgetIntent: WidgetConfigurationIntent {
     var room: RoomEntity?
 
     static var parameterSummary: some ParameterSummary {
-        When(\.$face, .equalTo, .roomPulse) {
+        // Explicit root: older Swift compilers (CI's Xcode) can't infer it.
+        When(\ReadPandaWidgetIntent.$face, .equalTo, .roomPulse) {
             Summary("Show \(\.$face) for \(\.$room)")
         } otherwise: {
             Summary("Show \(\.$face)")
