@@ -1,4 +1,30 @@
-ReadPanda is going to be a React Native application where users can read a book. Users can add comments to the parts they like and what not. Once a user reaches that part of the book, the comments become available to other users to see. This is something similar to discord where users interact with each other on particular topic/interest, similarly users on ReadPanda can come together as a group and read a book as a group and discuss their thought and comments on certain sections of the book.
+# ReadPanda
 
+A React Native app for reading books together. Readers form small rooms around
+a book and comment on passages, and a comment unlocks for the others only once
+they've read that far, so nobody hits spoilers.
 
-How to start the app: npm run start in terminal
+The backend (Go API, writer portal) is in the
+[readpanda](https://github.com/Mavzz/readpanda) repo.
+
+## Getting started
+
+**[docs/RUN.md](docs/RUN.md)** covers setup, pointing the app at a local or
+production backend, CI simulator builds and troubleshooting.
+
+The short version, once you have `ios/GoogleService-Info.plist` from a
+maintainer:
+
+```bash
+yarn install && yarn pods
+cp .env.example .env        # empty BACKEND_URL = backend on localhost:3000
+yarn start --reset-cache    # terminal 1
+yarn ios                    # terminal 2
+```
+
+## More docs
+
+- [docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md): architecture
+- [docs/DESIGN.md](docs/DESIGN.md): design system
+- [docs/API_RETRY_DOCUMENTATION.md](docs/API_RETRY_DOCUMENTATION.md): request retries and token refresh
+- [docs/sequence_diagrams](docs/sequence_diagrams): key flows
