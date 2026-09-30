@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -25,6 +25,14 @@ const InterestScreen = () => {
   log.info(`InterestScreen loaded for user: ${username}`);
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
+  // Sign-up opens this screen as soon as the user is signed in, which can be
+  // before their preferences fetch returns. Take the options when they land,
+  // unless the reader has already started picking.
+  useEffect(() => {
+    if (!isUpdated && Interests) {
+      setInterests(Interests);
+    }
+  }, [Interests, isUpdated]);
   let status;
   useScreenTracking();
 
