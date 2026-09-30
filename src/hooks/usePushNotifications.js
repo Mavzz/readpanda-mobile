@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import { showToast } from '../components/Toaster';
 import useNotificationStore from '../stores/notificationStore';
+import useReadingProgressStore from '../stores/readingProgressStore';
+import useCommentsStore from '../stores/commentsStore';
 import { NotificationService } from '../services/notificationService';
 import findReaderBook from '../utils/readerBook';
 import log from '../utils/logger';
@@ -81,6 +83,13 @@ const usePushNotifications = ({ isAuthenticated, navigationRef }) => {
             showToast(body, 'info');
           }
           useNotificationStore.getState().refreshUnreadCount();
+          // A friend's comment on the book being read changes what the
+          // home-screen widget says; reloading the comments is what
+          // re-syncs it (src/widget/useWidgetSync.js).
+          const hero = useReadingProgressStore.getState().activeBook;
+          if (hero?.roomId) {
+            useCommentsStore.getState().loadComments(hero.roomId, hero.id);
+          }
         }));
 
         // Tapped from the background, or the tap that launched the app.
