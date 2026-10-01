@@ -15,6 +15,8 @@ const RoomBookCard = ({
   shownPct,
   progressLabel,
   bookLocked,
+  // Only the room's creator decides what it reads (the API enforces it too).
+  canEdit,
   onStartReading,
   onSwapBook,
   onAddBucket,
@@ -69,14 +71,16 @@ const RoomBookCard = ({
               <Pressable
                 key={bookIdOf(book)}
                 onPress={() => onSwapBook(book)}
-                disabled={bookLocked}
+                disabled={bookLocked || !canEdit}
                 style={({ pressed }) => [
                   pressed && lobbyStyles.pressed,
-                  bookLocked && styles.upNextLocked,
+                  (bookLocked || !canEdit) && styles.upNextLocked,
                 ]}
                 accessibilityLabel={bookLocked
                   ? `${book.title}, queued — the room's book is locked`
-                  : `Read ${book.title} next`}
+                  : canEdit
+                    ? `Read ${book.title} next`
+                    : `${book.title}, queued`}
                 accessibilityRole="button"
               >
                 <BookCoverGradient
@@ -99,7 +103,7 @@ const RoomBookCard = ({
       /* STATE C — standalone book: let the room graduate to a list.
          Not once reading has started: picking a book from the new
          bucket is what changes the room's current book. */
-      !bookLocked && (
+      !bookLocked && canEdit && (
         <Pressable
           onPress={onAddBucket}
           style={({ pressed }) => [styles.addBucket, pressed && lobbyStyles.pressed]}

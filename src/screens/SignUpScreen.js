@@ -60,6 +60,9 @@ const SignUp = ({ navigation }) => {
             username: response.username,
             email: email,
             isNewUser: true,
+            // The API doesn't return one yet; Profile's "Joined …" (7c) and
+            // "Reading since …" (7a) read it.
+            createdAt: Date.now(),
             preferences: response.preferences || {},
           },
         };

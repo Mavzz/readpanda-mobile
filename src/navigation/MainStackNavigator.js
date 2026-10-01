@@ -1,7 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
 import InterestScreen from '../screens/InterestScreen';
 import CreateBucketScreen from '../screens/CreateBucketScreen';
 import CreateRoomScreen from '../screens/CreateRoomScreen';
@@ -52,7 +53,9 @@ const MainStackNavigator = () => {
           navigate('ManuscriptScreen'), since the name resolves upward from
           anywhere in the tree. */}
       <Stack.Screen name="ManuscriptScreen" component={ManuscriptScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} options={nativeHeader('Profile')} />
+      {/* Profile (7a) and Settings (7b) draw their own 38pt back button. */}
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen
         name="Interest"
         component={InterestScreen}

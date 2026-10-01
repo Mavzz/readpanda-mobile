@@ -9,6 +9,8 @@ import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
 import useInviteDeepLink from '../hooks/useInviteDeepLink';
 import usePushNotifications from '../hooks/usePushNotifications';
+import useWidgetDeepLink from '../hooks/useWidgetDeepLink';
+import useWidgetSync from '../widget/useWidgetSync';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +19,10 @@ const navigationRef = createNavigationContainerRef();
 
 const linking = {
   prefixes: ['readpanda://'],
+  // Invite and widget links are handled by their own hooks (they need an API
+  // call or a store lookup first). Left to React Navigation, their paths would
+  // be turned into routes that don't exist.
+  filter: (url) => !/^readpanda:\/\/(join|read|room|library)\b/.test(url),
   config: {
     screens: {
       Auth: {
@@ -46,6 +52,9 @@ const AppContent = () => {
   // because joining is an API call, not just a route.
   useInviteDeepLink({ isAuthenticated, navigationRef });
   usePushNotifications({ isAuthenticated, navigationRef });
+  // Home-screen widget: taps on it, and keeping what it shows current.
+  useWidgetDeepLink({ isAuthenticated, navigationRef });
+  useWidgetSync({ isAuthenticated });
 
   return (
     <NavigationContainer

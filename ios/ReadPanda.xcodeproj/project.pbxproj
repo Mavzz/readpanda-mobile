@@ -7,28 +7,66 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		063E89BF1012E5BD1EE8FA5A /* WidgetCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */; };
 		0A9C25F22E5DBFFC00F1734F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0A9C25F12E5DBFFC00F1734F /* GoogleService-Info.plist */; };
 		0AC96C182E5259E800C72562 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AC96C172E5259E800C72562 /* PDFKit.framework */; };
 		0AC96C1A2E5259EF00C72562 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AC96C192E5259EF00C72562 /* UIKit.framework */; };
+		0F9BD67AA3174C4C7FD8BAF8 /* ReadPandaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AE9E8FA547D5C8B2516A545 /* ReadPandaWidget.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1FB3C5CB27AB4D109BE2D5A8 /* ReaderChromeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67EBCF542FE442B8D1FE4BB /* ReaderChromeView.swift */; };
+		2566131BA6B8FFAF30AB5E22 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4522FBB5B50621833461DD2D /* Foundation.framework */; };
 		2A1A073FC07041EC9D9E0B74 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */; };
 		2EF9CA0761864E01B027CFB1 /* ReaderTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFC26DED4224D60ADDE3051 /* ReaderTheme.swift */; };
 		3E79182E06A84E6EABB2F833 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4309E6FD86E4AE5A01B8204 /* CommentSheetView.swift */; };
+		489B2D3E565D752712765D01 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1C8124D92774C4B8369CF03F /* Assets.xcassets */; };
 		5ADB9857126C454C878A00C6 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */; };
 		61C31230EE91437FBB4DDEC6 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */; };
+		738C9C1C2842C918407FE593 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E8EC0CD2E349134101080E /* WidgetTheme.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		7EBF3813B9F44ECD9904D2F9 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0305DA42206041BAB933A98C /* Manrope-Regular.ttf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		86A2425F9F68A786E2AE9008 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D755F8A3FF341D1FA6DE1A3D /* WidgetBridge.swift */; };
 		8EFE65052F66828300B8B59F /* RNPdfViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFE65042F66828300B8B59F /* RNPdfViewer.swift */; };
 		8EFE650A2F66833100B8B59F /* RNPdfViewer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8EFE65092F66833100B8B59F /* RNPdfViewer.m */; };
+		8F34421F8AA4DB892DA8BAA3 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */; };
+		961BE215CC2725C7C977CC5C /* WidgetBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */; };
+		B38A26F6BB39D3E282A61BF8 /* WidgetState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E4145AF4470B1C955EDC22 /* WidgetState.swift */; };
+		CF7B9CB07BBA8F913D9CCABA /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */; };
 		D50827B60D074D43919567A3 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */; };
 		D98D483F77794725A8906DED /* ReaderModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E3B16E2AAB4762AEE0A50D /* ReaderModels.swift */; };
+		DA5C1AD847DF1BE5669AB236 /* WidgetFaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D61C4CA21B7A7533420458 /* WidgetFaces.swift */; };
 		DBD52B6A69A0389ADA74D7EF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		ED9194F04CA0586F7A36E82D /* libPods-ReadPanda.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DE3D45B6C97600EBD3763EF /* libPods-ReadPanda.a */; };
+		EFF5DD6364C1315E7E01BC98 /* ReadPandaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 78E064C9EEC3737B2F249BD0 /* ReadPandaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FDABA6D3DE26BCEEF2E106D4 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		ED5B426C28A5D09FB0490121 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7F77A4F5920CC52AB7391055;
+			remoteInfo = ReadPandaWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D0BD5AAF402C32E9B987BC7D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EFF5DD6364C1315E7E01BC98 /* ReadPandaWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		01E4145AF4470B1C955EDC22 /* WidgetState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetState.swift; sourceTree = "<group>"; };
 		0305DA42206041BAB933A98C /* Manrope-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Regular.ttf"; path = "../src/assets/fonts/Manrope-Regular.ttf"; sourceTree = "<group>"; };
 		035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Medium.ttf"; path = "../src/assets/fonts/Manrope-Medium.ttf"; sourceTree = "<group>"; };
 		0A4EBFD12E5E390800EAF49B /* ReadPanda.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ReadPanda.entitlements; path = ReadPanda/ReadPanda.entitlements; sourceTree = "<group>"; };
@@ -41,18 +79,29 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ReadPanda/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ReadPanda/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = ReadPanda/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		1C8124D92774C4B8369CF03F /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-SemiBold.ttf"; path = "../src/assets/fonts/Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
+		2AE9E8FA547D5C8B2516A545 /* ReadPandaWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReadPandaWidget.swift; sourceTree = "<group>"; };
+		2EE3D61D7ABF0F64F2F908E3 /* ReadPandaWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ReadPandaWidget.entitlements; sourceTree = "<group>"; };
+		31D61C4CA21B7A7533420458 /* WidgetFaces.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetFaces.swift; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-ReadPanda.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ReadPanda.debug.xcconfig"; path = "Target Support Files/Pods-ReadPanda/Pods-ReadPanda.debug.xcconfig"; sourceTree = "<group>"; };
+		4522FBB5B50621833461DD2D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		49E8EC0CD2E349134101080E /* WidgetTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
 		4DE3D45B6C97600EBD3763EF /* libPods-ReadPanda.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ReadPanda.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EFC26DED4224D60ADDE3051 /* ReaderTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTheme.swift; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-ReadPanda.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ReadPanda.release.xcconfig"; path = "Target Support Files/Pods-ReadPanda/Pods-ReadPanda.release.xcconfig"; sourceTree = "<group>"; };
 		57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-ExtraBold.ttf"; path = "../src/assets/fonts/Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ReadPanda/AppDelegate.swift; sourceTree = "<group>"; };
+		78E064C9EEC3737B2F249BD0 /* ReadPandaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReadPandaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ReadPanda/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8EFE65042F66828300B8B59F /* RNPdfViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNPdfViewer.swift; sourceTree = "<group>"; };
 		8EFE65092F66833100B8B59F /* RNPdfViewer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RNPdfViewer.m; sourceTree = "<group>"; };
+		9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = WidgetBridge.m; sourceTree = "<group>"; };
 		B4E3B16E2AAB4762AEE0A50D /* ReaderModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderModels.swift; sourceTree = "<group>"; };
+		B7E4CF0D210CDB8ED23E5EBC /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C67EBCF542FE442B8D1FE4BB /* ReaderChromeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderChromeView.swift; sourceTree = "<group>"; };
+		D755F8A3FF341D1FA6DE1A3D /* WidgetBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
+		DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetCopy.swift; sourceTree = "<group>"; };
 		E4309E6FD86E4AE5A01B8204 /* CommentSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentSheetView.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Bold.ttf"; path = "../src/assets/fonts/Manrope-Bold.ttf"; sourceTree = "<group>"; };
@@ -66,6 +115,14 @@
 				0AC96C182E5259E800C72562 /* PDFKit.framework in Frameworks */,
 				0AC96C1A2E5259EF00C72562 /* UIKit.framework in Frameworks */,
 				ED9194F04CA0586F7A36E82D /* libPods-ReadPanda.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2C28AC0D1A891C520EA1E1AB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2566131BA6B8FFAF30AB5E22 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +147,8 @@
 				C67EBCF542FE442B8D1FE4BB /* ReaderChromeView.swift */,
 				E4309E6FD86E4AE5A01B8204 /* CommentSheetView.swift */,
 				8EFE65092F66833100B8B59F /* RNPdfViewer.m */,
+				D755F8A3FF341D1FA6DE1A3D /* WidgetBridge.swift */,
+				9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */,
 			);
 			name = ReadPanda;
 			sourceTree = "<group>";
@@ -101,6 +160,7 @@
 				0AC96C172E5259E800C72562 /* PDFKit.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				4DE3D45B6C97600EBD3763EF /* libPods-ReadPanda.a */,
+				DE7DD4DD12FF934F9349A5F7 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -121,6 +181,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				DBECB0865DDA4CC3963DE2CC /* Resources */,
+				C59B4192B02F85392101D97E /* ReadPandaWidget */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -131,6 +192,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* ReadPanda.app */,
+				78E064C9EEC3737B2F249BD0 /* ReadPandaWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -142,6 +204,21 @@
 				5709B34CF0A7D63546082F79 /* Pods-ReadPanda.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		C59B4192B02F85392101D97E /* ReadPandaWidget */ = {
+			isa = PBXGroup;
+			children = (
+				2AE9E8FA547D5C8B2516A545 /* ReadPandaWidget.swift */,
+				01E4145AF4470B1C955EDC22 /* WidgetState.swift */,
+				DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */,
+				49E8EC0CD2E349134101080E /* WidgetTheme.swift */,
+				31D61C4CA21B7A7533420458 /* WidgetFaces.swift */,
+				1C8124D92774C4B8369CF03F /* Assets.xcassets */,
+				B7E4CF0D210CDB8ED23E5EBC /* Info.plist */,
+				2EE3D61D7ABF0F64F2F908E3 /* ReadPandaWidget.entitlements */,
+			);
+			path = ReadPandaWidget;
 			sourceTree = "<group>";
 		};
 		DBECB0865DDA4CC3963DE2CC /* Resources */ = {
@@ -156,6 +233,14 @@
 			name = Resources;
 			sourceTree = "<group>";
 		};
+		DE7DD4DD12FF934F9349A5F7 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				4522FBB5B50621833461DD2D /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -167,6 +252,7 @@
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
+				D0BD5AAF402C32E9B987BC7D /* Embed Foundation Extensions */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
@@ -175,11 +261,29 @@
 			buildRules = (
 			);
 			dependencies = (
+				B9CC99199E18E60BE6F3010A /* PBXTargetDependency */,
 			);
 			name = ReadPanda;
 			productName = ReadPanda;
 			productReference = 13B07F961A680F5B00A75B9A /* ReadPanda.app */;
 			productType = "com.apple.product-type.application";
+		};
+		7F77A4F5920CC52AB7391055 /* ReadPandaWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BCEEFCF17BE5DF60B9F0CBFC /* Build configuration list for PBXNativeTarget "ReadPandaWidget" */;
+			buildPhases = (
+				1263344244ED365CBC1B5259 /* Sources */,
+				2C28AC0D1A891C520EA1E1AB /* Frameworks */,
+				ED266AF8B7C12DDBA3043469 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadPandaWidget;
+			productName = ReadPandaWidget;
+			productReference = 78E064C9EEC3737B2F249BD0 /* ReadPandaWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -208,6 +312,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* ReadPanda */,
+				7F77A4F5920CC52AB7391055 /* ReadPandaWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -226,6 +331,17 @@
 				2A1A073FC07041EC9D9E0B74 /* Manrope-ExtraBold.ttf in Resources */,
 				7EBF3813B9F44ECD9904D2F9 /* Manrope-Regular.ttf in Resources */,
 				61C31230EE91437FBB4DDEC6 /* Manrope-Bold.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ED266AF8B7C12DDBA3043469 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				489B2D3E565D752712765D01 /* Assets.xcassets in Resources */,
+				8F34421F8AA4DB892DA8BAA3 /* Manrope-SemiBold.ttf in Resources */,
+				CF7B9CB07BBA8F913D9CCABA /* Manrope-Bold.ttf in Resources */,
+				FDABA6D3DE26BCEEF2E106D4 /* Manrope-ExtraBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +446,18 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1263344244ED365CBC1B5259 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0F9BD67AA3174C4C7FD8BAF8 /* ReadPandaWidget.swift in Sources */,
+				B38A26F6BB39D3E282A61BF8 /* WidgetState.swift in Sources */,
+				063E89BF1012E5BD1EE8FA5A /* WidgetCopy.swift in Sources */,
+				738C9C1C2842C918407FE593 /* WidgetTheme.swift in Sources */,
+				DA5C1AD847DF1BE5669AB236 /* WidgetFaces.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		13B07F871A680F5B00A75B9A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -341,10 +469,21 @@
 				1FB3C5CB27AB4D109BE2D5A8 /* ReaderChromeView.swift in Sources */,
 				3E79182E06A84E6EABB2F833 /* CommentSheetView.swift in Sources */,
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				86A2425F9F68A786E2AE9008 /* WidgetBridge.swift in Sources */,
+				961BE215CC2725C7C977CC5C /* WidgetBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B9CC99199E18E60BE6F3010A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ReadPandaWidget;
+			target = 7F77A4F5920CC52AB7391055 /* ReadPandaWidget */;
+			targetProxy = ED5B426C28A5D09FB0490121 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -357,6 +496,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadPanda/ReadPanda.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = ReadPanda/LaunchScreen.storyboard;
+				DEVELOPMENT_TEAM = 6F6H5A6JCC;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = ReadPanda/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
@@ -395,6 +535,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadPanda/ReadPanda.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = ReadPanda/LaunchScreen.storyboard;
+				DEVELOPMENT_TEAM = 6F6H5A6JCC;
 				INFOPLIST_FILE = ReadPanda/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -418,6 +559,33 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		44A82B3966CF2113A38746F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ReadPandaWidget/ReadPandaWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadPandaWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.readpanda.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -621,6 +789,32 @@
 			};
 			name = Release;
 		};
+		9A448E73FA7FEF5A04547886 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ReadPandaWidget/ReadPandaWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadPandaWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.readpanda.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -638,6 +832,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BCEEFCF17BE5DF60B9F0CBFC /* Build configuration list for PBXNativeTarget "ReadPandaWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				44A82B3966CF2113A38746F4 /* Release */,
+				9A448E73FA7FEF5A04547886 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

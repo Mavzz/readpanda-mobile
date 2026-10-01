@@ -10,7 +10,9 @@ import log from '../utils/logger';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import useRoomStore from '../stores/roomStore';
+import useHighlightsStore from '../stores/highlightsStore';
 import enhancedStorage from '../utils/enhancedStorage';
+import { getReaderSetting } from '../utils/readerSettings';
 import { showToast } from '../components/Toaster';
 import { DS } from '../styles/global';
 
@@ -42,9 +44,18 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const toggleLike = useCommentsStore((s) => s.toggleLike);
   const markThreadRead = useCommentsStore((s) => s.markThreadRead);
   const rooms = useRoomStore((s) => s.rooms);
+  const bookHighlights = useHighlightsStore((s) => s.byBook[book.book_id]);
+  const loadHighlights = useHighlightsStore((s) => s.loadHighlights);
+  const addHighlight = useHighlightsStore((s) => s.addHighlight);
+  const removeHighlight = useHighlightsStore((s) => s.removeHighlight);
 
-  const savedProgress = loadProgress(book.book_id);
+  // Read once per book. Re-read every render, it followed the reader's own
+  // saves back into the native view, which re-navigated to whatever page had
+  // last been saved — a step behind a fast reader, so the page and scrubber
+  // jumped back and then forward again.
+  const savedProgress = useMemo(() => loadProgress(book.book_id), [loadProgress, book.book_id]);
   const initialPage = savedProgress?.currentPage || 0;
+  const [pageMode] = useState(() => getReaderSetting('pageMode'));
   // Seeded from the saved position, not 0: a save that lands before the PDF
   // reports its first page (backgrounding right after opening) must not send
   // the reader back to page one.
@@ -129,6 +140,12 @@ const ManuscriptScreen = ({ route, navigation }) => {
     }
   }, [roomId, book.book_id, loadComments]);
 
+  // Highlights are the reader's own, so unlike comments they load for solo
+  // books too.
+  useEffect(() => {
+    loadHighlights(book.book_id);
+  }, [book.book_id, loadHighlights]);
+
   // Page position is the reader's business; it only comes back here so the
   // shelf knows where the book was left.
   const handlePageChanged = useCallback((page, total) => {
@@ -161,6 +178,41 @@ const ManuscriptScreen = ({ route, navigation }) => {
       comments: t.comments,
     }));
   }, [threads, roomId]);
+
+  // What the native side draws. `key` stays the same from the moment a
+  // highlight is made to after it's saved, so nothing flickers on save.
+  const nativeHighlights = useMemo(
+    () => (bookHighlights || []).map((h) => ({
+      key: h.key,
+      page: h.page,
+      anchorText: h.anchorText,
+      bounds: h.anchorBounds || [],
+      fileHash: h.fileHash,
+    })),
+    [bookHighlights],
+  );
+
+  const handleCreateHighlight = useCallback(async ({ page, anchorText, bounds, fileHash }) => {
+    try {
+      await addHighlight({
+        bookId: book.book_id,
+        page,
+        anchorText,
+        anchorBounds: bounds,
+        fileHash: fileHash || fileHashRef.current,
+      });
+    } catch {
+      showToast('Couldn\'t save that highlight', 'error');
+    }
+  }, [book.book_id, addHighlight]);
+
+  const handleRemoveHighlight = useCallback(async (key) => {
+    try {
+      await removeHighlight(book.book_id, key);
+    } catch {
+      showToast('Couldn\'t remove that highlight', 'error');
+    }
+  }, [book.book_id, removeHighlight]);
 
   // Opening a thread marks it read.
   const handleThreadOpened = useCallback((anchorKey) => {
@@ -230,7 +282,9 @@ const ManuscriptScreen = ({ route, navigation }) => {
         pdfUrl={book.manuscript_url}
         bookTitle={book.title}
         initialPage={initialPage}
+        pageMode={pageMode}
         threads={nativeThreads}
+        highlights={nativeHighlights}
         hasRoom={!!roomId}
         canPickRoom={shelfRooms.length > 1}
         roomName={roomName}
@@ -246,6 +300,8 @@ const ManuscriptScreen = ({ route, navigation }) => {
         onLikeComment={handleLike}
         onRetryComment={handleRetry}
         onRoomPickerRequested={handleRoomPicker}
+        onCreateHighlight={handleCreateHighlight}
+        onRemoveHighlight={handleRemoveHighlight}
       />
 
       {/* Only asked when the book really is in more than one room. */}

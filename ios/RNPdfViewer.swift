@@ -30,30 +30,69 @@ class RNPdfViewerManager: RCTViewManager {
     }
 }
 
-/// PDFView subclass that adds "Comment" to the selection menu.
+/// PDFView subclass that adds "Highlight" and "Comment" to the selection menu.
 ///
-/// The handoff asks for a `UIEditMenuInteraction` action alongside Copy.
-/// `PDFView` owns its edit-menu interaction privately and exposes no delegate
-/// seam to add to it, so the customization point that actually works on PDFView
-/// is the responder-chain one underneath: a selector PDFView will offer because
-/// `canPerformAction` says it can. `UIMenuController.menuItems` still feeds the
-/// iOS 16+ edit menu for exactly this reason.
+/// iOS 16+ builds the text-selection menu through `UIMenuBuilder`, so the
+/// actions are added in `buildMenu(with:)` — the legacy `UIMenuController`
+/// items that used to carry "Comment" are no longer shown by PDFKit there.
+/// iOS 15 still uses the responder-chain path, which is what
+/// `canPerformAction` and the `@objc` selectors below are for.
 class CommentablePDFView: PDFView {
 
     var onCommentAction: (() -> Void)?
-    /// Solo reading has no audience, so the passage menu offers nothing extra.
+    var onHighlightAction: (() -> Void)?
+    /// Solo reading has no audience, so "Comment" is offered only in a room.
+    /// Highlighting is personal and always available.
     var commentingEnabled = false
+
+    private var hasSelectedText: Bool {
+        guard let text = currentSelection?.string else {
+            return false
+        }
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
         if action == #selector(commentOnSelection(_:)) {
-            // Only offer it when there is something to anchor a comment to.
-            return commentingEnabled && currentSelection?.string?.isEmpty == false
+            return commentingEnabled && hasSelectedText
+        }
+        if action == #selector(highlightSelection(_:)) {
+            return hasSelectedText
         }
         return super.canPerformAction(action, withSender: sender)
     }
 
     @objc func commentOnSelection(_ sender: Any?) {
         onCommentAction?()
+    }
+
+    @objc func highlightSelection(_ sender: Any?) {
+        onHighlightAction?()
+    }
+
+    override func buildMenu(with builder: UIMenuBuilder) {
+        super.buildMenu(with: builder)
+        // The main menu (iPad keyboard/Catalyst) isn't where passage actions
+        // belong; the selection's edit menu is.
+        guard builder.system != .main, hasSelectedText else {
+            return
+        }
+        var actions: [UIMenuElement] = [
+            UIAction(title: "Highlight", image: UIImage(systemName: "highlighter")) { [weak self] _ in
+                self?.onHighlightAction?()
+            },
+        ]
+        if commentingEnabled {
+            actions.append(UIAction(title: "Comment", image: UIImage(systemName: "text.bubble")) { [weak self] _ in
+                self?.onCommentAction?()
+            })
+        }
+        // First in the menu, ahead of Copy — the reason the reader selected
+        // text is far more often to mark it than to copy it.
+        builder.insertChild(
+            UIMenu(identifier: UIMenu.Identifier("com.readpanda.reader.passage"), options: .displayInline, children: actions),
+            atStartOfMenu: .root
+        )
     }
 }
 
@@ -72,7 +111,7 @@ class PassthroughView: UIView {
     }
 }
 
-class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
+class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRecognizerDelegate {
 
     /// The passage a comment can be anchored to is capped to the same length
     /// the API accepts, so a runaway drag can't produce a write the server
@@ -85,8 +124,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
     /// the manuscript from the app's own furniture above and below it.
     private let pageContainer = UIView()
     private let pdfView = CommentablePDFView()
-    private let status = ReaderStatusView()
-    private let sheet = CommentSheetView()
+    // Both lay themselves out with Auto Layout inside a frame set by hand.
+    // Created at .zero, their padding couldn't fit and UIKit logged a wall of
+    // broken constraints before the first real layout; a screen-sized start
+    // is replaced by layoutSubviews before anything is drawn.
+    private let status = ReaderStatusView(frame: UIScreen.main.bounds)
+    private let sheet = CommentSheetView(frame: UIScreen.main.bounds)
 
     /// Gutter dots live in their own layer above the page. An overlay rather
     /// than PDFAnnotation subclasses: dots have to be tappable and carry an
@@ -103,8 +146,17 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
     @objc var onLikeComment: RCTDirectEventBlock?
     @objc var onRetryComment: RCTDirectEventBlock?
     @objc var onRoomPickerRequested: RCTDirectEventBlock?
+    @objc var onCreateHighlight: RCTDirectEventBlock?
+    @objc var onRemoveHighlight: RCTDirectEventBlock?
 
     private var parsedThreads: [ReaderThread] = []
+    private var parsedHighlights: [ReaderHighlight] = []
+    /// Where each drawn passage sits, so a tap on the page can tell which one
+    /// it landed on. Rebuilt with the overlays.
+    private var tapTargets: [(target: TapTarget, page: PDFPage, rects: [CGRect])] = []
+    /// The highlight a tap menu is currently about.
+    private var menuHighlightKey: String?
+    private var highlightMenu: UIInteraction?
     private var documentHash: String = ""
     private var currentPageIndex: Int = 0
     private var addedHighlights: [(PDFPage, PDFAnnotation)] = []
@@ -114,9 +166,36 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
     private var scrollObserver: NSKeyValueObservation?
     private var overlayWork: DispatchWorkItem?
     private var lastLoadedURL: URL?
+    /// Page mode (Settings → Page turning) as last applied to the PDFView.
+    private var isPaged = false
+    /// True while the reader moves itself — a document going in, the jump to
+    /// the saved page, a switch of page mode. PDFKit announces every page it
+    /// passes through on the way (page 0 first, then the target), and passing
+    /// those on made the scrubber jump about and reported page 0 to JS.
+    private var isRepositioning = false
 
-    private let unreadTint = UIColor(rgb: 0xffddb8)
-    private let readDot = UIColor(rgb: 0xb9b3a8)
+    // Comments are blue and personal highlights yellow: a pair that stays
+    // distinct for the common colour-vision deficiencies. Commented passages
+    // are also underlined and carry a gutter dot, so colour is never the only
+    // cue. All three blues are measured against the white page:
+    //  - fill under black text: ≥15:1 at either opacity
+    //  - underline, unread dot (and its white count): 4.7:1
+    //  - read dot: 3.2:1 (WCAG non-text minimum is 3:1)
+    private let commentFill = UIColor(rgb: 0x8ec5ff)
+    private let commentInk = UIColor(rgb: 0x2f6fde)
+    private let readDot = UIColor(rgb: 0x5b8def)
+    /// Found passages, by page and text. A document's text never changes while
+    /// it's open, so each anchor is searched for once, not on every scroll,
+    /// zoom or prop update. Cleared when a new document loads.
+    private var anchorRectCache: [String: [CGRect]] = [:]
+    /// Personal highlights: a highlighter yellow, distinct from the peach of a
+    /// commented passage so the reader's own marks never read as a conversation.
+    private let personalTint = UIColor(rgb: 0xffe066)
+
+    private enum TapTarget {
+        case highlight(String)
+        case thread(String)
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -146,6 +225,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         pdfView.onCommentAction = { [weak self] in self?.commentOnSelection() }
+        pdfView.onHighlightAction = { [weak self] in self?.highlightSelection() }
         pageContainer.addSubview(pdfView)
 
         gutterLayer.backgroundColor = .clear
@@ -160,7 +240,21 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         sheet.delegate = self
         addSubview(sheet)
 
-        registerCommentMenuItem()
+        registerLegacyMenuItems()
+
+        // A tap on a passage that is already marked: the reader's own
+        // highlight offers Remove / Comment, a commented passage opens its
+        // thread. Recognized alongside PDFKit's own gestures, never instead.
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handlePageTap(_:)))
+        tap.delegate = self
+        tap.cancelsTouchesInView = false
+        pdfView.addGestureRecognizer(tap)
+
+        if #available(iOS 16.0, *) {
+            let interaction = UIEditMenuInteraction(delegate: self)
+            pageContainer.addInteraction(interaction)
+            highlightMenu = interaction
+        }
 
         NotificationCenter.default.addObserver(
             self,
@@ -182,12 +276,21 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         )
     }
 
-    private func registerCommentMenuItem() {
-        let item = UIMenuItem(title: "Comment", action: #selector(CommentablePDFView.commentOnSelection(_:)))
-        let existing = UIMenuController.shared.menuItems ?? []
-        if !existing.contains(where: { $0.action == item.action }) {
-            UIMenuController.shared.menuItems = existing + [item]
+    /// iOS 15 only. On 16+ the actions come from `buildMenu(with:)`, and
+    /// registering these as well would show them twice.
+    private func registerLegacyMenuItems() {
+        if #available(iOS 16.0, *) {
+            return
         }
+        let items = [
+            UIMenuItem(title: "Highlight", action: #selector(CommentablePDFView.highlightSelection(_:))),
+            UIMenuItem(title: "Comment", action: #selector(CommentablePDFView.commentOnSelection(_:))),
+        ]
+        var existing = UIMenuController.shared.menuItems ?? []
+        for item in items where !existing.contains(where: { $0.action == item.action }) {
+            existing.append(item)
+        }
+        UIMenuController.shared.menuItems = existing
     }
 
     deinit {
@@ -202,6 +305,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // React Native mounts the view at 0×0 and sizes it a pass later.
+        // Laying out now would squeeze the status view and comment sheet to
+        // nothing and break their constraints.
+        guard bounds.width > 0, bounds.height > 0 else {
+            return
+        }
 
         header.frame = CGRect(
             x: 0,
@@ -229,6 +338,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
             height: max(0, bottom - top)
         )
         pdfView.frame = pageContainer.bounds
+        if isPaged {
+            // The page view controller doesn't refit on resize the way the
+            // continuous view does.
+            pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+        }
+        hideScrollIndicators(in: pdfView)
         gutterLayer.frame = pageContainer.bounds
         status.frame = pageContainer.bounds
         sheet.frame = bounds
@@ -276,6 +391,15 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         }
     }
 
+    /// The reader's own highlights on this book. Replacing the array redraws
+    /// the page.
+    @objc var highlights: NSArray? {
+        didSet {
+            parsedHighlights = ((highlights as? [NSDictionary]) ?? []).map { ReaderHighlight($0) }
+            scheduleOverlayRefresh()
+        }
+    }
+
     /// Solo books have no room and therefore no conversation — none of the
     /// commenting chrome appears for them.
     @objc var hasRoom: NSNumber? {
@@ -305,6 +429,53 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         }
     }
 
+    /// "scroll" (the default) or "page", from Settings → Page turning
+    /// (PROFILE_SETTINGS_7a_7b.md § 7b). Page mode swipes one page at a time
+    /// left to right, like a book; the reader stays on the page it was on.
+    @objc var pageMode: NSString? {
+        didSet {
+            let paged = (pageMode as String?) == "page"
+            guard paged != isPaged else {
+                return
+            }
+            guard let document = pdfView.document else {
+                // Not loaded yet: set up now, so the document goes straight
+                // into the right mode instead of being re-laid out after.
+                applyPageMode(paged)
+                return
+            }
+            let pageIndex = currentPageIndex
+            reposition {
+                applyPageMode(paged)
+                if let page = document.page(at: pageIndex) {
+                    pdfView.go(to: page)
+                }
+            }
+        }
+    }
+
+    private func applyPageMode(_ paged: Bool) {
+        isPaged = paged
+        pdfView.usePageViewController(paged, withViewOptions: nil)
+        pdfView.displayMode = paged ? .singlePage : .singlePageContinuous
+        pdfView.displayDirection = paged ? .horizontal : .vertical
+        // A page at a time should be the whole card, not a sheet floating on
+        // it with a shadow and a break margin around it.
+        pdfView.displaysPageBreaks = !paged
+        pdfView.pageShadowsEnabled = !paged
+        pdfView.autoScales = true
+        setNeedsLayout()
+    }
+
+    /// Runs a move the reader makes on its own with page reports held back,
+    /// then reports where it ended up — once.
+    private func reposition(_ move: () -> Void) {
+        isRepositioning = true
+        move()
+        isRepositioning = false
+        reportPage(force: true)
+    }
+
     @objc var lockedCount: NSNumber? {
         didSet {
             scrubber.lockedCount = lockedCount?.intValue ?? 0
@@ -332,14 +503,27 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
     // MARK: - Page events
 
     @objc private func handlePageChanged() {
-        guard let currentPage = pdfView.currentPage,
+        reportPage(force: false)
+    }
+
+    private func reportPage(force: Bool) {
+        guard !isRepositioning,
+            let currentPage = pdfView.currentPage,
             let document = pdfView.document
         else {
             return
         }
         let pageIndex = document.index(for: currentPage)
+        // The page view controller re-announces the page it is already on as
+        // it settles a swipe.
+        guard force || pageIndex != currentPageIndex else {
+            return
+        }
         currentPageIndex = pageIndex
         scrubber.currentPage = pageIndex
+        // The page view controller builds its scroll views lazily, as pages
+        // are turned, so a layout pass alone doesn't reach them all.
+        hideScrollIndicators(in: pdfView)
         onPageChanged?([
             "currentPage": pageIndex,
             "totalPages": document.pageCount,
@@ -399,6 +583,24 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
             fileHash: documentHash
         ))
         refreshSheet()
+    }
+
+    /// The reader chose "Highlight" — hand the passage to JS, which saves it
+    /// and pushes it back down as a highlight to draw.
+    private func highlightSelection() {
+        guard let selection = pdfView.currentSelection,
+            let raw = selection.string?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !raw.isEmpty
+        else {
+            return
+        }
+        onCreateHighlight?([
+            "page": pageIndex(of: selection),
+            "anchorText": String(raw.prefix(RNPdfView.maxAnchorLength)),
+            "bounds": normalizedBounds(for: selection).map { $0.payload },
+            "fileHash": documentHash,
+        ])
+        clearSelection()
     }
 
     /// A selection can run across a page break. It is filed under the page it
@@ -536,6 +738,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         }
     }
 
+    /// The scrubber is the reader's one sense of place. PDFKit's own
+    /// indicators — a grey bar under the page in page mode — would be a
+    /// second, competing one.
+    private func hideScrollIndicators(in view: UIView) {
+        for subview in view.subviews {
+            if let scrollView = subview as? UIScrollView {
+                scrollView.showsHorizontalScrollIndicator = false
+                scrollView.showsVerticalScrollIndicator = false
+            }
+            hideScrollIndicators(in: subview)
+        }
+    }
+
     private func findScrollView(in view: UIView) -> UIScrollView? {
         for subview in view.subviews {
             if let scrollView = subview as? UIScrollView {
@@ -572,10 +787,31 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         clearHighlights()
         gutterLayer.subviews.forEach { $0.removeFromSuperview() }
         gutterDots.removeAll()
+        tapTargets.removeAll()
         observeScrolling()
 
         guard let document = pdfView.document else {
             return
+        }
+
+        // The reader's own marks go down first, so a passage that is both
+        // highlighted and commented shows the conversation tint on top.
+        for highlight in parsedHighlights {
+            guard highlight.page >= 0, highlight.page < document.pageCount,
+                let page = document.page(at: highlight.page)
+            else {
+                continue
+            }
+            if !highlight.fileHash.isEmpty && !documentHash.isEmpty && highlight.fileHash != documentHash {
+                continue
+            }
+            guard let rects = anchorRects(text: highlight.anchorText, bounds: highlight.bounds, on: page),
+                !rects.isEmpty
+            else {
+                continue
+            }
+            drawHighlights(rects, on: page, color: personalTint.withAlphaComponent(0.45))
+            tapTargets.append((target: .highlight(highlight.key), page: page, rects: rects))
         }
 
         for thread in parsedThreads {
@@ -590,45 +826,79 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
             if !thread.fileHash.isEmpty && !documentHash.isEmpty && thread.fileHash != documentHash {
                 continue
             }
-            guard let rects = anchorRects(for: thread, on: page), !rects.isEmpty else {
+            guard let rects = anchorRects(text: thread.anchorText, bounds: thread.bounds, on: page),
+                !rects.isEmpty
+            else {
                 continue
             }
 
-            drawHighlights(rects, on: page, unread: thread.unreadCount > 0)
+            drawHighlights(rects, on: page, color: commentFill.withAlphaComponent(thread.unreadCount > 0 ? 0.55 : 0.35))
+            drawUnderlines(rects, on: page)
             drawGutterDot(for: thread, firstLine: rects[0], on: page)
+            tapTargets.append((target: .thread(thread.anchorKey), page: page, rects: rects))
         }
     }
 
     /// The passage as it sits on the page today. The stored text is looked up
     /// first so a re-flowed or re-exported edition still anchors correctly;
     /// the saved rects are the fallback for when the words have really gone.
-    private func anchorRects(for thread: ReaderThread, on page: PDFPage) -> [CGRect]? {
-        if !thread.anchorText.isEmpty, let selection = findSelection(of: thread.anchorText, on: page) {
-            return selection.selectionsByLine().map { $0.bounds(for: page) }
+    private func anchorRects(text: String, bounds: [NormalizedRect], on page: PDFPage) -> [CGRect]? {
+        if !text.isEmpty {
+            let cacheKey = "\(pdfView.document?.index(for: page) ?? -1)|\(text)"
+            if let cached = anchorRectCache[cacheKey] {
+                return cached.isEmpty ? fallbackRects(bounds, on: page) : cached
+            }
+            let found = findSelection(of: text, on: page)?.selectionsByLine().map { $0.bounds(for: page) } ?? []
+            // A miss is cached too (as empty), so a passage that has really
+            // gone isn't searched for again on every refresh.
+            anchorRectCache[cacheKey] = found
+            if !found.isEmpty {
+                return found
+            }
         }
+        return fallbackRects(bounds, on: page)
+    }
 
-        guard !thread.bounds.isEmpty else {
+    private func fallbackRects(_ bounds: [NormalizedRect], on page: PDFPage) -> [CGRect]? {
+        guard !bounds.isEmpty else {
             return nil
         }
         let box = page.bounds(for: .cropBox)
-        return thread.bounds.map { $0.denormalized(in: box) }
+        return bounds.map { $0.denormalized(in: box) }
     }
 
+    /// Searches the one page the anchor is filed under. `document.findString`
+    /// used to scan every page of the book for every anchor, on the main
+    /// thread — the lag before highlights appeared on a long book.
     private func findSelection(of text: String, on page: PDFPage) -> PDFSelection? {
-        guard let document = pdfView.document else {
+        guard let pageText = page.string else {
             return nil
         }
-        let matches = document.findString(text, withOptions: [.caseInsensitive])
-        return matches.first { $0.pages.contains(page) }
+        let range = (pageText as NSString).range(of: text, options: [.caseInsensitive])
+        guard range.location != NSNotFound else {
+            return nil
+        }
+        return page.selection(for: range)
     }
 
     /// Runtime only. These annotations are never written back — the manuscript
     /// on disk is the author's file, not a scratch pad.
-    private func drawHighlights(_ rects: [CGRect], on page: PDFPage, unread: Bool) {
-        let color = unreadTint.withAlphaComponent(unread ? 0.28 : 0.14)
+    private func drawHighlights(_ rects: [CGRect], on page: PDFPage, color: UIColor) {
         for rect in rects {
             let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
             annotation.color = color
+            annotation.shouldDisplay = true
+            annotation.shouldPrint = false
+            page.addAnnotation(annotation)
+            addedHighlights.append((page, annotation))
+        }
+    }
+
+    /// The non-colour cue for a commented passage.
+    private func drawUnderlines(_ rects: [CGRect], on page: PDFPage) {
+        for rect in rects {
+            let annotation = PDFAnnotation(bounds: rect, forType: .underline, withProperties: nil)
+            annotation.color = commentInk
             annotation.shouldDisplay = true
             annotation.shouldPrint = false
             page.addAnnotation(annotation)
@@ -661,9 +931,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         dot.accessibilityIdentifier = thread.anchorKey
 
         if unread > 0 {
-            dot.backgroundColor = unreadTint
+            dot.backgroundColor = commentInk
             dot.setTitle(unread > 9 ? "9+" : "\(unread)", for: .normal)
-            dot.setTitleColor(DS.Colors.onPrimary, for: .normal)
+            dot.setTitleColor(.white, for: .normal)
             dot.titleLabel?.font = .systemFont(ofSize: 10, weight: .heavy)
             dot.accessibilityLabel = "\(unread) unread comments"
         } else {
@@ -699,6 +969,90 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
         }
     }
 
+    // MARK: - Tapping a marked passage
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        return true
+    }
+
+    @objc private func handlePageTap(_ recognizer: UITapGestureRecognizer) {
+        let point = recognizer.location(in: pdfView)
+        guard let page = pdfView.page(for: point, nearest: false) else {
+            return
+        }
+        let pagePoint = pdfView.convert(point, to: page)
+        // Lines are tight; a couple of points of slack makes a tap on the
+        // edge of a word still count.
+        let hits = tapTargets.filter { target in
+            target.page == page && target.rects.contains { $0.insetBy(dx: -2, dy: -2).contains(pagePoint) }
+        }
+        // The reader's own highlight wins: its menu can still reach the
+        // conversation through "Comment".
+        if let hit = hits.first(where: { if case .highlight = $0.target { return true } else { return false } }),
+            case .highlight(let key) = hit.target
+        {
+            showHighlightMenu(for: key, at: recognizer.location(in: pageContainer))
+        } else if let hit = hits.first, case .thread(let anchorKey) = hit.target {
+            openThread(anchorKey: anchorKey)
+        }
+    }
+
+    private func showHighlightMenu(for key: String, at point: CGPoint) {
+        menuHighlightKey = key
+        if #available(iOS 16.0, *), let interaction = highlightMenu as? UIEditMenuInteraction {
+            interaction.presentEditMenu(with: UIEditMenuConfiguration(identifier: nil, sourcePoint: point))
+            return
+        }
+        // iOS 15: a plain action sheet.
+        guard let controller = window?.rootViewController?.presentedViewController ?? window?.rootViewController else {
+            return
+        }
+        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        for action in highlightMenuActions() {
+            sheet.addAction(UIAlertAction(title: action.title, style: action.destructive ? .destructive : .default) { _ in
+                action.handler()
+            })
+        }
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sheet.popoverPresentationController?.sourceView = pageContainer
+        sheet.popoverPresentationController?.sourceRect = CGRect(origin: point, size: .zero)
+        controller.present(sheet, animated: true)
+    }
+
+    /// The same two choices whichever way the menu is shown.
+    private func highlightMenuActions() -> [(title: String, destructive: Bool, handler: () -> Void)] {
+        guard let key = menuHighlightKey,
+            let highlight = parsedHighlights.first(where: { $0.key == key })
+        else {
+            return []
+        }
+        var actions: [(title: String, destructive: Bool, handler: () -> Void)] = []
+        if pdfView.commentingEnabled {
+            actions.append((title: "Comment", destructive: false, handler: { [weak self] in
+                self?.commentOn(highlight)
+            }))
+        }
+        actions.append((title: "Remove highlight", destructive: true, handler: { [weak self] in
+            self?.onRemoveHighlight?(["key": key])
+        }))
+        return actions
+    }
+
+    /// Commenting on a highlighted passage anchors to exactly the same words,
+    /// so it joins the existing thread there if there is one.
+    private func commentOn(_ highlight: ReaderHighlight) {
+        sheet.open(target: .draft(
+            page: highlight.page,
+            anchorText: highlight.anchorText,
+            bounds: highlight.bounds,
+            fileHash: highlight.fileHash.isEmpty ? documentHash : highlight.fileHash
+        ))
+        refreshSheet()
+    }
+
     // MARK: - Loading
 
     private func goToPage(_ pageIndex: Int) {
@@ -725,9 +1079,11 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
 
         if url.isFileURL {
             if let data = try? Data(contentsOf: url), let document = PDFDocument(data: data) {
-                pdfView.document = document
+                reposition {
+                    pdfView.document = document
+                    goToPage(initialPage?.intValue ?? 0)
+                }
                 notifyLoadComplete(document: document, data: data)
-                goToPage(initialPage?.intValue ?? 0)
             } else {
                 fail("Failed to load local PDF file.")
             }
@@ -745,9 +1101,11 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
                     guard let self = self else {
                         return
                     }
-                    self.pdfView.document = document
+                    self.reposition {
+                        self.pdfView.document = document
+                        self.goToPage(self.initialPage?.intValue ?? 0)
+                    }
                     self.notifyLoadComplete(document: document, data: data)
-                    self.goToPage(self.initialPage?.intValue ?? 0)
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -767,6 +1125,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
     /// apart and left undrawn.
     private func notifyLoadComplete(document: PDFDocument, data: Data) {
         documentHash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        anchorRectCache.removeAll()
         status.show(.ready)
         scrubber.totalPages = document.pageCount
         scrubber.isHidden = document.pageCount == 0
@@ -776,6 +1135,24 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate {
             "fileHash": documentHash,
         ])
         scheduleOverlayRefresh()
+    }
+}
+
+@available(iOS 16.0, *)
+extension RNPdfView: UIEditMenuInteractionDelegate {
+    func editMenuInteraction(
+        _ interaction: UIEditMenuInteraction,
+        menuFor configuration: UIEditMenuConfiguration,
+        suggestedActions: [UIMenuElement]
+    ) -> UIMenu? {
+        let actions = highlightMenuActions().map { action in
+            UIAction(
+                title: action.title,
+                image: UIImage(systemName: action.destructive ? "trash" : "text.bubble"),
+                attributes: action.destructive ? .destructive : []
+            ) { _ in action.handler() }
+        }
+        return actions.isEmpty ? nil : UIMenu(children: actions)
     }
 }
 

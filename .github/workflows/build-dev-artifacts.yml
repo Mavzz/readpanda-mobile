@@ -1,9 +1,9 @@
 name: Build Simulator & Emulator Apps
 
-# Produces standalone (JS bundled, no Metro needed) builds that can be
-# downloaded from the run's "Artifacts" section and installed locally:
-#   iOS:     unzip ReadPanda-Simulator.zip && xcrun simctl install booted ReadPanda.app
-#   Android: adb install ReadPanda-emulator.apk
+# Produces a standalone (JS bundled, no Metro needed) iOS Simulator build that
+# can be downloaded from the run's "Artifacts" section and installed locally:
+#   unzip ReadPanda-Simulator.zip && xcrun simctl install booted ReadPanda.app
+# No Android job yet. See docs/RUN.md.
 
 on:
   push:
