@@ -40,9 +40,10 @@ const RoomLobbyScreen = ({ navigation, route }) => {
           bucket={bucket}
           currentBook={currentBook}
           bookTitle={bookTitle}
+          iAmCreator={iAmCreator}
           onOpenBook={(book) => navigation.navigate('ManuscriptScreen', { book })}
         />
-        <InviteSection roomName={room?.name} inviteCode={inviteCode} />
+        <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={iAmCreator} />
         <MemberList members={members} />
         <DangerZone room={room} iAmCreator={iAmCreator} onGone={() => navigation.goBack()} />
       </ScrollView>

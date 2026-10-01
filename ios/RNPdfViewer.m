@@ -13,6 +13,7 @@
 RCT_EXPORT_VIEW_PROPERTY(pdfDetails, NSDictionary)
 RCT_EXPORT_VIEW_PROPERTY(initialPage, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(bookTitle, NSString)
+RCT_EXPORT_VIEW_PROPERTY(pageMode, NSString)
 RCT_EXPORT_VIEW_PROPERTY(onPageChanged, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLoadComplete, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
@@ -36,5 +37,10 @@ RCT_EXPORT_VIEW_PROPERTY(onSubmitComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLikeComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRetryComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRoomPickerRequested, RCTDirectEventBlock)
+
+// Personal highlights. Private to the reader, so they exist in solo books too.
+RCT_EXPORT_VIEW_PROPERTY(highlights, NSArray)
+RCT_EXPORT_VIEW_PROPERTY(onCreateHighlight, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onRemoveHighlight, RCTDirectEventBlock)
 
 @end

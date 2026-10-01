@@ -7,7 +7,7 @@ import { showToast } from '../../components/Toaster';
 import log from '../../utils/logger';
 import lobbyStyles from './lobbyStyles';
 
-const InviteSection = ({ roomName, inviteCode }) => {
+const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
   const [copied, setCopied] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const copiedTimer = useRef(null);
@@ -43,7 +43,7 @@ const InviteSection = ({ roomName, inviteCode }) => {
 
   return (
     <>
-      <Text style={lobbyStyles.eyebrow}>Then, bring your people</Text>
+      <Text style={lobbyStyles.eyebrow}>{iAmCreator ? 'Then, bring your people' : 'Invite friends'}</Text>
       <View style={styles.inviteCard}>
         <View style={styles.codeWell}>
           <Text style={styles.codeText}>{displayCode}</Text>

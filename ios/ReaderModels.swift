@@ -132,6 +132,26 @@ struct ReaderThread {
     }
 }
 
+/// A passage the reader marked for themselves. Private — no room, no thread —
+/// and drawn in its own colour so it never reads as a conversation.
+struct ReaderHighlight {
+    /// Stable from the moment the highlight is made to after the server saves
+    /// it, so removal can name it either side of the save.
+    let key: String
+    let page: Int
+    let anchorText: String
+    let bounds: [NormalizedRect]
+    let fileHash: String
+
+    init(_ dict: NSDictionary) {
+        key = (dict["key"] as? String) ?? ""
+        page = (dict["page"] as? NSNumber)?.intValue ?? 0
+        anchorText = (dict["anchorText"] as? String) ?? ""
+        bounds = ((dict["bounds"] as? [Any]) ?? []).compactMap { NormalizedRect($0) }
+        fileHash = (dict["fileHash"] as? String) ?? ""
+    }
+}
+
 /// What the sheet is currently about.
 ///
 /// A thread opened from the gutter is followed by its anchor key. A draft has

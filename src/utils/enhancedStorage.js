@@ -3,6 +3,14 @@ import { getStore, getTokens, setTokens, clearTokens } from '../services/secureS
 import { STORAGE_CATEGORIES } from '../constants/storageConstants';
 import log from './logger';
 
+// "2026-09-30" in the reader's own timezone — a streak is about their days,
+// not UTC's.
+const localDay = (date) => {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
 class EnhancedStorage {
   // Auth: tokens in the Keychain (see secureStorage), the profile in MMKV.
   storeAuthData(authData) {
@@ -155,6 +163,7 @@ class EnhancedStorage {
       lastBookId: manuscriptId,
       books: { ...books, [manuscriptId]: entry },
     });
+    this.recordReadingDay();
 
     // SQLite is the durable per-user history: reading_progress is keyed
     // UNIQUE(username, book_id), and the write also queues the row for upload
@@ -177,6 +186,37 @@ class EnhancedStorage {
         log.error('SQLite reading-progress write failed (MMKV position is saved):', error);
       });
     }
+  }
+
+  // ── Reading days (the widget's streak flame) ─────────────────────────
+  // The local days a position was saved on, newest last, capped so it can't
+  // grow without bound. A streak is consecutive days ending today — or
+  // yesterday, since a day you haven't read *yet* shouldn't break it.
+  readingDaysKey() {
+    return this.scopedKey('reading_days');
+  }
+
+  recordReadingDay(date = new Date()) {
+    const day = localDay(date);
+    const days = StorageService.getItem(this.readingDaysKey()) || [];
+    if (days[days.length - 1] === day) {
+      return;
+    }
+    StorageService.setItem(this.readingDaysKey(), [...days.filter((d) => d !== day), day].slice(-60));
+  }
+
+  getReadingStreak(now = new Date()) {
+    const days = new Set(StorageService.getItem(this.readingDaysKey()) || []);
+    const cursor = new Date(now);
+    if (!days.has(localDay(cursor))) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    let streak = 0;
+    while (days.has(localDay(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
   }
 
   getCurrentReadingPosition() {

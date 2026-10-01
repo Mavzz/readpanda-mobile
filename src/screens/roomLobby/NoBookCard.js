@@ -4,8 +4,9 @@ import { DS } from '../../styles/global';
 import GradientPill from '../../components/GradientPill';
 import lobbyStyles from './lobbyStyles';
 
-// STATE A — nothing chosen yet.
-const NoBookCard = ({ onChooseBook, onChooseBucket }) => (
+// STATE A — nothing chosen yet. A member (pickerName set) sees the card
+// alone: only the creator gets the pickers.
+const NoBookCard = ({ onChooseBook, onChooseBucket, pickerName }) => (
   <>
     <View style={styles.bookCard}>
       <View style={styles.coverPlaceholder}>
@@ -14,21 +15,27 @@ const NoBookCard = ({ onChooseBook, onChooseBucket }) => (
       <View style={styles.bookCardText}>
         <Text style={styles.bookCardTitle}>Nothing on the shelf yet</Text>
         <Text style={styles.bookCardBody}>
-          Pick one book — or a bucket, a whole reading list to work through together.
+          {pickerName
+            ? `${pickerName} is picking what to read`
+            : 'Pick one book — or a bucket, a whole reading list to work through together.'}
         </Text>
       </View>
     </View>
-    <GradientPill onPress={onChooseBook} style={styles.bookCta}>
-      <Icon name="search" size={17} color={DS.colors.onPrimary} />
-      <Text style={styles.bookCtaText}>Choose a book</Text>
-    </GradientPill>
-    <Pressable
-      onPress={onChooseBucket}
-      style={({ pressed }) => [styles.bucketCta, pressed && lobbyStyles.pressed]}
-    >
-      <Icon name="albums-outline" size={16} color={DS.colors.primary} />
-      <Text style={styles.bucketCtaText}>Read through a bucket</Text>
-    </Pressable>
+    {!pickerName && (
+      <>
+        <GradientPill onPress={onChooseBook} style={styles.bookCta}>
+          <Icon name="search" size={17} color={DS.colors.onPrimary} />
+          <Text style={styles.bookCtaText}>Choose a book</Text>
+        </GradientPill>
+        <Pressable
+          onPress={onChooseBucket}
+          style={({ pressed }) => [styles.bucketCta, pressed && lobbyStyles.pressed]}
+        >
+          <Icon name="albums-outline" size={16} color={DS.colors.primary} />
+          <Text style={styles.bucketCtaText}>Read through a bucket</Text>
+        </Pressable>
+      </>
+    )}
   </>
 );
 

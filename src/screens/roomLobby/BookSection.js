@@ -14,7 +14,7 @@ import RoomBookCard from './RoomBookCard';
 // "First, decide what to read": the room's book (or bucket), how far in the
 // reader is, and the pickers that change it. A room reads either a standalone
 // book or a bucket (a shared list) with a current book picked from it.
-const BookSection = ({ room, members, bucket, currentBook, bookTitle, onOpenBook }) => {
+const BookSection = ({ room, members, bucket, currentBook, bookTitle, iAmCreator, onOpenBook }) => {
   const [picker, setPicker] = useState(null); // 'book' | 'bucket' | 'bucket-book'
   const [pendingBucket, setPendingBucket] = useState(null);
 
@@ -153,6 +153,10 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, onOpenBook
     setPicker('bucket');
   };
 
+  // Members can't change the book, so the creator's setup-flow wording
+  // ("First, decide…") would be addressed to the wrong person.
+  const creatorName = members.find((m) => m.isCreator)?.name?.split(' ')[0] || 'The creator';
+
   const bucketPickerItems = [...customBuckets, ...curatedBuckets].map((b) => ({
     id: b.id,
     title: b.name,
@@ -162,7 +166,9 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, onOpenBook
 
   return (
     <>
-      <Text style={[lobbyStyles.eyebrow, styles.firstSection]}>First, decide what to read</Text>
+      <Text style={[lobbyStyles.eyebrow, styles.firstSection]}>
+        {iAmCreator ? 'First, decide what to read' : 'Reading'}
+      </Text>
       {bookTitle ? (
         <RoomBookCard
           coverUrl={currentBook?.cover_image_url || room?.coverUrl}
@@ -172,12 +178,15 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, onOpenBook
           shownPct={shownPct}
           progressLabel={progressLabel}
           bookLocked={bookLocked}
+          canEdit={iAmCreator}
           onStartReading={startReadingRoomBook}
           onSwapBook={handleSwapCurrentBook}
           onAddBucket={openBucketPicker}
         />
-      ) : (
+      ) : iAmCreator ? (
         <NoBookCard onChooseBook={() => setPicker('book')} onChooseBucket={openBucketPicker} />
+      ) : (
+        <NoBookCard pickerName={creatorName} />
       )}
 
       <PickerSheet
