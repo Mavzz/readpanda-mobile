@@ -17,6 +17,7 @@ const PdfViewer = ({
   pdfUrl,
   bookTitle,
   initialPage,
+  pageMode,
   threads,
   highlights,
   hasRoom,
@@ -100,6 +101,7 @@ const PdfViewer = ({
       pdfDetails={{ url: pdfUrl || '' }}
       bookTitle={bookTitle || ''}
       initialPage={initialPage || 0}
+      pageMode={pageMode || 'scroll'}
       threads={threads || []}
       highlights={highlights || []}
       hasRoom={!!hasRoom}

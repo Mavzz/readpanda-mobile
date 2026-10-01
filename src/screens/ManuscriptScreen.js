@@ -12,6 +12,7 @@ import useCommentsStore from '../stores/commentsStore';
 import useRoomStore from '../stores/roomStore';
 import useHighlightsStore from '../stores/highlightsStore';
 import enhancedStorage from '../utils/enhancedStorage';
+import { getReaderSetting } from '../utils/readerSettings';
 import { showToast } from '../components/Toaster';
 import { DS } from '../styles/global';
 
@@ -48,8 +49,13 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const addHighlight = useHighlightsStore((s) => s.addHighlight);
   const removeHighlight = useHighlightsStore((s) => s.removeHighlight);
 
-  const savedProgress = loadProgress(book.book_id);
+  // Read once per book. Re-read every render, it followed the reader's own
+  // saves back into the native view, which re-navigated to whatever page had
+  // last been saved — a step behind a fast reader, so the page and scrubber
+  // jumped back and then forward again.
+  const savedProgress = useMemo(() => loadProgress(book.book_id), [loadProgress, book.book_id]);
   const initialPage = savedProgress?.currentPage || 0;
+  const [pageMode] = useState(() => getReaderSetting('pageMode'));
   // Seeded from the saved position, not 0: a save that lands before the PDF
   // reports its first page (backgrounding right after opening) must not send
   // the reader back to page one.
@@ -276,6 +282,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         pdfUrl={book.manuscript_url}
         bookTitle={book.title}
         initialPage={initialPage}
+        pageMode={pageMode}
         threads={nativeThreads}
         highlights={nativeHighlights}
         hasRoom={!!roomId}

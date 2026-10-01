@@ -124,8 +124,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
     /// the manuscript from the app's own furniture above and below it.
     private let pageContainer = UIView()
     private let pdfView = CommentablePDFView()
-    private let status = ReaderStatusView()
-    private let sheet = CommentSheetView()
+    // Both lay themselves out with Auto Layout inside a frame set by hand.
+    // Created at .zero, their padding couldn't fit and UIKit logged a wall of
+    // broken constraints before the first real layout; a screen-sized start
+    // is replaced by layoutSubviews before anything is drawn.
+    private let status = ReaderStatusView(frame: UIScreen.main.bounds)
+    private let sheet = CommentSheetView(frame: UIScreen.main.bounds)
 
     /// Gutter dots live in their own layer above the page. An overlay rather
     /// than PDFAnnotation subclasses: dots have to be tappable and carry an
@@ -162,6 +166,13 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
     private var scrollObserver: NSKeyValueObservation?
     private var overlayWork: DispatchWorkItem?
     private var lastLoadedURL: URL?
+    /// Page mode (Settings → Page turning) as last applied to the PDFView.
+    private var isPaged = false
+    /// True while the reader moves itself — a document going in, the jump to
+    /// the saved page, a switch of page mode. PDFKit announces every page it
+    /// passes through on the way (page 0 first, then the target), and passing
+    /// those on made the scrubber jump about and reported page 0 to JS.
+    private var isRepositioning = false
 
     // Comments are blue and personal highlights yellow: a pair that stays
     // distinct for the common colour-vision deficiencies. Commented passages
@@ -294,6 +305,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // React Native mounts the view at 0×0 and sizes it a pass later.
+        // Laying out now would squeeze the status view and comment sheet to
+        // nothing and break their constraints.
+        guard bounds.width > 0, bounds.height > 0 else {
+            return
+        }
 
         header.frame = CGRect(
             x: 0,
@@ -321,6 +338,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
             height: max(0, bottom - top)
         )
         pdfView.frame = pageContainer.bounds
+        if isPaged {
+            // The page view controller doesn't refit on resize the way the
+            // continuous view does.
+            pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+        }
+        hideScrollIndicators(in: pdfView)
         gutterLayer.frame = pageContainer.bounds
         status.frame = pageContainer.bounds
         sheet.frame = bounds
@@ -406,6 +429,53 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
         }
     }
 
+    /// "scroll" (the default) or "page", from Settings → Page turning
+    /// (PROFILE_SETTINGS_7a_7b.md § 7b). Page mode swipes one page at a time
+    /// left to right, like a book; the reader stays on the page it was on.
+    @objc var pageMode: NSString? {
+        didSet {
+            let paged = (pageMode as String?) == "page"
+            guard paged != isPaged else {
+                return
+            }
+            guard let document = pdfView.document else {
+                // Not loaded yet: set up now, so the document goes straight
+                // into the right mode instead of being re-laid out after.
+                applyPageMode(paged)
+                return
+            }
+            let pageIndex = currentPageIndex
+            reposition {
+                applyPageMode(paged)
+                if let page = document.page(at: pageIndex) {
+                    pdfView.go(to: page)
+                }
+            }
+        }
+    }
+
+    private func applyPageMode(_ paged: Bool) {
+        isPaged = paged
+        pdfView.usePageViewController(paged, withViewOptions: nil)
+        pdfView.displayMode = paged ? .singlePage : .singlePageContinuous
+        pdfView.displayDirection = paged ? .horizontal : .vertical
+        // A page at a time should be the whole card, not a sheet floating on
+        // it with a shadow and a break margin around it.
+        pdfView.displaysPageBreaks = !paged
+        pdfView.pageShadowsEnabled = !paged
+        pdfView.autoScales = true
+        setNeedsLayout()
+    }
+
+    /// Runs a move the reader makes on its own with page reports held back,
+    /// then reports where it ended up — once.
+    private func reposition(_ move: () -> Void) {
+        isRepositioning = true
+        move()
+        isRepositioning = false
+        reportPage(force: true)
+    }
+
     @objc var lockedCount: NSNumber? {
         didSet {
             scrubber.lockedCount = lockedCount?.intValue ?? 0
@@ -433,14 +503,27 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
     // MARK: - Page events
 
     @objc private func handlePageChanged() {
-        guard let currentPage = pdfView.currentPage,
+        reportPage(force: false)
+    }
+
+    private func reportPage(force: Bool) {
+        guard !isRepositioning,
+            let currentPage = pdfView.currentPage,
             let document = pdfView.document
         else {
             return
         }
         let pageIndex = document.index(for: currentPage)
+        // The page view controller re-announces the page it is already on as
+        // it settles a swipe.
+        guard force || pageIndex != currentPageIndex else {
+            return
+        }
         currentPageIndex = pageIndex
         scrubber.currentPage = pageIndex
+        // The page view controller builds its scroll views lazily, as pages
+        // are turned, so a layout pass alone doesn't reach them all.
+        hideScrollIndicators(in: pdfView)
         onPageChanged?([
             "currentPage": pageIndex,
             "totalPages": document.pageCount,
@@ -652,6 +735,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
         }
         scrollObserver = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
             self?.repositionGutter()
+        }
+    }
+
+    /// The scrubber is the reader's one sense of place. PDFKit's own
+    /// indicators — a grey bar under the page in page mode — would be a
+    /// second, competing one.
+    private func hideScrollIndicators(in view: UIView) {
+        for subview in view.subviews {
+            if let scrollView = subview as? UIScrollView {
+                scrollView.showsHorizontalScrollIndicator = false
+                scrollView.showsVerticalScrollIndicator = false
+            }
+            hideScrollIndicators(in: subview)
         }
     }
 
@@ -983,9 +1079,11 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
 
         if url.isFileURL {
             if let data = try? Data(contentsOf: url), let document = PDFDocument(data: data) {
-                pdfView.document = document
+                reposition {
+                    pdfView.document = document
+                    goToPage(initialPage?.intValue ?? 0)
+                }
                 notifyLoadComplete(document: document, data: data)
-                goToPage(initialPage?.intValue ?? 0)
             } else {
                 fail("Failed to load local PDF file.")
             }
@@ -1003,9 +1101,11 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
                     guard let self = self else {
                         return
                     }
-                    self.pdfView.document = document
+                    self.reposition {
+                        self.pdfView.document = document
+                        self.goToPage(self.initialPage?.intValue ?? 0)
+                    }
                     self.notifyLoadComplete(document: document, data: data)
-                    self.goToPage(self.initialPage?.intValue ?? 0)
                 }
             } catch {
                 DispatchQueue.main.async {
