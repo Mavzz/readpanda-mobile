@@ -1,7 +1,6 @@
 import StorageService from '../services/storageService';
 import { getStore, getTokens, setTokens, clearTokens } from '../services/secureStorage';
 import { STORAGE_CATEGORIES } from '../constants/storageConstants';
-import log from './logger';
 
 // "2026-09-30" in the reader's own timezone — a streak is about their days,
 // not UTC's.
@@ -78,20 +77,7 @@ class EnhancedStorage {
   }
 
   getUserPreference(key, defaultValue = null) {
-    return StorageService.getItem(this.scopedKey(`pref_${key}`)) || defaultValue;
-  }
-
-  // Manuscript operations (SQLite)
-  saveManuscript(manuscript) {
-    return StorageService.saveManuscript(manuscript);
-  }
-
-  getManuscripts(filters) {
-    return StorageService.getManuscripts(filters);
-  }
-
-  getFavoriteManuscripts() {
-    return StorageService.getManuscripts({ isFavorite: true });
+    return StorageService.getItem(this.scopedKey(`pref_${key}`)) ?? defaultValue;
   }
 
   // ── Reading positions (MMKV) ────────────────────────────────────────
@@ -119,15 +105,7 @@ class EnhancedStorage {
     return { lastBookId: stored.lastBookId || null, books: stored.books || {} };
   }
 
-  // Reading progress (Hybrid approach)
   saveReadingProgress(manuscriptId, progress, book = null) {
-    // MMKV first, and on its own: this is what the Home hero and the Reading
-    // tab actually read back, so it must not be able to fail because of the
-    // SQLite layer below. It used to run second, behind an
-    // updateReadingProgress() that StorageService has never implemented — so
-    // every save threw before reaching here and no reading position was ever
-    // persisted.
-    //
     // `book` carries just enough of the manuscript (title/cover/url) for
     // Home's "Continue reading" hero and the Reading tab to show the real
     // book — including its real cover image — after a cold start.
@@ -164,28 +142,6 @@ class EnhancedStorage {
       books: { ...books, [manuscriptId]: entry },
     });
     this.recordReadingDay();
-
-    // SQLite is the durable per-user history: reading_progress is keyed
-    // UNIQUE(username, book_id), and the write also queues the row for upload
-    // once a progress endpoint exists. This used to call a non-existent
-    // `updateReadingProgress(manuscriptId, progress)`; the real method is
-    // saveReadingProgress(username, bookId, currentPage, totalPages).
-    //
-    // It's async and best-effort — the MMKV position above is already saved,
-    // and a SQLite failure must not surface as a lost reading position.
-    const username = this.getUserProfile()?.username;
-    if (username) {
-      Promise.resolve(
-        StorageService.saveReadingProgress(
-          username,
-          manuscriptId,
-          progress?.currentPage || 0,
-          progress?.totalPages || 0,
-        ),
-      ).catch((error) => {
-        log.error('SQLite reading-progress write failed (MMKV position is saved):', error);
-      });
-    }
   }
 
   // ── Reading days (the widget's streak flame) ─────────────────────────
@@ -281,37 +237,24 @@ class EnhancedStorage {
     StorageService.setItem(this.readingPositionsKey(), { lastBookId: nextLast, books: remaining });
   }
 
-  // Cache management (MMKV)
-  cacheApiResponse(key, data, ttl = 5 * 60 * 1000) { // 5 minutes default
-    const cacheData = {
-      data,
-      timestamp: Date.now(),
-      ttl,
-    };
-    StorageService.setItem(`cache_${key}`, cacheData);
+  // ── Last-seen server data (MMKV) ─────────────────────────────────────
+  // What a screen showed last time, so a cold start renders it at once and
+  // the network only refreshes it. Per account like everything else here; with
+  // nobody signed in there is no account to keep it for, so writes are dropped.
+  readCache(name) {
+    return StorageService.getItem(this.scopedKey(`cache_${name}`));
   }
 
-  getCachedData(key) {
-    const cached = StorageService.getItem(`cache_${key}`);
-    if (!cached) return null;
-
-    const { data, timestamp, ttl } = cached;
-    if (Date.now() - timestamp > ttl) {
-      StorageService.removeItem(`cache_${key}`);
-      return null;
+  writeCache(name, value) {
+    if (!this.getUserProfile()?.username) {
+      return;
     }
-
-    return data;
+    StorageService.setItem(this.scopedKey(`cache_${name}`), value);
   }
 
   // Clear all storage
   clearAll() {
-    // Clear MMKV
     getStore().clearAll();
-
-    // Clear SQLite (optional - usually you'd want to keep some data)
-    //  StorageService.db.executeSql('DELETE FROM manuscripts');
-    //  StorageService.db.executeSql('DELETE FROM reading_rooms');
   }
 }
 

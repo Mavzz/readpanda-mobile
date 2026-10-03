@@ -2,6 +2,7 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import SplashScreen from 'react-native-splash-screen';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import useAuthStore from './src/stores/authStore';
 import { initSecureStorage } from './src/services/secureStorage';
 import log from './src/utils/logger';
@@ -61,8 +62,10 @@ const App = () => {
     }
   }, [isLoading, storage, tryFadeOut]);
 
+  // Gesture handler's root: 9a's swipe-to-delete and drag-to-reorder need it
+  // above every screen.
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       {storage === 'ready' && <AppNavigator />}
       {storage === 'failed' && (
         <View style={styles.failed}>
@@ -87,7 +90,7 @@ const App = () => {
           </View>
         </Animated.View>
       )}
-    </View>
+    </GestureHandlerRootView>
   );
 }
 

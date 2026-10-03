@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,16 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
-import GradientPill from '../components/GradientPill';
 import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
+import PressableScale from '../components/PressableScale';
+import haptics from '../utils/haptics';
 
 // Creating a room is one decision (the name) plus one setting (privacy).
 // Invite-only is pre-selected — this is a private-friends product. The
@@ -42,12 +44,11 @@ const STEPS = [
 ];
 
 const PrivacyCard = ({ option, selected, onPress }) => (
-  <Pressable
+  <PressableScale
     onPress={onPress}
-    style={({ pressed }) => [
+    style={[
       styles.privacyCard,
       selected ? styles.privacyCardSelected : styles.privacyCardIdle,
-      pressed && styles.pressed,
     ]}
   >
     <View style={styles.privacyHeader}>
@@ -61,7 +62,7 @@ const PrivacyCard = ({ option, selected, onPress }) => (
       </Text>
     </View>
     <Text style={styles.privacyBody}>{option.body}</Text>
-  </Pressable>
+  </PressableScale>
 );
 
 const StepsStrip = () => (
@@ -92,9 +93,42 @@ const CreateRoomScreen = ({ navigation, route }) => {
   const [name, setName] = useState('');
   const [privacy, setPrivacy] = useState(PRIVACY.invite.key);
   const [saving, setSaving] = useState(false);
+  // Set once leaving is intended (created, or discard confirmed) so the
+  // beforeRemove guard lets the navigation through.
+  const leaving = useRef(false);
 
   const trimmedName = name.trim();
   const canCreate = trimmedName.length > 0 && !saving;
+  const isDirty = trimmedName.length > 0 || privacy !== PRIVACY.invite.key;
+
+  // 12b: confirm before dismissing with changes — the ×, a swipe, or back.
+  useEffect(() => navigation.addListener('beforeRemove', (e) => {
+    if (!isDirty || leaving.current) {
+      return;
+    }
+    e.preventDefault();
+    Alert.alert(
+      'Discard room?',
+      'Your room won\'t be created.',
+      [
+        { text: 'Keep editing', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            leaving.current = true;
+            navigation.dispatch(e.data.action);
+          },
+        },
+      ],
+    );
+  }), [navigation, isDirty]);
+
+  // Native-stack can't hold a swipe-dismiss in beforeRemove, so with changes
+  // the gesture is off and leaving goes through the confirm above.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !isDirty });
+  }, [navigation, isDirty]);
 
   const handleCreate = async () => {
     if (!canCreate) return;
@@ -124,6 +158,8 @@ const CreateRoomScreen = ({ navigation, route }) => {
         }
       }
       showToast(seedBook ? `Room created — reading ${seedBook.title}` : 'Room created', 'success');
+      haptics.success();
+      leaving.current = true;
       navigation.replace('RoomLobbyScreen', { room: response });
       return;
     }
@@ -133,7 +169,7 @@ const CreateRoomScreen = ({ navigation, route }) => {
   };
 
   return (
-    // Bottom too: the Create button sits at the foot of a full-screen modal
+    // Bottom too: the steps strip sits at the foot of a full-screen modal
     // and has to clear the home indicator.
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
@@ -143,15 +179,27 @@ const CreateRoomScreen = ({ navigation, route }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.content}>
-          {/* Header */}
+          {/* Header (12b modal): × · centred title · text action */}
           <View style={styles.header}>
-            <Pressable
+            <PressableScale
               onPress={() => navigation.goBack()}
-              style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
             >
               <Icon name="close" size={19} color={DS.colors.onSurface} />
-            </Pressable>
+            </PressableScale>
             <Text style={styles.headerTitle}>New room</Text>
+            <Pressable
+              onPress={handleCreate}
+              disabled={!canCreate}
+              hitSlop={10}
+              style={styles.headerAction}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canCreate }}
+            >
+              <Text style={[styles.create, canCreate && styles.createReady]}>Create</Text>
+            </Pressable>
           </View>
 
           {/* Name */}
@@ -161,10 +209,12 @@ const CreateRoomScreen = ({ navigation, route }) => {
             value={name}
             onChangeText={setName}
             placeholder="e.g. Midnight Club"
-            placeholderTextColor={DS.colors.onSurfaceVariant}
+            placeholderTextColor={DS.colors.placeholder}
             selectionColor={DS.colors.primary}
             maxLength={50}
             autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleCreate}
           />
           <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
 
@@ -174,12 +224,12 @@ const CreateRoomScreen = ({ navigation, route }) => {
             <PrivacyCard
               option={PRIVACY.invite}
               selected={privacy === PRIVACY.invite.key}
-              onPress={() => setPrivacy(PRIVACY.invite.key)}
+              onPress={() => { haptics.light(); setPrivacy(PRIVACY.invite.key); }}
             />
             <PrivacyCard
               option={PRIVACY.open}
               selected={privacy === PRIVACY.open.key}
-              onPress={() => setPrivacy(PRIVACY.open.key)}
+              onPress={() => { haptics.light(); setPrivacy(PRIVACY.open.key); }}
             />
           </View>
           <Text style={styles.helper}>Add a description later from the room&apos;s page.</Text>
@@ -187,10 +237,6 @@ const CreateRoomScreen = ({ navigation, route }) => {
           <View style={styles.spacer} />
 
           <StepsStrip />
-
-          <GradientPill onPress={handleCreate} disabled={!canCreate} style={styles.cta}>
-            <Text style={styles.ctaText}>Create room</Text>
-          </GradientPill>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -209,31 +255,39 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
   },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 26,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    marginBottom: 14,
   },
   closeButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: DS.colors.surfaceContainerHigh,
+    width: DS.size.iconButton,
+    height: DS.size.iconButton,
+    borderRadius: DS.size.iconButton / 2,
+    backgroundColor: DS.colors.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontFamily: DS.font.extraBold,
+    ...DS.type.modalNavTitle,
     color: DS.colors.onSurface,
-    letterSpacing: -0.5,
+  },
+  // Same width as the × so the title stays centred.
+  headerAction: {
+    minWidth: DS.size.iconButton,
+    alignItems: 'flex-end',
+  },
+  create: {
+    fontSize: 15,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.disabled,
+  },
+  createReady: {
+    color: DS.colors.primaryContainer,
   },
 
   // Section eyebrows
@@ -324,7 +378,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepsStrip: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   stepItem: {
     flexDirection: 'row',
@@ -359,17 +413,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: DS.font.semibold,
     color: DS.colors.onSurfaceVariant,
-  },
-
-  // CTA
-  cta: {
-    marginBottom: 12,
-    paddingVertical: 16,
-  },
-  ctaText: {
-    fontSize: 15,
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.onPrimary,
   },
 });
 

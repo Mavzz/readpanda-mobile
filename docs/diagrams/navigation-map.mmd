@@ -14,14 +14,20 @@ flowchart TD
         subgraph Tabs["Tabs — TabNavigator"]
             subgraph HomeTab["Home — HomeStackNavigator"]
                 HomeMain
-                LibraryScreen
-                BucketBooksScreen
-                GenreBooksScreen["GenreBooksScreen<br/>(registered, never navigated to)"]
+                HomeBookGrid["BookGrid (10c)<br/>Curated for you See all"]
             end
-            subgraph ReadingTab["Reading — ReadingStackNavigator"]
-                ReadingMain
+            subgraph DiscoverTab["Discover — DiscoverStackNavigator (8a)"]
+                DiscoverMain
+                PopularList["BookGrid (10c)<br/>Popular See all"]
+                CuratedGrid["BucketGrid (10e, curated)"]
+            end
+            subgraph MyBooksTab["My Books — MyBooksStackNavigator (8b)"]
+                MyBooksMain
+                Shelf["Shelf — ReadingScreen (4a)"]
                 RoomBookScreen
                 SoloBookScreen
+                MyBucket["MyBucket (9a)"]
+                MyBucketGrid["BucketGrid (10e, mine)"]
             end
             Rooms["Rooms — RoomsScreen"]
         end
@@ -31,6 +37,8 @@ flowchart TD
         CreateBucketScreen["CreateBucketScreen (modal)"]
         CreateRoomScreen["CreateRoomScreen (modal)"]
         RoomLobbyScreen
+        BookDetail["BookDetail (8c)"]
+        CuratedBucket["CuratedBucket (9b)"]
     end
 
     Root -->|signed out| Auth
@@ -40,23 +48,50 @@ flowchart TD
 
     HomeMain -.->|isNewUser| InterestM
     HomeMain -.-> Profile
-    HomeMain -.->|See all / Browse| LibraryScreen
-    HomeMain -.->|curated card| BucketBooksScreen
+    HomeMain -.->|Browse| DiscoverMain
+    HomeMain -.->|first-run curated card| CuratedBucket
     HomeMain -.->|hero| ManuscriptScreen
     HomeMain -.->|room card / nudge| RoomLobbyScreen
     HomeMain -.->|first run| CreateRoomScreen
     HomeMain -.->|join by code| Rooms
-    LibraryScreen -.-> BucketBooksScreen
-    LibraryScreen -.->|+| CreateBucketScreen
-    BucketBooksScreen -.-> ManuscriptScreen
 
-    ReadingMain -.->|room row| RoomBookScreen
-    ReadingMain -.->|solo row| SoloBookScreen
-    ReadingMain -.->|▶| ManuscriptScreen
-    ReadingMain -.->|first run| LibraryScreen
+    DiscoverMain -.->|curated tile, genre| CuratedBucket
+    DiscoverMain -.->|Popular cover| BookDetail
+    DiscoverMain -.->|Popular See all| PopularList
+    DiscoverMain -.->|Curated See all| CuratedGrid
+    PopularList -.->|cover| BookDetail
+    CuratedGrid -.->|tile| CuratedBucket
+    HomeMain -.->|Curated See all| HomeBookGrid
+    HomeBookGrid -.->|cover| BookDetail
+    MyBooksMain -.->|My buckets See all| MyBucketGrid
+    MyBucketGrid -.->|tile / Reorder books| MyBucket
+    MyBucketGrid -.->|+| CreateBucketScreen
+    CuratedBucket -.->|cover| BookDetail
+    CuratedBucket -.->|Saved| MyBucket
+    PopularList -.-> BookDetail
+
+    MyBooksMain -.->|See all| Shelf
+    MyBooksMain -.->|room row| RoomBookScreen
+    MyBooksMain -.->|solo row| SoloBookScreen
+    MyBooksMain -.->|▶| ManuscriptScreen
+    MyBooksMain -.->|bucket| MyBucket
+    MyBooksMain -.->|New bucket| CreateBucketScreen
+    MyBooksMain -.->|first run 3b| DiscoverMain
+    MyBucket -.->|unopened book| BookDetail
+    MyBucket -.->|opened book| SoloBookScreen
+    MyBucket -.->|room book| RoomBookScreen
+    MyBucket -.->|Continue / Start| ManuscriptScreen
+    Shelf -.->|room row| RoomBookScreen
+    Shelf -.->|solo row| SoloBookScreen
+    Shelf -.->|▶| ManuscriptScreen
     RoomBookScreen -.-> ManuscriptScreen
     SoloBookScreen -.-> ManuscriptScreen
     SoloBookScreen -.->|seedBook| CreateRoomScreen
+
+    BookDetail -.->|Start / Continue| ManuscriptScreen
+    BookDetail -.->|Read with a room| RoomLobbyScreen
+    BookDetail -.->|Start a new room, seedBook| CreateRoomScreen
+    BookDetail -.->|New bucket| CreateBucketScreen
 
     Rooms -.->|New| CreateRoomScreen
     Rooms -.->|open / join| RoomLobbyScreen

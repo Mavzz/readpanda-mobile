@@ -78,7 +78,7 @@ const NewBookCard = ({ book, onPress, style }) => {
       onPressOut={handlePressOut}
       activeOpacity={1}
       accessible={true}
-      accessibilityLabel={`Book: ${book?.title || 'Untitled'} by ${book?.author_name || 'Unknown Author'}`}
+      accessibilityLabel={book?.author_name ? `Book: ${book?.title || 'Untitled'} by ${book.author_name}` : `Book: ${book?.title || 'Untitled'}`}
       accessibilityRole="button"
     >
       <View style={cardStyles.horizontalBookCover}>
@@ -88,9 +88,12 @@ const NewBookCard = ({ book, onPress, style }) => {
         <Text style={cardStyles.gridBookTitle} numberOfLines={2}>
           {book?.title || 'Untitled'}
         </Text>
-        <Text style={cardStyles.gridBookAuthor} numberOfLines={1}>
-          {book?.author_name || 'Unknown Author'}
-        </Text>
+        {/* Unknown authors are left out, never shown as "Unknown Author". */}
+        {book?.author_name ? (
+          <Text style={cardStyles.gridBookAuthor} numberOfLines={1}>
+            {book.author_name}
+          </Text>
+        ) : null}
         {book?.reading_progress && (
           <View style={cardStyles.progressContainer}>
             <View style={cardStyles.progressBar}>

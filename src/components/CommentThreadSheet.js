@@ -242,7 +242,7 @@ const CommentThreadSheet = ({
                 value={body}
                 onChangeText={setBody}
                 placeholder="Add to the thread…"
-                placeholderTextColor={DS.colors.onSurfaceVariant}
+                placeholderTextColor={DS.colors.placeholder}
                 multiline
                 maxLength={2000}
                 accessibilityLabel="Comment"

@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import GradientPill from '../../components/GradientPill';
-import lobbyStyles from './lobbyStyles';
+import PressableScale from '../../components/PressableScale';
 
 // STATE A — nothing chosen yet. A member (pickerName set) sees the card
 // alone: only the creator gets the pickers.
@@ -27,13 +27,13 @@ const NoBookCard = ({ onChooseBook, onChooseBucket, pickerName }) => (
           <Icon name="search" size={17} color={DS.colors.onPrimary} />
           <Text style={styles.bookCtaText}>Choose a book</Text>
         </GradientPill>
-        <Pressable
+        <PressableScale
           onPress={onChooseBucket}
-          style={({ pressed }) => [styles.bucketCta, pressed && lobbyStyles.pressed]}
+          style={styles.bucketCta}
         >
           <Icon name="albums-outline" size={16} color={DS.colors.primary} />
           <Text style={styles.bucketCtaText}>Read through a bucket</Text>
-        </Pressable>
+        </PressableScale>
       </>
     )}
   </>

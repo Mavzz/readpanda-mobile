@@ -27,9 +27,12 @@ const useHomeData = ({ user, navigation }) => {
   useEffect(() => () => clearTimeout(welcomeTimer.current), []);
 
   const loadHome = useCallback(async (showRefresh = false) => {
-    const { status: curatedStatus } = await fetchCuratedBuckets(showRefresh);
-    const { status: customStatus } = await fetchCustomBuckets();
-    const { status: roomsStatus } = await fetchRooms();
+    // Independent of each other, so they go out together.
+    const [{ status: curatedStatus }, { status: customStatus }, { status: roomsStatus }] = await Promise.all([
+      fetchCuratedBuckets(showRefresh),
+      fetchCustomBuckets(),
+      fetchRooms(),
+    ]);
     // After the rooms, so a book started on another device comes back tagged
     // with the room reading it.
     await syncFromServer(useRoomStore.getState().rooms);
@@ -89,7 +92,7 @@ const useHomeData = ({ user, navigation }) => {
   // Home stays mounted, so without this the hero would keep showing whatever
   // was true when the tab first mounted — a book started from a room, or one
   // just read, wouldn't appear until a pull-to-refresh or an app restart.
-  // Cheap: loadActiveBook is a no-op once activeBook is set.
+  // Cheap: once activeBook is set, this only rebuilds the shelf from MMKV.
   useFocusEffect(
     useCallback(() => {
       loadActiveBook();

@@ -10,6 +10,8 @@ import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import CommentThreadSheet from '../components/CommentThreadSheet';
 import log from '../utils/logger';
+import PressableScale from '../components/PressableScale';
+import ProgressFill from '../components/ProgressFill';
 
 // The room read (§ 1b): where everyone in the room is, and comments unlocked
 // or locked by chapter. Reached from a room row on the Reading shelf (4a);
@@ -71,14 +73,14 @@ const RoomBookScreen = () => {
         <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
         <SafeAreaView style={styles.safeTop} edges={['top']}>
           <View style={styles.navRow}>
-            <Pressable
+            <PressableScale
               onPress={() => navigation.goBack()}
-              style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+              style={styles.backButton}
               accessibilityLabel="Go back"
               accessibilityRole="button"
             >
               <Icon name="chevron-back" size={19} color={DS.colors.onSurface} />
-            </Pressable>
+            </PressableScale>
           </View>
         </SafeAreaView>
       </View>
@@ -104,17 +106,17 @@ const RoomBookScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <SafeAreaView style={styles.safeTop} edges={['top']}>
         <View style={styles.topTrack}>
-          <View style={[styles.topFill, { width: `${book.progressPct}%` }]} />
+          <ProgressFill pct={book.progressPct} seenKey={`book:${book.id}`} style={styles.topFill} />
         </View>
         <View style={styles.navRow}>
-          <Pressable
+          <PressableScale
             onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+            style={styles.backButton}
             accessibilityLabel="Go back"
             accessibilityRole="button"
           >
             <Icon name="chevron-back" size={19} color={DS.colors.onSurface} />
-          </Pressable>
+          </PressableScale>
         </View>
       </SafeAreaView>
 
@@ -147,7 +149,7 @@ const RoomBookScreen = () => {
             <Text style={styles.paceTitle}>Where everyone is</Text>
             <View style={styles.paceTrackWrap}>
               <View style={styles.paceTrack}>
-                <View style={[styles.paceFill, { width: `${book.progressPct}%` }]} />
+                <ProgressFill pct={book.progressPct} seenKey={`book:${book.id}`} style={styles.paceFill} />
               </View>
               {memberProgress.map((m) => (
                 <View
@@ -531,10 +533,6 @@ const styles = StyleSheet.create({
     color: DS.colors.onPrimary,
   },
 
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
 });
 
 export default RoomBookScreen;

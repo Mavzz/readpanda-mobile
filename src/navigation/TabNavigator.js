@@ -2,19 +2,23 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Text, Platform, StyleSheet } from 'react-native';
 import HomeStackNavigator from './HomeStackNavigator';
-import ReadingStackNavigator from './ReadingStackNavigator';
+import DiscoverStackNavigator from './DiscoverStackNavigator';
+import MyBooksStackNavigator from './MyBooksStackNavigator';
 import RoomsScreen from '../screens/RoomsScreen';
 import { DS } from '../styles/global';
 
 const Tab = createBottomTabNavigator();
 
 const tabLabel = (label) => ({ focused, color }) => (
-  <Text style={[styles.tabLabel, { color, fontFamily: focused ? DS.font.bold : DS.font.semibold }]}>
+  <Text style={[styles.tabLabel, { color, fontFamily: focused ? DS.font.bold : DS.font.semibold }]} numberOfLines={1}>
     {label}
   </Text>
 );
 
-// 3-tab IA per design_handoff_redesign § 1a/1b/1c: Home · Reading · Rooms.
+// 4-tab IA (DISCOVER_MYBOOKS_8a_8c.md): Home · Discover · My Books · Rooms.
+// Each tab does one job — Home jumps back in, Discover finds books, My Books
+// is everything that's yours, Rooms is reading socially. Home keeps 1a's book
+// icon rather than the spec's house.
 // No blur library is installed (@react-native-community/blur etc.), so the
 // glass tab bar falls back to a solid surfaceContainerHigh per the handoff's
 // explicit fallback clause.
@@ -47,10 +51,20 @@ const TabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Reading"
-        component={ReadingStackNavigator}
+        name="Discover"
+        component={DiscoverStackNavigator}
         options={{
-          tabBarLabel: tabLabel('Reading'),
+          tabBarLabel: tabLabel('Discover'),
+          tabBarIcon: ({ color, focused }) => (
+            <Icon name={focused ? 'compass' : 'compass-outline'} color={color} size={23} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="MyBooks"
+        component={MyBooksStackNavigator}
+        options={{
+          tabBarLabel: tabLabel('My Books'),
           tabBarIcon: ({ color, focused }) => (
             <Icon name={focused ? 'bookmarks' : 'bookmarks-outline'} color={color} size={23} />
           ),
@@ -74,7 +88,7 @@ export default TabNavigator;
 
 const styles = StyleSheet.create({
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 3,
   },
   tabIcon: {

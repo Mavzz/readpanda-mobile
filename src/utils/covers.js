@@ -74,4 +74,22 @@ export const COVER_SHADOW = {
 // Bottom scrim for tiles whose label sits on top of the cover.
 export const SCRIM_COLORS = ['rgba(6,13,32,0)', 'rgba(6,13,32,0.85)'];
 
-export default { GENRE_DUOTONES, duotoneFor, genreDuotone, COVER_SHADOW, SCRIM_COLORS };
+// The front cover of a fanned stack (BUCKETS_9a_9c.md § 9c): -6/6/16
+// rgba(0,0,0,0.45), a little off to the side so the fan reads as stacked.
+export const FAN_SHADOW = {
+  shadowColor: '#000000',
+  shadowOffset: { width: -6, height: 6 },
+  shadowOpacity: 0.45,
+  shadowRadius: 8,
+  elevation: 8,
+};
+
+// Curated buckets sit on a warm ground (9b hero, 9c curated tile).
+export const CURATED_GROUND = ['#4a3418', '#1c1a2e'];
+
+// 9b's hero fades into the page surface (#0b1326, DS.colors.background).
+export const HERO_FADE = ['rgba(11,19,38,0)', 'rgba(11,19,38,1)'];
+
+export default {
+  GENRE_DUOTONES, duotoneFor, genreDuotone, COVER_SHADOW, SCRIM_COLORS, FAN_SHADOW, CURATED_GROUND, HERO_FADE,
+};

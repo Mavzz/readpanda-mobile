@@ -95,7 +95,7 @@ const Login = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Username"
-            placeholderTextColor={DS.colors.onSurfaceVariant}
+            placeholderTextColor={DS.colors.placeholder}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -103,7 +103,7 @@ const Login = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor={DS.colors.onSurfaceVariant}
+            placeholderTextColor={DS.colors.placeholder}
             value={password}
             onChangeText={setPassword}
             autoCapitalize="none"

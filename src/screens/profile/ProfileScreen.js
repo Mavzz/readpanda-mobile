@@ -15,6 +15,7 @@ import { DS } from '../../styles/global';
 import profileStyles from './profileStyles';
 import useProfileData from './useProfileData';
 import MakeItYoursCard from './MakeItYoursCard';
+import PressableScale from '../../components/PressableScale';
 
 const MAX_COVERS = 4;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -60,9 +61,8 @@ const Avatar = ({ user, name, onAddPhoto }) => {
   }
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onAddPhoto}
-      style={({ pressed }) => pressed && profileStyles.pressed}
       accessibilityLabel="Add a profile photo"
       accessibilityRole="button"
     >
@@ -77,7 +77,7 @@ const Avatar = ({ user, name, onAddPhoto }) => {
       >
         <Icon name="camera" size={14} color={DS.colors.onPrimary} />
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 };
 
@@ -156,16 +156,16 @@ const ProfileScreen = () => {
     {
       key: 'book',
       title: 'Start your first book',
-      subtitle: 'Pick something from the library',
+      subtitle: 'Find something in Discover',
       done: hasProgress,
-      onPress: () => navigation.navigate('Tabs', { screen: 'Home', params: { screen: 'LibraryScreen' } }),
+      onPress: () => navigation.popTo('Tabs', { screen: 'Discover' }),
     },
     {
       key: 'room',
       title: 'Join or start a room',
       subtitle: 'Read along with friends',
       done: rooms.length > 0,
-      onPress: () => navigation.navigate('Tabs', { screen: 'Rooms', params: { focusCode: true } }),
+      onPress: () => navigation.popTo('Tabs', { screen: 'Rooms', params: { focusCode: true } }),
     },
     {
       key: 'photo',
@@ -182,22 +182,22 @@ const ProfileScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <ScrollView contentContainerStyle={profileStyles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.nav}>
-          <Pressable
+          <PressableScale
             onPress={() => navigation.goBack()}
-            style={({ pressed }) => [profileStyles.circleButton, pressed && profileStyles.pressed]}
+            style={profileStyles.circleButton}
             accessibilityLabel="Go back"
             accessibilityRole="button"
           >
             <Icon name="chevron-back" size={19} color={DS.colors.onSurface} />
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
             onPress={() => navigation.navigate('Settings')}
-            style={({ pressed }) => [profileStyles.circleButton, pressed && profileStyles.pressed]}
+            style={profileStyles.circleButton}
             accessibilityLabel="Settings"
             accessibilityRole="button"
           >
             <Icon name="settings-outline" size={18} color={DS.colors.onSurface} />
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={styles.identity}>
@@ -206,15 +206,15 @@ const ProfileScreen = () => {
           <Text style={styles.handle} numberOfLines={1}>
             @{handle}{since ? ` · ${since}` : ''}
           </Text>
-          <Pressable
+          <PressableScale
             // The edit form is its own piece of work (out of scope for 7a).
             onPress={() => showToast('Editing your profile is coming soon', 'info')}
-            style={({ pressed }) => [styles.editPill, pressed && profileStyles.pressed]}
+            style={styles.editPill}
             accessibilityRole="button"
           >
             <Icon name="pencil" size={12} color={DS.colors.primary} />
             <Text style={styles.editPillText}>Edit profile</Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         {showChecklist ? <MakeItYoursCard steps={steps} /> : null}
@@ -242,7 +242,7 @@ const ProfileScreen = () => {
             <View style={styles.sectionHeader}>
               <Text style={profileStyles.eyebrow}>Finished in {year}</Text>
               <Pressable
-                onPress={() => navigation.navigate('Tabs', { screen: 'Reading' })}
+                onPress={() => navigation.popTo('Tabs', { screen: 'MyBooks' })}
                 hitSlop={10}
                 accessibilityRole="button"
               >
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: DS.colors.outlineVariant,
+    borderColor: DS.colors.createDash,
   },
   emptyShelfText: {
     flex: 1,

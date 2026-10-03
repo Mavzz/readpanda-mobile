@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'react-native-linear-gradient';
 import { DS } from '../../styles/global';
 import useReadingProgressStore from '../../stores/readingProgressStore';
 import useCommentsStore from '../../stores/commentsStore';
 import HeroCard from './HeroCard';
+import ProgressFill from '../../components/ProgressFill';
 
 // 1a — the book on the nightstand, how far in, and who in its room is ahead.
 const ContinueReadingHero = ({ activeBook, onContinue }) => {
@@ -42,11 +42,11 @@ const ContinueReadingHero = ({ activeBook, onContinue }) => {
         {activeBook.roomName ? ` · with ${activeBook.roomName}` : ''}
       </Text>
       <View style={styles.heroTrack}>
-        <LinearGradient
+        <ProgressFill
+          pct={activeBook.progressPct}
+          seenKey={`book:${activeBook.id}`}
           colors={[DS.colors.primary, DS.colors.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.heroFill, { width: `${activeBook.progressPct}%` }]}
+          style={styles.heroFill}
         />
       </View>
       {friends.length > 0 && (

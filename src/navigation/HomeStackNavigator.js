@@ -1,8 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/home/HomeScreen';
-import LibraryScreen from '../screens/LibraryScreen';
-import GenreBooksScreen from '../screens/GenreBooksScreen';
-import BucketBooksScreen from '../screens/BucketBooksScreen';
+import BookGridScreen from '../screens/BookGridScreen';
 import { DS } from '../styles/global';
 
 const Stack = createNativeStackNavigator();
@@ -17,9 +15,7 @@ const HomeStackNavigator = () => {
       }}
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />
-      <Stack.Screen name="LibraryScreen" component={LibraryScreen} />
-      <Stack.Screen name="GenreBooksScreen" component={GenreBooksScreen} />
-      <Stack.Screen name="BucketBooksScreen" component={BucketBooksScreen} />
+      <Stack.Screen name="BookGrid" component={BookGridScreen} />
     </Stack.Navigator>
   );
 };

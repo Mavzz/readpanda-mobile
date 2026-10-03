@@ -8,6 +8,7 @@ import useBucketsStore from '../../stores/bucketsStore';
 import useReadingProgressStore from '../../stores/readingProgressStore';
 import lobbyStyles from './lobbyStyles';
 import { bookIdOf, toPickerBook } from './roomLobbyFormat';
+import { sameId } from '../../utils/bookId';
 import NoBookCard from './NoBookCard';
 import RoomBookCard from './RoomBookCard';
 
@@ -28,7 +29,7 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, iAmCreator
   // the room's progress bar without a remount.
   const progressMap = useReadingProgressStore((s) => s.progress);
 
-  const upNext = (bucket?.books || []).filter((b) => bookIdOf(b) !== bookIdOf(currentBook));
+  const upNext = (bucket?.books || []).filter((b) => !sameId(bookIdOf(b), bookIdOf(currentBook)));
 
   // How far into the room's book the reader actually is. There is no
   // per-member progress endpoint yet, so what the room can honestly show is
@@ -105,7 +106,7 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, iAmCreator
       refuseChange();
       return;
     }
-    const picked = books.find((b) => bookIdOf(b) === item.id) || item;
+    const picked = books.find((b) => sameId(bookIdOf(b), item.id)) || item;
     applyReading({ bucket: null, currentBook: picked }, `Now reading ${item.title}`);
   };
 
@@ -129,7 +130,7 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, iAmCreator
       refuseChange();
       return;
     }
-    const picked = (pendingBucket?.books || []).find((b) => bookIdOf(b) === item.id) || item;
+    const picked = (pendingBucket?.books || []).find((b) => sameId(bookIdOf(b), item.id)) || item;
     const nextBucket = pendingBucket || bucket;
     setPendingBucket(null);
     applyReading(
@@ -176,6 +177,7 @@ const BookSection = ({ room, members, bucket, currentBook, bookTitle, iAmCreator
           bucket={bucket}
           upNext={upNext}
           shownPct={shownPct}
+          progressKey={room ? `room:${room.id}` : null}
           progressLabel={progressLabel}
           bookLocked={bookLocked}
           canEdit={iAmCreator}

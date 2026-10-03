@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { DS } from '../styles/global';
+import PressableScale from './PressableScale';
 
 // Gradient CTA pill (Home/Reading "continue" buttons, Rooms "New") — mirrors
 // Button.js's primaryButton: the Pressable's own padding determines the
@@ -8,20 +9,25 @@ import { DS } from '../styles/global';
 // not a parent the content sizes itself through. Letting LinearGradient
 // size itself via padding (as an earlier version of these screens did)
 // rendered as a solid blank pill with no visible text/icon.
+// 12d: disabled is never a filled pill — a disabled pill drops the gradient
+// and the glow, and the caller colours its label DS.colors.disabled. Prefer
+// not rendering a disabled primary at all (modals use a header text action).
 const GradientPill = ({ onPress, children, style, disabled }) => (
-  <Pressable
+  <PressableScale
     onPress={onPress}
     disabled={disabled}
-    style={({ pressed }) => [styles.wrap, style, pressed && styles.pressed, disabled && styles.disabled]}
+    style={[styles.wrap, style, disabled && styles.disabled]}
   >
-    <LinearGradient
-      colors={[DS.colors.primary, DS.colors.primaryContainer]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.fill}
-    />
+    {disabled ? null : (
+      <LinearGradient
+        colors={[DS.colors.primary, DS.colors.primaryContainer]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.fill}
+      />
+    )}
     {children}
-  </Pressable>
+  </PressableScale>
 );
 
 const styles = StyleSheet.create({
@@ -43,12 +49,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: DS.radius.full,
   },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
   disabled: {
-    opacity: 0.4,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });
 

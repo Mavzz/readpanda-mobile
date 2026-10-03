@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import getInitials from '../../utils/getInitials';
 import NotificationList from '../../components/NotificationList';
 import useNotificationStore from '../../stores/notificationStore';
+import { Bone, useSkeletonDelay } from '../../components/Skeleton';
 
 // Greeting, the notification bell (and its inbox sheet), and the avatar into
 // Profile. The notification store is read only here, so a badge change
@@ -16,6 +17,7 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const [notifModalVisible, setNotifModalVisible] = useState(false);
+  const showSkeleton = useSkeletonDelay(notifLoading);
 
   const handleNotificationPress = () => {
     setNotifModalVisible(true);
@@ -58,7 +60,12 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             {notifLoading ? (
-              <ActivityIndicator size="large" color={DS.colors.primary} />
+              // NotificationList's rows: surface-1, radius xl, 12 apart.
+              showSkeleton ? (
+                <View style={styles.skeleton}>
+                  {[0, 1, 2, 3].map((i) => <Bone key={i} width="100%" height={76} radius={DS.radius.xl} />)}
+                </View>
+              ) : null
             ) : (
               <NotificationList
                 notifications={notifications}
@@ -74,6 +81,9 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
 };
 
 const styles = StyleSheet.create({
+  skeleton: {
+    gap: 12,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
