@@ -1,6 +1,6 @@
-// Book records reach us in two shapes: the manuscripts list uses `id`, a
-// bucket's books_preview uses `book_id`.
-export const bookIdOf = (book) => book?.book_id ?? book?.id;
+import { bookIdOf } from '../../utils/bookId';
+
+export { bookIdOf };
 
 export const toPickerBook = (book) => ({
   id: bookIdOf(book),

@@ -9,11 +9,15 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import BookCoverGradient from './BookCoverGradient';
+import PressableScale from './PressableScale';
 
 // One sheet for all three Room Detail prompts (ROOM_DETAIL_2a-2.md):
 // "Choose a book", "Read through a bucket", and "Which book first?".
-// Items: { id, title, subtitle?, coverUrl? } — a cover is drawn when the
-// item is a book, an icon tile when it's a bucket.
+// Items: { id, title, subtitle?, coverUrl?, icon?, checked? } — a cover is
+// drawn when the item is a book, an icon tile when it's a bucket or carries
+// its own `icon`. A boolean `checked` swaps the chevron for a tick, for
+// sheets that toggle membership (Book detail's Add to bucket) rather than
+// navigate.
 const PickerSheet = ({ visible, title, subtitle, items = [], onSelect, onClose, emptyText }) => (
   <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
     <Pressable style={styles.backdrop} onPress={onClose}>
@@ -23,14 +27,14 @@ const PickerSheet = ({ visible, title, subtitle, items = [], onSelect, onClose, 
             <Text style={styles.title}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
-          <Pressable
+          <PressableScale
             onPress={onClose}
-            style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+            style={styles.closeButton}
             accessibilityLabel="Close"
             accessibilityRole="button"
           >
             <Icon name="close" size={20} color={DS.colors.onSurfaceVariant} />
-          </Pressable>
+          </PressableScale>
         </View>
 
         {items.length === 0 ? (
@@ -45,13 +49,13 @@ const PickerSheet = ({ visible, title, subtitle, items = [], onSelect, onClose, 
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <Pressable
+              <PressableScale
                 onPress={() => onSelect(item)}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                style={styles.row}
               >
-                {item.isBucket ? (
+                {item.isBucket || item.icon ? (
                   <View style={styles.bucketTile}>
-                    <Icon name="albums-outline" size={20} color={DS.colors.primary} />
+                    <Icon name={item.icon || 'albums-outline'} size={20} color={DS.colors.primary} />
                   </View>
                 ) : (
                   <BookCoverGradient
@@ -69,8 +73,16 @@ const PickerSheet = ({ visible, title, subtitle, items = [], onSelect, onClose, 
                     <Text style={styles.rowSubtitle} numberOfLines={1}>{item.subtitle}</Text>
                   ) : null}
                 </View>
-                <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
-              </Pressable>
+                {typeof item.checked === 'boolean' ? (
+                  <Icon
+                    name={item.checked ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={item.checked ? DS.colors.primary : DS.colors.onSurfaceVariant}
+                  />
+                ) : (
+                  <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
+                )}
+              </PressableScale>
             )}
           />
         )}
@@ -92,10 +104,6 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     paddingTop: 20,
     paddingBottom: 28,
-  },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
   },
 
   header: {

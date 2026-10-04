@@ -6,6 +6,7 @@ import { DS } from '../../styles/global';
 import { showToast } from '../../components/Toaster';
 import log from '../../utils/logger';
 import lobbyStyles from './lobbyStyles';
+import PressableScale from '../../components/PressableScale';
 
 const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
   const [copied, setCopied] = useState(false);
@@ -47,9 +48,9 @@ const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
       <View style={styles.inviteCard}>
         <View style={styles.codeWell}>
           <Text style={styles.codeText}>{displayCode}</Text>
-          <Pressable
+          <PressableScale
             onPress={handleCopyCode}
-            style={({ pressed }) => [styles.copyControl, pressed && lobbyStyles.pressed]}
+            style={styles.copyControl}
             accessibilityLabel="Copy invite code"
             accessibilityRole="button"
           >
@@ -59,24 +60,24 @@ const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
               color={DS.colors.onSurfaceVariant}
             />
             <Text style={styles.copyText}>{copied ? 'Copied' : 'Copy'}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={styles.actionRow}>
-          <Pressable
+          <PressableScale
             onPress={handleShareInvite}
-            style={({ pressed }) => [styles.actionPill, pressed && lobbyStyles.pressed]}
+            style={styles.actionPill}
           >
             <Icon name="share-outline" size={15} color={DS.colors.primary} />
             <Text style={styles.actionPillText}>Share invite</Text>
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
             onPress={() => setQrVisible(true)}
-            style={({ pressed }) => [styles.actionPill, pressed && lobbyStyles.pressed]}
+            style={styles.actionPill}
           >
             <Icon name="qr-code-outline" size={15} color={DS.colors.primary} />
             <Text style={styles.actionPillText}>QR code</Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <Text style={styles.inviteCaption}>Anyone with the code can join this room</Text>

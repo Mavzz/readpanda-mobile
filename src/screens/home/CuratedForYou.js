@@ -32,10 +32,10 @@ const CuratedForYou = ({ isFirstRun, onOpenBucket, onSeeAll }) => {
 
   // On first run the first collection is interest-seeded and says so.
   const seededBucket = isFirstRun ? seedCollection(curatedBuckets, preferences).bucket : null;
-  const curatedCards = (seededBucket
+  const ordered = seededBucket
     ? [seededBucket, ...curatedBuckets.filter((b) => b.id !== seededBucket.id)]
-    : curatedBuckets
-  ).slice(0, 2);
+    : curatedBuckets;
+  const curatedCards = ordered.slice(0, 2);
 
   if (curatedCards.length === 0) {
     return null;
@@ -45,9 +45,13 @@ const CuratedForYou = ({ isFirstRun, onOpenBucket, onSeeAll }) => {
     <View style={[homeStyles.section, styles.lastSection]}>
       <View style={styles.sectionHeaderRow}>
         <Text style={homeStyles.sectionTitle}>Curated for you</Text>
-        <TouchableOpacity onPress={onSeeAll}>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
+        {/* Only when there are more buckets than the two cards show. 10c
+            lists every book in them, in this order. */}
+        {ordered.length > curatedCards.length && (
+          <TouchableOpacity onPress={() => onSeeAll(ordered.map((b) => b.id))}>
+            <Text style={styles.seeAll}>See all</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.curatedRow}>
         {curatedCards.map((bucket, i) => {

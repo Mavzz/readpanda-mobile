@@ -9,7 +9,7 @@ import log from '../utils/logger';
 // link:
 //   readpanda://read/{bookId}?page={p}  → the reader (5a)
 //   readpanda://room/{roomId}           → Room Detail (5b)
-//   readpanda://library                 → the Library (empty state, 3a)
+//   readpanda://library                 → Discover (empty state, 3a)
 //
 // The reader reopens at the book's saved position, which is the page the
 // widget was showing, so `page` isn't needed to get there.
@@ -71,7 +71,7 @@ const useWidgetDeepLink = ({ isAuthenticated, navigationRef }) => {
       } else {
         whenReady(() => navigationRef.current?.navigate('Main', {
           screen: 'Tabs',
-          params: { screen: 'Home', params: { screen: 'LibraryScreen' } },
+          params: { screen: 'Discover' },
         }));
       }
     };

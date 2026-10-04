@@ -51,7 +51,7 @@ Still open:
 - **Push needs server credentials.** `FIREBASE_PROJECT_ID` plus the service account, with the FCM API enabled. Without them the inbox works and nothing is pushed.
 - **Only book publishing notifies.** `POST /books/seed` deliberately doesn't, to avoid a burst per seeded book. Nothing notifies on room or comment activity yet.
 
-`GenreBooksScreen` is still registered but never navigated to.
+The "See all" views (10c–10e) are `BookGrid` (Discover › Popular, Home › Curated for you), `BucketGrid` (Discover › Curated buckets, My Books › My buckets) and the `Shelf` (My Books › Currently reading). They replace `GenreBooksScreen`.
 
 The older [../sequence_diagrams/](../sequence_diagrams/) files describe intended designs (email verification, push registration) that the code doesn't implement. Where they disagree, trust these.
 

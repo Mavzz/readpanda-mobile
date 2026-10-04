@@ -4,8 +4,6 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactNativePlugin from 'eslint-plugin-react-native';
 
 export default [
-  // Dead code kept for reference only; nothing imports it.
-  { ignores: ['src/not_in_use/**'] },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,mjs}'],

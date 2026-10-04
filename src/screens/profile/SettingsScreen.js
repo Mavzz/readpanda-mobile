@@ -12,10 +12,12 @@ import log from '../../utils/logger';
 import { useScreenTracking } from '../../utils/screenTracking';
 import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/readerSettings';
 import { DS } from '../../styles/global';
+import useSubscriptionStore from '../../stores/subscriptionStore';
 import packageJson from '../../../package.json';
 import profileStyles from './profileStyles';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
 import { ChoiceSheet, ConfirmSheet } from './SettingsSheets';
+import PressableScale from '../../components/PressableScale';
 
 const CHOICE_TITLES = {
   pageMode: 'Page turning',
@@ -32,6 +34,7 @@ const SettingsScreen = () => {
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const isPlus = useSubscriptionStore((s) => s.isPlus);
 
   const [pageMode, setPageMode] = useReaderSetting('pageMode');
   const [pageTheme, setPageTheme] = useReaderSetting('pageTheme');
@@ -76,16 +79,25 @@ const SettingsScreen = () => {
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <ScrollView contentContainerStyle={profileStyles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.nav}>
-          <Pressable
+          <PressableScale
             onPress={() => navigation.goBack()}
-            style={({ pressed }) => [profileStyles.circleButton, pressed && profileStyles.pressed]}
+            style={profileStyles.circleButton}
             accessibilityLabel="Go back"
             accessibilityRole="button"
           >
             <Icon name="chevron-back" size={19} color={DS.colors.onSurface} />
-          </Pressable>
+          </PressableScale>
           <Text style={styles.title}>Settings</Text>
         </View>
+
+        <SettingsGroup title="ReadPanda+">
+          <SettingsRow
+            icon="sparkles-outline"
+            label="ReadPanda+"
+            value={isPlus ? 'Active' : 'Free plan'}
+            onPress={() => navigation.navigate('Paywall', { reason: 'settings' })}
+          />
+        </SettingsGroup>
 
         <SettingsGroup title="Reading">
           <SettingsRow

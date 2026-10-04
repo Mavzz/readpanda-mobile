@@ -87,6 +87,8 @@ PODS:
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
   - PromisesObjC (2.4.0)
+  - PurchasesHybridCommon (19.5.0):
+    - RevenueCat (= 5.92.0)
   - RCTDeprecation (0.84.1)
   - RCTRequired (0.84.1)
   - RCTSwiftUI (0.84.1)
@@ -1673,8 +1675,6 @@ PODS:
     - Yoga
   - react-native-splash-screen (3.3.0):
     - React-Core
-  - react-native-sqlite-storage (6.0.1):
-    - React-Core
   - React-NativeModulesApple (0.84.1):
     - hermes-engine
     - React-callinvoker
@@ -2060,6 +2060,7 @@ PODS:
     - React-utils (= 0.84.1)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.84.1)
+  - RevenueCat (5.92.0)
   - RNFBApp (23.8.6):
     - Firebase/CoreOnly (= 12.8.0)
     - hermes-engine
@@ -2108,7 +2109,54 @@ PODS:
     - ReactNativeDependencies
     - RNFBApp
     - Yoga
+  - RNGestureHandler (2.33.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNKeychain (10.0.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - RNPurchases (10.11.0):
+    - PurchasesHybridCommon (= 19.5.0)
+    - React-Core
+  - RNReactNativeHapticFeedback (3.0.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2443,7 +2491,6 @@ DEPENDENCIES:
   - react-native-pdf (from `../node_modules/react-native-pdf`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-splash-screen (from `../node_modules/react-native-splash-screen`)
-  - react-native-sqlite-storage (from `../node_modules/react-native-sqlite-storage`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -2480,7 +2527,10 @@ DEPENDENCIES:
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
+  - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
+  - RNPurchases (from `../node_modules/react-native-purchases`)
+  - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -2501,6 +2551,8 @@ SPEC REPOS:
     - GoogleUtilities
     - nanopb
     - PromisesObjC
+    - PurchasesHybridCommon
+    - RevenueCat
     - SwiftUIIntrospect
 
 EXTERNAL SOURCES:
@@ -2599,8 +2651,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-splash-screen:
     :path: "../node_modules/react-native-splash-screen"
-  react-native-sqlite-storage:
-    :path: "../node_modules/react-native-sqlite-storage"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -2673,8 +2723,14 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-firebase/app"
   RNFBMessaging:
     :path: "../node_modules/@react-native-firebase/messaging"
+  RNGestureHandler:
+    :path: "../node_modules/react-native-gesture-handler"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
+  RNPurchases:
+    :path: "../node_modules/react-native-purchases"
+  RNReactNativeHapticFeedback:
+    :path: "../node_modules/react-native-haptic-feedback"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2703,6 +2759,7 @@ SPEC CHECKSUMS:
   hermes-engine: b36465d92e3d367c3f2803c58d880767c8877f3f
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  PurchasesHybridCommon: da80a28f43fdfbf96dcb04c3aa2c6122b0e315d2
   RCTDeprecation: af44b104091a34482596cd9bd7e8d90c4e9b4bd7
   RCTRequired: bb77b070f75f53398ce43c0aaaa58337cebe2bf6
   RCTSwiftUI: afc0a0a635860da1040a0b894bfd529da06d7810
@@ -2747,7 +2804,6 @@ SPEC CHECKSUMS:
   react-native-pdf: 4713e2abf5c18c02cd6a54c00dcc1834fb7332ad
   react-native-safe-area-context: ae7587b95fb580d1800c5b0b2a7bd48c2868e67a
   react-native-splash-screen: 95994222cc95c236bd3cdc59fe45ed5f27969594
-  react-native-sqlite-storage: 0c84826214baaa498796c7e46a5ccc9a82e114ed
   React-NativeModulesApple: 5ba0903927f6b8d335a091700e9fda143980f819
   React-networking: 3a4b7f9ed2b2d1c0441beacb79674323a24bcca6
   React-oscompat: ff26abf0ae3e3fdbe47b44224571e3fc7226a573
@@ -2782,9 +2838,13 @@ SPEC CHECKSUMS:
   ReactCodegen: 797de5178718324c6eba3327b07f9a423fbd5787
   ReactCommon: 07572bf9e687c8a52fbe4a3641e9e3a1a477c78e
   ReactNativeDependencies: def6899a72017b7b7835736300985c5e5573efbe
+  RevenueCat: 39657b04641af73c29788b4bf2cf1acff52fd0dc
   RNFBApp: 0301a2330161b0a66bcec40bfd15152d85030e48
   RNFBMessaging: f96ec02d65bac046b87f814a451faafc282ccd40
+  RNGestureHandler: 1e791cd6c02c467d59d143a3e3fe35c5310cdb52
   RNKeychain: 667b7bd224f14055ae4cb52b41a82ad0ad70574f
+  RNPurchases: 2cc6a918e58254980bc1db0b293087a77b454e9a
+  RNReactNativeHapticFeedback: 9c16ffd4f6df9e6ca03cb81b33015e2d9b64e21a
   RNReanimated: 66fa99647173f254f731e6aa59a0a2cc8c838ac1
   RNScreens: 6cb648bdad8fe9bee9259fe144df95b6d1d5b707
   RNSVG: 507bf2685de6b3d49449efd4aae7e7471bb9c433

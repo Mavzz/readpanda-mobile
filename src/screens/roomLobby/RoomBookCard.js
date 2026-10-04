@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import BookCoverGradient from '../../components/BookCoverGradient';
-import lobbyStyles from './lobbyStyles';
 import { bookIdOf } from './roomLobbyFormat';
+import PressableScale from '../../components/PressableScale';
+import ProgressFill from '../../components/ProgressFill';
 
 // STATE B / C — the cover-led progress hero from § 1b. Tapping it starts (or
 // resumes) the book in the reader.
@@ -13,6 +14,7 @@ const RoomBookCard = ({
   bucket,
   upNext,
   shownPct,
+  progressKey,
   progressLabel,
   bookLocked,
   // Only the room's creator decides what it reads (the API enforces it too).
@@ -22,9 +24,9 @@ const RoomBookCard = ({
   onAddBucket,
 }) => (
   <>
-    <Pressable
+    <PressableScale
       onPress={onStartReading}
-      style={({ pressed }) => [styles.bookHero, pressed && lobbyStyles.pressed]}
+      style={styles.bookHero}
       accessibilityLabel={`Start reading ${bookTitle}`}
       accessibilityRole="button"
     >
@@ -40,11 +42,11 @@ const RoomBookCard = ({
         <Text style={styles.bookHeroTitle} numberOfLines={2}>{bookTitle}</Text>
         <Text style={styles.bookHeroMeta}>{progressLabel}</Text>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${shownPct}%` }]} />
+          <ProgressFill pct={shownPct} seenKey={progressKey} style={styles.progressFill} />
         </View>
       </View>
       <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
-    </Pressable>
+    </PressableScale>
 
     {bookLocked && (
       <View style={styles.lockedRow}>
@@ -68,12 +70,11 @@ const RoomBookCard = ({
             contentContainerStyle={styles.upNextRow}
           >
             {upNext.map((book) => (
-              <Pressable
+              <PressableScale
                 key={bookIdOf(book)}
                 onPress={() => onSwapBook(book)}
                 disabled={bookLocked || !canEdit}
-                style={({ pressed }) => [
-                  pressed && lobbyStyles.pressed,
+                style={[
                   (bookLocked || !canEdit) && styles.upNextLocked,
                 ]}
                 accessibilityLabel={bookLocked
@@ -91,7 +92,7 @@ const RoomBookCard = ({
                   borderRadius={10}
                   titleFontSize={7}
                 />
-              </Pressable>
+              </PressableScale>
             ))}
             <View style={styles.upNextChip}>
               <Text style={styles.upNextChipText}>{upNext.length} left</Text>
@@ -104,12 +105,12 @@ const RoomBookCard = ({
          Not once reading has started: picking a book from the new
          bucket is what changes the room's current book. */
       !bookLocked && canEdit && (
-        <Pressable
+        <PressableScale
           onPress={onAddBucket}
-          style={({ pressed }) => [styles.addBucket, pressed && lobbyStyles.pressed]}
+          style={styles.addBucket}
         >
           <Text style={styles.addBucketText}>Add a bucket</Text>
-        </Pressable>
+        </PressableScale>
       )
     )}
   </>

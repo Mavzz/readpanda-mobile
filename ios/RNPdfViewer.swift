@@ -1092,10 +1092,20 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             do {
-                let data = try Data(contentsOf: url)
+                // A book read before opens from disk: no download, and it
+                // works offline. Data(contentsOf:) skips URLCache entirely,
+                // so without this every open fetched the whole file again.
+                let cached = ManuscriptCache.read(url)
+                let data = try cached ?? Data(contentsOf: url)
                 guard let document = PDFDocument(data: data) else {
+                    if cached != nil {
+                        ManuscriptCache.remove(url)
+                    }
                     DispatchQueue.main.async { self?.fail("Failed to parse PDF data.") }
                     return
+                }
+                if cached == nil {
+                    ManuscriptCache.write(data, for: url)
                 }
                 DispatchQueue.main.async {
                     guard let self = self else {
@@ -1223,11 +1233,17 @@ private class ReaderStatusView: UIView {
         [spinner, icon, title, subtitle, retry].forEach { stack.addArrangedSubview($0) }
         addSubview(stack)
 
+        // The insets yield while the view is still zero-width (before the
+        // first layout pass), instead of UIKit breaking centerX and logging.
+        let leading = stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32)
+        let trailing = stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32)
+        leading.priority = .init(999)
+        trailing.priority = .init(999)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32),
+            leading,
+            trailing,
         ])
 
         show(.loading)
@@ -1279,5 +1295,78 @@ private class ReaderStatusView: UIView {
 
     @objc private func tapRetry() {
         onRetry?()
+    }
+}
+
+
+// MARK: - Manuscript cache
+
+/// Downloaded manuscripts, kept in Caches so iOS can reclaim the space under
+/// pressure. Keyed by host and path only: manuscript URLs are presigned, so
+/// the query string changes on every fetch while the file behind it doesn't.
+private enum ManuscriptCache {
+    /// Past this, the least recently opened books are dropped first.
+    static let maxBytes = 500 * 1024 * 1024
+
+    private static let directory: URL? = {
+        guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let dir = caches.appendingPathComponent("manuscripts", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    private static func file(for url: URL) -> URL? {
+        let key = "\(url.host ?? "")\(url.path)"
+        let name = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
+        return directory?.appendingPathComponent(name).appendingPathExtension("pdf")
+    }
+
+    static func read(_ url: URL) -> Data? {
+        guard let file = file(for: url), let data = try? Data(contentsOf: file) else {
+            return nil
+        }
+        // Mark it recently used, so pruning drops older books before this one.
+        try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
+        return data
+    }
+
+    static func write(_ data: Data, for url: URL) {
+        guard let file = file(for: url) else {
+            return
+        }
+        try? data.write(to: file, options: .atomic)
+        prune()
+    }
+
+    static func remove(_ url: URL) {
+        guard let file = file(for: url) else {
+            return
+        }
+        try? FileManager.default.removeItem(at: file)
+    }
+
+    private static func prune() {
+        guard
+            let dir = directory,
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]
+            )
+        else {
+            return
+        }
+        let entries = files.compactMap { file -> (URL, Int, Date)? in
+            guard let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]) else {
+                return nil
+            }
+            return (file, values.fileSize ?? 0, values.contentModificationDate ?? .distantPast)
+        }
+        var total = entries.reduce(0) { $0 + $1.1 }
+        for (file, size, _) in entries.sorted(by: { $0.2 < $1.2 }) where total > maxBytes {
+            try? FileManager.default.removeItem(at: file)
+            total -= size
+        }
     }
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { bookIdOf } from '../utils/bookId';
 import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
 import getInitials from '../utils/getInitials';
@@ -10,10 +11,6 @@ import { putReadingProgress, fetchRoomProgress, fetchMyProgress } from '../servi
 //
 // Member pace used to be a fixture here too. It now comes from
 // GET /room/{id}/progress — see fetchMemberProgress below.
-
-// Books reach us in two shapes: the manuscripts list uses `id`, everything
-// that came through a bucket or a room uses `book_id`.
-const bookIdOf = (book) => book?.book_id ?? book?.id;
 
 // The book a room is reading, in the shape startBook wants. /room/{id} returns
 // the whole record; /room/my-rooms only flattens a title and a cover.
@@ -156,9 +153,7 @@ const toShelfBook = (entry, remoteProgress) => {
 };
 
 const useReadingProgressStore = create((set, get) => ({
-  currentBook: null,
   progress: {},
-  recentBooks: [],
 
   // ── "Tonight" (Home) / Reading tab ───────────────────────────────────
   activeBook: null,
@@ -183,10 +178,12 @@ const useReadingProgressStore = create((set, get) => ({
   // Hydrates the Home hero / Reading tab from the real book the user last
   // opened (persisted with its cover_image_url by saveProgress). Leaves
   // activeBook null when nothing has been read — that's the 3a/3b first run.
+  // Always rebuilds the shelf too, so callers never need both.
   loadActiveBook: () => {
     const { activeBook } = get();
     if (activeBook) {
       set({ activeBookLoaded: true });
+      get().loadShelf();
       return;
     }
 
@@ -223,11 +220,6 @@ const useReadingProgressStore = create((set, get) => ({
       .map((entry) => toShelfBook(entry, remoteProgress))
       .sort((a, b) => b.lastReadAt - a.lastReadAt);
     set({ shelf });
-  },
-
-  setCurrentBook: (book) => {
-    log.info('Setting current book:', book?.title);
-    set({ currentBook: book });
   },
 
   // Makes a book the active one before a single page has been read — the
@@ -358,17 +350,6 @@ const useReadingProgressStore = create((set, get) => ({
     } catch (e) {
       log.error('Failed to load reading progress:', e);
       return null;
-    }
-  },
-
-  addToRecentBooks: (book) => {
-    const { recentBooks } = get();
-    const alreadyExists = recentBooks.some((b) => b.book_id === book.book_id);
-
-    if (!alreadyExists) {
-      const updated = [book, ...recentBooks].slice(0, 10);
-      set({ recentBooks: updated });
-      log.info('Added book to recent list:', book.title);
     }
   },
 
@@ -701,9 +682,7 @@ const useReadingProgressStore = create((set, get) => ({
   clearProgress: () => {
     log.info('Clearing reading progress');
     set({
-      currentBook: null,
       progress: {},
-      recentBooks: [],
       activeBook: null,
       memberProgress: [],
       remoteProgress: {},

@@ -1,6 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'react-native-linear-gradient';
 import { useEffect, useState } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -11,12 +10,16 @@ import useReadingProgressStore from '../stores/readingProgressStore';
 import enhancedStorage from '../utils/enhancedStorage';
 import relativeTime from '../utils/relativeTime';
 import log from '../utils/logger';
+import usePlusGate from '../hooks/usePlusGate';
+import PressableScale from '../components/PressableScale';
+import ProgressFill from '../components/ProgressFill';
 
 // § 4b — a book being read alone. Deliberately none of the room view's social
 // furniture: no "Where everyone is" track, no friend avatars, no comment feed,
 // no unlock copy. A solo book never renders an empty version of those.
 const SoloBookScreen = () => {
   const navigation = useNavigation();
+  const gate = usePlusGate();
   const route = useRoute();
   const bookId = route?.params?.bookId;
 
@@ -56,7 +59,7 @@ const SoloBookScreen = () => {
 
   // Create Room (2b), pre-seeded so the new room starts on this book and the
   // reader's progress carries straight over.
-  const startARoom = () => {
+  const startARoom = () => gate('rooms', () => {
     navigation.navigate('CreateRoomScreen', {
       seedBook: {
         book_id: book.id,
@@ -65,17 +68,17 @@ const SoloBookScreen = () => {
         manuscript_url: book.manuscriptUrl,
       },
     });
-  };
+  });
 
   const backButton = (
-    <Pressable
+    <PressableScale
       onPress={() => navigation.goBack()}
-      style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+      style={styles.backButton}
       accessibilityLabel="Go back"
       accessibilityRole="button"
     >
       <Icon name="chevron-back" size={19} color={DS.colors.onSurface} />
-    </Pressable>
+    </PressableScale>
   );
 
   // The book can be dropped while this screen is open. Fall back to the shelf
@@ -127,11 +130,11 @@ const SoloBookScreen = () => {
             <Text style={styles.paceWhen}>Last read {relativeTime(book.lastReadAt)}</Text>
           </View>
           <View style={styles.track}>
-            <LinearGradient
+            <ProgressFill
+              pct={Math.max(book.progressPct, book.started ? 2 : 0)}
+              seenKey={`book:${book.id}`}
               colors={[DS.colors.primary, DS.colors.secondary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.fill, { width: `${Math.max(book.progressPct, book.started ? 2 : 0)}%` }]}
+              style={styles.fill}
             />
           </View>
           {/* The handoff's "About {est} left at your usual pace" needs a
@@ -144,7 +147,7 @@ const SoloBookScreen = () => {
 
         <GradientPill onPress={continueReading} style={styles.cta}>
           <Text style={styles.ctaText}>
-            {book.started ? `Continue Page ${book.chapter}` : 'Start reading'}
+            {book.started ? `Continue page ${book.chapter}` : 'Start reading'}
           </Text>
         </GradientPill>
 
@@ -158,22 +161,20 @@ const SoloBookScreen = () => {
               Reading is better together — start a room with this book and your progress carries
               over.
             </Text>
-            <Pressable
+            <PressableScale
               onPress={startARoom}
-              style={({ pressed }) => pressed && styles.pressed}
               accessibilityRole="button"
             >
               <Text style={styles.upsellAction}>Start a room</Text>
-            </Pressable>
-            <Pressable
+            </PressableScale>
+            <PressableScale
               onPress={dismissUpsell}
               hitSlop={8}
-              style={({ pressed }) => pressed && styles.pressed}
               accessibilityLabel="Dismiss"
               accessibilityRole="button"
             >
               <Icon name="close" size={15} color={DS.colors.onSurfaceVariant} />
-            </Pressable>
+            </PressableScale>
           </View>
         )}
       </ScrollView>
@@ -333,9 +334,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: DS.font.bold,
     color: DS.colors.primary,
-  },
-  pressed: {
-    opacity: 0.85,
   },
 });
 

@@ -1,15 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { DS } from '../styles/global';
+import RollingCount from './RollingCount';
 
 const NotificationBadge = ({ count }) => {
   if (!count) return null;
 
   return (
     <View style={styles.badge}>
-      <Text style={styles.badgeText}>
-        {count > 99 ? '99+' : count}
-      </Text>
+      <RollingCount
+        value={count}
+        display={(n) => (n > 99 ? '99+' : String(n))}
+        style={styles.badgeText}
+      />
     </View>
   );
 };

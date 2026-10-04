@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, StatusBar, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
 import log from '../../utils/logger';
 import { DS } from '../../styles/global';
 import useAuthStore from '../../stores/authStore';
 import useRoomStore from '../../stores/roomStore';
+import usePlusGate from '../../hooks/usePlusGate';
 import useReadingProgressStore from '../../stores/readingProgressStore';
 import useHomeData from './useHomeData';
 import HomeHeader from './HomeHeader';
@@ -14,8 +14,11 @@ import RoomNudgeHero from './RoomNudgeHero';
 import FirstRunHero from './FirstRunHero';
 import RoomsTonight from './RoomsTonight';
 import CuratedForYou from './CuratedForYou';
+import HomeSkeleton from './HomeSkeleton';
+import { useSkeletonDelay } from '../../components/Skeleton';
 
 const Home = ({ navigation }) => {
+  const gate = usePlusGate();
   const user = useAuthStore((s) => s.user);
   const rooms = useRoomStore((s) => s.rooms);
   const roomsLoaded = useRoomStore((s) => s.roomsLoaded);
@@ -73,30 +76,32 @@ const Home = ({ navigation }) => {
     attachRoom(room, { force: true });
   };
 
+  // Home only shows curated buckets (first run), and those open 9b.
   const openBucket = (bucket) => {
-    navigation.navigate('BucketBooksScreen', {
-      books_preview: bucket.booksPreview,
-      name: bucket.name,
-      book_count: bucket.bookCount,
-      // Without the id the screen only ever has the 2-book preview.
-      bucket_id: bucket.id,
-      isCustom: !bucket.isCurated,
-    });
+    navigation.navigate('CuratedBucket', { bucketId: bucket.id, name: bucket.name });
   };
 
-  const browseBooks = () => navigation.navigate('LibraryScreen');
-  const createRoom = () => navigation.navigate('CreateRoomScreen');
+  const browseBooks = () => navigation.navigate('Discover');
+  const seeAllCurated = (bucketIds) => navigation.navigate('BookGrid', {
+    source: 'curatedForYou',
+    title: 'Curated for you',
+    bucketIds,
+  });
+  const createRoom = () => gate('rooms', () => navigation.navigate('CreateRoomScreen'));
   // Rooms tab with the invite-code field already focused.
   const joinByCode = () => navigation.navigate('Rooms', { focusCode: true });
+
+  // Until the shelf and rooms are in, the hero area has nothing true to say.
+  // A book already on the nightstand shows straight away.
+  const showSkeleton = useSkeletonDelay(!user || (!ready && !activeBook));
 
   if (!user) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-        <View style={styles.loadingContainer}>
-          <Icon name="book" size={48} color={DS.colors.primary} />
-          <Text style={styles.loadingText}>Loading your library...</Text>
-        </View>
+        <SafeAreaView style={styles.safeTop} edges={['top']}>
+          {showSkeleton ? <HomeSkeleton /> : null}
+        </SafeAreaView>
       </View>
     );
   }
@@ -124,6 +129,7 @@ const Home = ({ navigation }) => {
           />
         }
       >
+        {showSkeleton && !activeBook && <HomeSkeleton />}
         {activeBook && (
           <ContinueReadingHero activeBook={activeBook} onContinue={handleContinueReading} />
         )}
@@ -141,7 +147,12 @@ const Home = ({ navigation }) => {
           onOpenRoom={openRoom}
           onJoinByCode={joinByCode}
         />
-        <CuratedForYou isFirstRun={isFirstRun} onOpenBucket={openBucket} onSeeAll={browseBooks} />
+        {/* Curated buckets live in Discover now. A first-run reader still gets
+            them here — that's onboarding, not browsing — but a returning one
+            doesn't see browsing on Home. */}
+        {isFirstRun && (
+          <CuratedForYou isFirstRun onOpenBucket={openBucket} onSeeAll={seeAllCurated} />
+        )}
       </ScrollView>
     </View>
   );
@@ -157,17 +168,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    fontFamily: DS.font.regular,
-    color: DS.colors.onSurfaceVariant,
-    marginTop: 16,
   },
 });
 

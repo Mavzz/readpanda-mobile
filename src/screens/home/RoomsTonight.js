@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import homeStyles from './homeStyles';
+import PressableScale from '../../components/PressableScale';
 
 // "Your rooms tonight" chips. Until there is a room to show — and for a reader
 // who has a book but no rooms yet — the join-by-code row takes its place.
@@ -9,7 +10,7 @@ const RoomsTonight = ({ rooms, ready, onOpenRoom, onJoinByCode }) => {
   if (rooms.length > 0) {
     return (
       <View style={homeStyles.section}>
-        <Text style={homeStyles.sectionTitle}>Your rooms tonight</Text>
+        <Text style={homeStyles.sectionTitle}>Your rooms tonight · {rooms.length}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           {rooms.map((room) => (
             <TouchableOpacity
@@ -40,16 +41,16 @@ const RoomsTonight = ({ rooms, ready, onOpenRoom, onJoinByCode }) => {
 
   return (
     <View style={styles.joinRowWrap}>
-      <Pressable
+      <PressableScale
         onPress={onJoinByCode}
-        style={({ pressed }) => [styles.joinRow, pressed && homeStyles.pressed]}
+        style={styles.joinRow}
       >
         <View style={styles.joinIcon}>
           <Icon name="key-outline" size={15} color={DS.colors.primary} />
         </View>
         <Text style={styles.joinText}>Got an invite code from a friend?</Text>
         <Text style={styles.joinAction}>Join a room</Text>
-      </Pressable>
+      </PressableScale>
     </View>
   );
 };

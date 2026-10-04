@@ -1,19 +1,19 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
-import lobbyStyles from './lobbyStyles';
 import { roomAgeLabel } from './roomLobbyFormat';
+import PressableScale from '../../components/PressableScale';
 
 const LobbyHeader = ({ room, bookTitle, bucket, memberCount, onBack }) => (
   <View style={styles.header}>
-    <Pressable
+    <PressableScale
       onPress={onBack}
-      style={({ pressed }) => [styles.backButton, pressed && lobbyStyles.pressed]}
+      style={styles.backButton}
       accessibilityLabel="Go back"
       accessibilityRole="button"
     >
       <Icon name="chevron-back" size={19} color={DS.colors.onSurface} />
-    </Pressable>
+    </PressableScale>
     <View style={styles.headerText}>
       <Text style={styles.roomName} numberOfLines={1}>{room?.name ?? 'Room'}</Text>
       <Text style={styles.roomSubtitle} numberOfLines={1}>

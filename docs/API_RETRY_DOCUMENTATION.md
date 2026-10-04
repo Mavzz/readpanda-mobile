@@ -15,7 +15,7 @@ The ReadPanda mobile app now includes comprehensive retry capabilities for handl
 
 1. **`apiService.js`** - Centralized API service with retry logic
 2. **`authenticatedRequests.js`** - Helper functions that automatically include auth tokens
-3. **Updated HTTP services** - `useGet.js`, `usePost.js`, `usePut.js` now use the retry system
+3. **`usePost.js`** - `postRequest`, used by the sign-in calls in `auth.js`
 4. **Enhanced AuthContext** - Includes `refreshToken()` method for centralized token management
 
 ### Retry Configuration
@@ -28,19 +28,16 @@ retryDelay: 1000ms (exponential backoff)
 
 ## Usage Examples
 
-### 1. Basic HTTP Requests (Existing API - No Changes Required)
+### 1. Public Requests (no token)
 
-Your existing code continues to work without modifications:
+For calls made before sign-in:
 
 ```javascript
-import { getRequest } from '../services/useGet';
-import { postRequest } from '../services/usePost';
-import { putRequest } from '../services/usePut';
+import { makePublicGetRequest, makePublicPostRequest } from '../services/authenticatedRequests';
 
-// These now automatically include retry capabilities
-const response = await getRequest(url, headers);
-const postResponse = await postRequest(url, body, headers);
-const putResponse = await putRequest(url, body, headers);
+// Retries are built in
+const response = await makePublicGetRequest(url);
+const postResponse = await makePublicPostRequest(url, body);
 ```
 
 ### 2. Authenticated Requests (Recommended)
@@ -123,7 +120,7 @@ const MyComponent = () => {
 
 ### For Existing Code
 
-No changes required! Your existing `getRequest`, `postRequest`, and `putRequest` calls will automatically benefit from retry capabilities.
+Every request goes through `apiService`, so retries apply to all of them.
 
 ### For New Code
 
@@ -132,12 +129,12 @@ Consider using the authenticated request helpers:
 ```javascript
 // Instead of manually adding auth headers:
 const token = enhanceedStorage.getAuthToken();
-const response = await getRequest(url, {
+const response = await makePublicGetRequest(url, {
   'Authorization': `Bearer ${token}`
 });
 
 // Use the authenticated helper:
-const response = await authenticatedGetRequest(url);
+const response = await makeAuthenticatedGetRequest(url);
 ```
 
 ### For Components Using API Calls

@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import profileStyles from './profileStyles';
+import PressableScale from '../../components/PressableScale';
 
 const Sheet = ({ visible, onClose, children }) => (
   <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -48,20 +49,20 @@ export const ConfirmSheet = ({ visible, title, message, confirmLabel, destructiv
   <Sheet visible={visible} onClose={onClose}>
     <Text style={styles.title}>{title}</Text>
     {message ? <Text style={styles.message}>{message}</Text> : null}
-    <Pressable
+    <PressableScale
       onPress={onConfirm}
-      style={({ pressed }) => [styles.button, styles.confirmButton, pressed && profileStyles.pressed]}
+      style={[styles.button, styles.confirmButton]}
       accessibilityRole="button"
     >
       <Text style={[styles.buttonText, destructive && styles.destructiveText]}>{confirmLabel}</Text>
-    </Pressable>
-    <Pressable
+    </PressableScale>
+    <PressableScale
       onPress={onClose}
-      style={({ pressed }) => [styles.button, pressed && profileStyles.pressed]}
+      style={styles.button}
       accessibilityRole="button"
     >
       <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
-    </Pressable>
+    </PressableScale>
   </Sheet>
 );
 

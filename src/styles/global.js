@@ -24,6 +24,14 @@ export const DS = {
     // Text hierarchy
     onSurface: '#dae2fd',   // tertiary – main/display text
     onSurfaceVariant: '#d6c3b2',   // metadata, labels
+    body: '#c6cde8',               // running body copy (12a)
+    placeholder: '#8b93ad',        // input placeholders (12a)
+    disabled: '#5d6580',           // disabled text / not-yet-valid actions (12a)
+
+    // Strokes (12a): hairline only inside lists, inset to the text; the
+    // dashed stroke only for "create" slots.
+    hairline: '#1b2338',
+    createDash: '#2a3450',
 
     // Ghost border (use at 15% opacity)
     outlineVariant: '#514537',
@@ -56,6 +64,46 @@ export const DS = {
     // token mapping (hero card / comment cards don't fit the generic scale).
     hero: 28,
     comment: 20,
+    // 12a shape scale. New code should use these; sm/md/lg/xl predate it.
+    coverSmall: 8,
+    cover: 11,
+    tile: 20,
+    sheet: 28,
+    banner: 18,
+    pill: 9999,
+  },
+
+  // 12a type roles: spread into a style, e.g. { ...DS.type.rowTitle, color }.
+  type: {
+    pageTitle: { fontSize: 26, fontFamily: 'Manrope-ExtraBold', letterSpacing: -0.5 },
+    objectTitle: { fontSize: 22, fontFamily: 'Manrope-ExtraBold', letterSpacing: -0.4 },
+    sheetTitle: { fontSize: 17, fontFamily: 'Manrope-ExtraBold' },
+    modalNavTitle: { fontSize: 16, fontFamily: 'Manrope-ExtraBold' },
+    rowTitle: { fontSize: 14, fontFamily: 'Manrope-ExtraBold' },
+    body: { fontSize: 13, fontFamily: 'Manrope-Medium', lineHeight: 19.5 },
+    tileTitle: { fontSize: 13, fontFamily: 'Manrope-ExtraBold' },
+    meta: { fontSize: 12, fontFamily: 'Manrope-SemiBold' },
+    eyebrow: {
+      fontSize: 11,
+      fontFamily: 'Manrope-Bold',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+  },
+
+  // 12a space scale.
+  space: {
+    gutter: 24,
+    topBarGutter: 20,
+    section: 24,
+    headerToContent: 10,
+    listGap: 10,
+  },
+
+  // 12a hit targets.
+  size: {
+    iconButton: 38,
+    minHit: 44,
   },
 
   spacing: {

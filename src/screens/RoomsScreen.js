@@ -16,13 +16,18 @@ import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
 import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
+import usePlusGate from '../hooks/usePlusGate';
 import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
+import haptics from '../utils/haptics';
+import ProgressFill from '../components/ProgressFill';
+import RollingCount from '../components/RollingCount';
 
 // Merges the old Join Room + My Rooms tabs — invite-only clubs, one place.
 // See design_handoff_redesign § 1c.
 const RoomsScreen = () => {
   const navigation = useNavigation();
+  const gate = usePlusGate();
   const route = useRoute();
   const rooms = useRoomStore((s) => s.rooms);
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
@@ -77,7 +82,7 @@ const RoomsScreen = () => {
   );
 
   const handleCreateRoom = () => {
-    navigation.navigate('CreateRoomScreen');
+    gate('rooms', () => navigation.navigate('CreateRoomScreen'));
   };
 
   const handleJoinRoom = async () => {
@@ -90,6 +95,7 @@ const RoomsScreen = () => {
     const { status, response, error } = await joinRoomByCode(code);
     if (status === 200) {
       setInviteCode('');
+      haptics.success();
       showToast(`Joined ${response.name}`, 'success');
       navigation.navigate('RoomLobbyScreen', { room: response });
     } else {
@@ -120,7 +126,8 @@ const RoomsScreen = () => {
           <Text style={styles.roomName} numberOfLines={1}>{room.name}</Text>
           {room.unreadCount > 0 && (
             <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>{room.unreadCount} new</Text>
+              <RollingCount value={room.unreadCount} style={styles.newBadgeText} />
+              <Text style={styles.newBadgeText}> new</Text>
             </View>
           )}
         </View>
@@ -145,7 +152,7 @@ const RoomsScreen = () => {
             ))}
           </View>
           <View style={styles.groupTrack}>
-            <View style={[styles.groupFill, { width: `${room.groupProgressPct}%` }]} />
+            <ProgressFill pct={room.groupProgressPct} seenKey={`room:${room.id}`} style={styles.groupFill} />
           </View>
         </View>
       </View>
@@ -191,7 +198,7 @@ const RoomsScreen = () => {
                   value={inviteCode}
                   onChangeText={(t) => setInviteCode(t.toUpperCase())}
                   placeholder="Enter invite code"
-                  placeholderTextColor={DS.colors.onSurfaceVariant}
+                  placeholderTextColor={DS.colors.placeholder}
                   maxLength={6}
                   autoCapitalize="characters"
                   autoCorrect={false}
@@ -328,6 +335,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   newBadge: {
+    flexDirection: 'row',
     backgroundColor: DS.colors.primaryContainer,
     borderRadius: DS.radius.full,
     paddingHorizontal: 8,
