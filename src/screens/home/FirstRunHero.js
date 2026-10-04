@@ -1,4 +1,4 @@
-import { Text, StyleSheet, Pressable } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import useAuthStore from '../../stores/authStore';
@@ -7,6 +7,7 @@ import useFirstRunRecommendation from '../../hooks/useFirstRunRecommendation';
 import { topInterest } from '../../utils/interests';
 import HeroCard from './HeroCard';
 import homeStyles from './homeStyles';
+import PressableScale from '../../components/PressableScale';
 
 // 3a (FIRST_RUN_3a_3b.md) — no book and no rooms: recommend a first book from
 // the reader's top interest, and offer a room as the other way in.
@@ -25,13 +26,13 @@ const FirstRunHero = ({ onBrowse, onCreateRoom }) => {
       ctaLabel="Browse books"
       onCta={onBrowse}
       footer={(
-        <Pressable
+        <PressableScale
           onPress={onCreateRoom}
-          style={({ pressed }) => [styles.secondaryPill, pressed && homeStyles.pressed]}
+          style={styles.secondaryPill}
         >
           <Icon name="people-outline" size={16} color={DS.colors.primary} />
           <Text style={styles.secondaryPillText}>Start a room with friends</Text>
-        </Pressable>
+        </PressableScale>
       )}
     >
       <Text style={homeStyles.heroSubtitle} numberOfLines={1}>

@@ -4,9 +4,6 @@ import enhancedStorage from './enhancedStorage';
 // The reader's own choices from Settings (PROFILE_SETTINGS_7a_7b.md § 7b).
 // Kept per account in MMKV next to the other preferences, and read
 // synchronously so the reader opens in the right mode on its first frame.
-//
-// Values are stored as strings: getUserPreference falls back on any falsy
-// value, so a stored `false` would read back as the default.
 export const READER_SETTINGS = {
   pageMode: {
     key: 'reader_page_mode',

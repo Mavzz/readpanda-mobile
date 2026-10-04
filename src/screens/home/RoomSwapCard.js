@@ -1,16 +1,16 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import BookCoverGradient from '../../components/BookCoverGradient';
-import homeStyles from './homeStyles';
+import PressableScale from '../../components/PressableScale';
 
 // "Your room is reading something else" — an offer, deliberately quieter than
 // the hero it sits under. The hero stays the reader's own; this is an explicit
 // swap, never taken automatically.
 const RoomSwapCard = ({ room, onSwitch }) => (
-  <Pressable
+  <PressableScale
     onPress={() => onSwitch(room)}
-    style={({ pressed }) => [styles.swapCard, pressed && homeStyles.pressed]}
+    style={styles.swapCard}
   >
     <BookCoverGradient
       coverUrl={room.coverUrl}
@@ -27,7 +27,7 @@ const RoomSwapCard = ({ room, onSwitch }) => (
       <Text style={styles.swapBody}>Read this instead — your place here is kept</Text>
     </View>
     <Icon name="chevron-forward" size={18} color={DS.colors.primary} />
-  </Pressable>
+  </PressableScale>
 );
 
 const styles = StyleSheet.create({

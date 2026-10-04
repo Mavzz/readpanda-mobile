@@ -3,11 +3,19 @@ import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
 import useReadingProgressStore from './readingProgressStore';
 import useCommentsStore from './commentsStore';
-import useRoomStore from './roomStore';
-import useBucketsStore from './bucketsStore';
+import useRoomStore, { hydrateRooms } from './roomStore';
+import useBucketsStore, { hydrateBuckets } from './bucketsStore';
 import useBooksStore from './booksStore';
 import useNotificationStore from './notificationStore';
 import useHighlightsStore from './highlightsStore';
+import useSubscriptionStore from './subscriptionStore';
+
+// What this account's Home and My Books showed last time, read back once
+// storage knows whose it is.
+const hydrateCaches = () => {
+  hydrateRooms();
+  hydrateBuckets();
+};
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -21,6 +29,8 @@ const useAuthStore = create((set, get) => ({
       const authData = enhancedStorage.getAuthData();
 
       if (authData && authData.token && authData.userProfile) {
+        hydrateCaches();
+        useSubscriptionStore.getState().start(authData.userProfile.username);
         set({
           user: authData.userProfile,
           token: authData.token,
@@ -47,6 +57,8 @@ const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
       });
       enhancedStorage.storeAuthData(userData);
+      hydrateCaches();
+      useSubscriptionStore.getState().start(userData.userDetails?.username);
     } catch (e) {
       log.error('Failed to save user data', e);
     }
@@ -67,6 +79,7 @@ const useAuthStore = create((set, get) => ({
       useBooksStore.getState().clearBooks();
       useNotificationStore.getState().clearNotifications();
       useHighlightsStore.getState().clearHighlights();
+      useSubscriptionStore.getState().stop();
       log.info('User signed out');
     } catch (e) {
       log.error('Failed to clear user data', e);

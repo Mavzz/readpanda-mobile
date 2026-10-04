@@ -1,8 +1,9 @@
 import useBooksStore from '../stores/booksStore';
+import { bookIdOf, sameId } from './bookId';
 
 // The manuscripts list uses `id`; the reader keys everything on `book_id`.
 const toReaderBook = (book) => ({
-  book_id: book.book_id ?? book.id,
+  book_id: bookIdOf(book),
   title: book.title,
   cover_image_url: book.cover_image_url || null,
   manuscript_url: book.manuscript_url || null,
@@ -15,7 +16,7 @@ const findReaderBook = async (bookId) => {
   if (!bookId) {
     return null;
   }
-  const matches = (b) => String(b.book_id ?? b.id) === String(bookId);
+  const matches = (b) => sameId(bookIdOf(b), bookId);
   let book = useBooksStore.getState().books.find(matches);
   if (!book) {
     await useBooksStore.getState().fetchBooks();
@@ -24,4 +25,5 @@ const findReaderBook = async (bookId) => {
   return book ? toReaderBook(book) : null;
 };
 
+export { toReaderBook };
 export default findReaderBook;

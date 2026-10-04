@@ -3,6 +3,7 @@ import { Linking } from 'react-native';
 import { showToast } from '../components/Toaster';
 import useRoomStore from '../stores/roomStore';
 import log from '../utils/logger';
+import haptics from '../utils/haptics';
 
 // The QR on Room Detail encodes readpanda://join/{CODE}. Joining is an API
 // call, not just a screen, so the link is handled here rather than through
@@ -41,6 +42,7 @@ const useInviteDeepLink = ({ isAuthenticated, navigationRef }) => {
       handling.current = false;
 
       if (status === 200) {
+        haptics.success();
         showToast(`Joined ${response.name}`, 'success');
         // RoomLobbyScreen lives inside the authenticated "Main" navigator, so
         // the root ref has to address it through that.

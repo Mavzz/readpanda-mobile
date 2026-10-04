@@ -65,7 +65,7 @@ const SearchBar = () => {
         onChangeText={setSearchText}
         placeholder="Search books..."
         style={styles.input}
-        placeholderTextColor={DS.colors.onSurfaceVariant}
+        placeholderTextColor={DS.colors.placeholder}
         onFocus={handleFocus}
         onBlur={handleBlur}
         returnKeyType="search"

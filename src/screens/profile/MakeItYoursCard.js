@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
+import ProgressFill from '../../components/ProgressFill';
 
 const GRADIENT = [DS.colors.primary, DS.colors.primaryContainer];
 
@@ -19,11 +20,11 @@ const MakeItYoursCard = ({ steps }) => {
         <Text style={styles.count}>{done} of {steps.length}</Text>
       </View>
       <View style={styles.track}>
-        <LinearGradient
+        <ProgressFill
+          pct={(done / steps.length) * 100}
+          seenKey="profile:setup"
           colors={GRADIENT}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.fill, { width: `${(done / steps.length) * 100}%` }]}
+          style={styles.fill}
         />
       </View>
 

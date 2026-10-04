@@ -1,9 +1,9 @@
-import { Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { Text, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import { showToast } from '../../components/Toaster';
 import useRoomStore from '../../stores/roomStore';
-import lobbyStyles from './lobbyStyles';
+import PressableScale from '../../components/PressableScale';
 
 // The creator deletes the room; everyone else can only leave it. Either way
 // the room is gone from this reader's view, so `onGone` takes them out.
@@ -59,9 +59,9 @@ const DangerZone = ({ room, iAmCreator, onGone }) => {
   };
 
   return (
-    <Pressable
+    <PressableScale
       onPress={iAmCreator ? handleDeleteRoom : handleLeaveRoom}
-      style={({ pressed }) => [styles.dangerAction, pressed && lobbyStyles.pressed]}
+      style={styles.dangerAction}
     >
       <Icon
         name={iAmCreator ? 'trash-outline' : 'exit-outline'}
@@ -71,7 +71,7 @@ const DangerZone = ({ room, iAmCreator, onGone }) => {
       <Text style={styles.dangerActionText}>
         {iAmCreator ? 'Delete room' : 'Leave room'}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 };
 

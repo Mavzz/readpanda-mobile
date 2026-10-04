@@ -44,16 +44,31 @@ These hold keys, so they're gitignored and never in the repo:
 
 ### 4. Point the app at a backend
 
+There are two environments, each in its own gitignored file:
+
+| File | App talks to |
+|---|---|
+| `.env.dev` | `http://<Local_IP>:3000/api/v1`, a backend on your machine (`BACKEND_URL` empty) |
+| `.env.prod` | `https://readpanda-backend-439290157125.asia-south1.run.app/api/v1`, production on Cloud Run |
+
+Create both from the template (see the comments in `.env.example`):
+
 ```bash
-cp .env.example .env
+cp .env.example .env.dev
+cp .env.example .env.prod   # then set BACKEND_URL to the Cloud Run URL
 ```
 
-`src/utils/Helper.js` builds every API URL from these values:
+Switch between them with:
 
-| `.env` | App talks to |
-|---|---|
-| `BACKEND_URL=` (empty) | `http://<Local_IP>:3000/api/v1`, a backend on your machine |
-| `BACKEND_URL=https://readpanda-backend-439290157125.asia-south1.run.app` | Production on Cloud Run |
+```bash
+yarn start:dev     # use .env.dev and start Metro with a clean cache
+yarn start:prod    # use .env.prod and start Metro with a clean cache
+```
+
+Both copy the chosen file over `.env`, the one file the app reads
+(`src/utils/Helper.js` builds every API URL from it), and print which backend
+is now active. `yarn env:dev` / `yarn env:prod` switch without starting Metro,
+for example before an Xcode build.
 
 - Leave `/api/v1` off `BACKEND_URL`: `API_VERSION` is appended automatically.
 - With a local backend, `Local_IP` depends on where the app runs: `localhost`
@@ -61,14 +76,20 @@ cp .env.example .env
   LAN IP for a physical phone.
 - To run the backend locally, see `packages/api-go/README.md` in the
   [readpanda](https://github.com/Mavzz/readpanda) repo.
+- Don't edit `.env` directly; the next switch overwrites it. Edit `.env.dev`
+  or `.env.prod`.
+- Don't name an environment `.env.local`: `react-native-dotenv` always loads
+  that file on top of `.env`, whichever environment you picked.
 
-**The values are compiled in.** After editing `.env`, restart Metro with
-`yarn start --reset-cache`, or the app keeps the old values.
+**The values are compiled in.** Metro has to restart with a clean cache after
+a switch. `start:dev` / `start:prod` do that; if Metro is already running,
+stop it first. The app you already installed doesn't need rebuilding, it just
+reloads.
 
 ### 5. Run
 
 ```bash
-yarn start --reset-cache    # terminal 1: Metro
+yarn start:dev              # terminal 1: Metro, against your local backend
 yarn ios                    # terminal 2: builds, installs and opens the simulator
 ```
 

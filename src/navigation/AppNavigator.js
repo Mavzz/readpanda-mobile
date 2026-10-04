@@ -34,9 +34,14 @@ const linking = {
       },
       Main: {
         screens: {
-          Home: 'Home',
-          Reading: 'Reading',
-          Rooms: 'Rooms',
+          Tabs: {
+            screens: {
+              Home: 'Home',
+              Discover: 'Discover',
+              MyBooks: 'MyBooks',
+              Rooms: 'Rooms',
+            },
+          },
           Profile: 'Profile',
         },
       },

@@ -5,6 +5,8 @@ import { makeAuthenticatedGetRequest, makeAuthenticatedPostRequest, makeAuthenti
 import useReadingProgressStore from './readingProgressStore';
 import enhancedStorage from '../utils/enhancedStorage';
 import getInitials from '../utils/getInitials';
+import { bookIdOf } from '../utils/bookId';
+import persistSlice from './persistSlice';
 
 // GET /room/my-rooms and GET /room/{id} return members as
 // { user_id, username, role, joined_at, progress_pct }. The API doesn't flag
@@ -226,7 +228,7 @@ const useRoomStore = create((set, get) => ({
       const { status, response } = await makeAuthenticatedPatchRequest(
         getBackendUrl(`/room/${roomId}/reading`),
         {
-          current_book_id: currentBook?.book_id ?? currentBook?.id ?? null,
+          current_book_id: bookIdOf(currentBook) ?? null,
           bucket_id: bucket?.id ?? null,
           bucket_type: bucket?.type ?? (bucket ? 'user' : null),
         },
@@ -360,5 +362,13 @@ const useRoomStore = create((set, get) => ({
     set({ rooms: [], activeRoom: null, participants: [], roomsLoaded: false });
   },
 }));
+
+// Last launch's rooms show at once, and count as loaded only if there were
+// some: an empty list could be a stale "no rooms yet", so Home still waits
+// for the fetch before showing the first-run state.
+export const hydrateRooms = persistSlice(useRoomStore, 'rooms', {
+  pick: (s) => ({ rooms: s.rooms }),
+  restore: ({ rooms }) => ({ rooms: rooms || [], roomsLoaded: (rooms || []).length > 0 }),
+});
 
 export default useRoomStore;

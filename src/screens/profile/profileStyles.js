@@ -13,10 +13,6 @@ const profileStyles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 40,
   },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
   // The 38pt back / gear buttons in both screens' nav rows.
   circleButton: {
     width: 38,

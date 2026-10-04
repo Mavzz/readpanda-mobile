@@ -107,7 +107,7 @@ const SignUp = ({ navigation }) => {
           placeholder="Username"
           value={username}
           onChangeText={setUsername}
-          placeholderTextColor={DS.colors.onSurfaceVariant}
+          placeholderTextColor={DS.colors.placeholder}
           autoCapitalize="none"
         />
         <TextInput
@@ -116,7 +116,7 @@ const SignUp = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
-          placeholderTextColor={DS.colors.onSurfaceVariant}
+          placeholderTextColor={DS.colors.placeholder}
           autoCapitalize="none"
         />
         <TextInput
@@ -124,7 +124,7 @@ const SignUp = ({ navigation }) => {
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
-          placeholderTextColor={DS.colors.onSurfaceVariant}
+          placeholderTextColor={DS.colors.placeholder}
           autoCapitalize="none"
           secureTextEntry
         />
@@ -133,7 +133,7 @@ const SignUp = ({ navigation }) => {
           placeholder="Confirm Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          placeholderTextColor={DS.colors.onSurfaceVariant}
+          placeholderTextColor={DS.colors.placeholder}
           autoCapitalize="none"
           secureTextEntry
         />

@@ -28,8 +28,6 @@ const lastRoomKey = (bookId) => `commentRoom:${bookId}`;
 
 const ManuscriptScreen = ({ route, navigation }) => {
   const { book } = route.params;
-  const setCurrentBook = useReadingProgressStore((s) => s.setCurrentBook);
-  const addToRecentBooks = useReadingProgressStore((s) => s.addToRecentBooks);
   const saveProgress = useReadingProgressStore((s) => s.saveProgress);
   const loadProgress = useReadingProgressStore((s) => s.loadProgress);
   const shelf = useReadingProgressStore((s) => s.shelf);
@@ -111,15 +109,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
     );
   }, [book, saveProgress]);
 
-  useEffect(() => {
-    setCurrentBook(book);
-    addToRecentBooks(book);
-
-    return () => {
-      persistPosition();
-      setCurrentBook(null);
-    };
-  }, [book, setCurrentBook, addToRecentBooks, persistPosition]);
+  useEffect(() => () => persistPosition(), [persistPosition]);
 
   // Unmount alone isn't enough: a reader who swipes the app away from the
   // switcher never unmounts this screen. 'inactive' is the last event iOS
