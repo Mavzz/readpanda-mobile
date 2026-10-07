@@ -57,6 +57,10 @@ const normalizeRoom = (room) => ({
   unreadCount: room.unread_count || 0,
   groupProgressPct: room.group_progress_pct ?? 0,
   status: room.status || null,
+  // The room's reading schedule ({ target_page, due_at, start_page }) — what
+  // the deadline widgets count down to (WIDGETS_13a_13f.md 13b). The API
+  // doesn't send one yet; until it does, the widgets show their solo faces.
+  schedule: room.schedule || null,
 });
 
 // Fixture used by the Home/Rooms redesign (1a/1c) so the screens have

@@ -38,11 +38,16 @@ enum WTheme {
     static let primaryContainer = Color(hex: 0xffb95f)
     static let onSurface = Color(hex: 0xdae2fd)
     static let onSurfaceVariant = Color(hex: 0xd6c3b2)
+    static let track = Color(hex: 0x060d20)
+    /// 13d's room panel.
+    static let panel = Color(hex: 0x171f33)
 
+    /// WIDGETS_13a_13f.md: linear-gradient(135deg, #131b2e, #0b1326), shared
+    /// by every face. The system clips it to the widget's corner radius.
     static let background = LinearGradient(
-        colors: [Color(hex: 0x171f33), Color(hex: 0x0b1326)],
-        startPoint: .top,
-        endPoint: .bottom
+        colors: [Color(hex: 0x131b2e), Color(hex: 0x0b1326)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
     )
 
     static func font(_ name: String, _ size: CGFloat) -> Font {
@@ -89,47 +94,56 @@ struct CoverArt: View {
     }
 }
 
-/// Height 5, pill, surface track, primary gradient fill that never shrinks
-/// below a visible nub — and an optional tick for the room median.
+/// Pill, #060d20 track, primary gradient fill that never shrinks below a
+/// visible nub — and an optional tick for the room median or target. 3–5pt
+/// high (WIDGETS_13a_13f.md "Tokens"). Fixed size, so Dynamic Type never moves
+/// it.
 struct ProgressTrack: View {
     let fraction: Double
     var tick: Double?
+    var height: CGFloat = 5
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(WTheme.surfaceContainerHighest)
+                Capsule().fill(WTheme.track)
                 Capsule()
                     .fill(LinearGradient(
                         colors: [WTheme.primary, WTheme.primaryContainer],
                         startPoint: .leading,
                         endPoint: .trailing
                     ))
-                    .frame(width: max(10, geo.size.width * clamp(fraction)))
+                    .frame(width: min(geo.size.width, max(minFill, geo.size.width * clamp(fraction))))
                 if let tick {
                     Rectangle()
-                        .fill(WTheme.onSurface.opacity(0.6))
-                        .frame(width: 2, height: 9)
+                        .fill(WTheme.onSurface)
+                        .frame(width: 2, height: 10)
                         .offset(x: geo.size.width * clamp(tick) - 1)
                 }
             }
-            .frame(height: 5)
+            .frame(height: height)
             .frame(maxHeight: .infinity, alignment: .center)
         }
-        .frame(height: 9)
+        .frame(height: tick == nil ? height : 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityValue("\(Int((clamp(fraction) * 100).rounded())) percent")
     }
+
+    private var minFill: CGFloat { height >= 5 ? 10 : 8 }
 
     private func clamp(_ value: Double) -> Double {
         min(1, max(0, value))
     }
 }
 
-/// Shown only for a streak of three days or more — absence is never punished.
+/// Shown only for a streak of three days or more on 5a — absence is never
+/// punished. 13a shows any streak above zero.
 struct StreakFlame: View {
     let days: Int
+    var minimum = 3
 
     var body: some View {
-        if days >= 3 {
+        if days >= max(1, minimum) {
             HStack(spacing: 3) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 11, weight: .bold))

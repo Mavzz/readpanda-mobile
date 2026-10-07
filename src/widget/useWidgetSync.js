@@ -4,12 +4,14 @@ import useAuthStore from '../stores/authStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useRoomStore from '../stores/roomStore';
 import useCommentsStore from '../stores/commentsStore';
+import useBucketsStore from '../stores/bucketsStore';
 import log from '../utils/logger';
 import { buildWidgetState } from './widgetState';
 
-// Keeps the home-screen widget in step with the app (WIDGET_5a_5b.md,
-// "Timeline & states"). Whenever the stores behind it change — a progress
-// save, rooms loading, comments arriving — the state is rebuilt and handed to
+// Keeps the widgets in step with the app (WIDGET_5a_5b.md "Timeline & states",
+// WIDGETS_13a_13f.md "Timeline"). Whenever the stores behind them change — a
+// progress save, a room or its schedule changing, a comment unlocking, a
+// bucket edited — the state is rebuilt and handed to
 // WidgetBridge, which writes it to the App Group and reloads the widget.
 // Leaving the app flushes immediately, since that's when progress was just
 // saved and the widget is about to be seen.
@@ -56,6 +58,7 @@ const useWidgetSync = ({ isAuthenticated }) => {
       useReadingProgressStore.subscribe(schedule),
       useRoomStore.subscribe(schedule),
       useCommentsStore.subscribe(schedule),
+      useBucketsStore.subscribe(schedule),
     ];
     const appState = AppState.addEventListener('change', (state) => {
       if (state === 'background') {

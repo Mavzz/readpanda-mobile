@@ -50,9 +50,9 @@ const PdfViewer = ({
   }, [onPageChanged]);
 
   const handleLoadComplete = useCallback((e) => {
-    const { totalPages, fileHash } = e.nativeEvent;
-    log.info(`PDF loaded: ${bookTitle} — ${totalPages} pages`);
-    onLoadComplete?.(totalPages, fileHash);
+    const { totalPages, fileHash, chapters } = e.nativeEvent;
+    log.info(`PDF loaded: ${bookTitle} — ${totalPages} pages, ${chapters?.length || 0} chapters`);
+    onLoadComplete?.(totalPages, fileHash, chapters || []);
   }, [bookTitle, onLoadComplete]);
 
   const handleError = useCallback((e) => {

@@ -1199,8 +1199,35 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         onLoadComplete?([
             "totalPages": document.pageCount,
             "fileHash": documentHash,
+            "chapters": Self.chapterStarts(in: document),
         ])
         scheduleOverlayRefresh()
+    }
+
+    /// The first page (0-based) of each chapter, from the PDF's outline — what
+    /// the widgets' "Ch. 2" and chapter gauge are measured against. Many books
+    /// nest their chapters under a single root entry (the title, or "Contents"),
+    /// so a lone top-level entry is looked through. Empty when the PDF has no
+    /// usable outline; the widgets then speak in pages.
+    static func chapterStarts(in document: PDFDocument) -> [Int] {
+        guard var level = document.outlineRoot else {
+            return []
+        }
+        while level.numberOfChildren == 1, let only = level.child(at: 0), only.numberOfChildren > 1 {
+            level = only
+        }
+        var starts = Set<Int>()
+        for i in 0..<level.numberOfChildren {
+            guard let page = level.child(at: i)?.destination?.page else {
+                continue
+            }
+            let index = document.index(for: page)
+            if index >= 0, index < document.pageCount {
+                starts.insert(index)
+            }
+        }
+        // Two entries or fewer isn't a table of contents worth counting in.
+        return starts.count >= 2 ? starts.sorted() : []
     }
 }
 

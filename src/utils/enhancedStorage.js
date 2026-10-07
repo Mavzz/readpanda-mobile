@@ -175,6 +175,61 @@ class EnhancedStorage {
     return streak;
   }
 
+  // ── Chapters (the widgets' "Ch. 2") ───────────────────────────────────
+  // The first page (0-based) of each chapter, as the reader found it in the
+  // PDF's outline. Kept per book apart from the position, so a save that
+  // rewrites the position can't drop it.
+  bookChaptersKey() {
+    return this.scopedKey('book_chapters');
+  }
+
+  setBookChapters(bookId, chapters) {
+    const all = StorageService.getItem(this.bookChaptersKey()) || {};
+    const next = Array.isArray(chapters) && chapters.length >= 2 ? chapters : null;
+    if (JSON.stringify(all[bookId] || null) === JSON.stringify(next)) {
+      return;
+    }
+    const updated = { ...all };
+    if (next) {
+      updated[bookId] = next;
+    } else {
+      delete updated[bookId];
+    }
+    StorageService.setItem(this.bookChaptersKey(), updated);
+  }
+
+  getBookChapters(bookId) {
+    return (StorageService.getItem(this.bookChaptersKey()) || {})[bookId] || null;
+  }
+
+  // ── Reading pace (the widgets' "3 h left") ────────────────────────────
+  // Running totals of time spent on pages the reader actually read through,
+  // halved whenever they get large so the pace follows how they read now.
+  readingPaceKey() {
+    return this.scopedKey('reading_pace');
+  }
+
+  recordReadingPace(seconds, pages) {
+    if (!(seconds > 0) || !(pages > 0)) {
+      return;
+    }
+    const pace = StorageService.getItem(this.readingPaceKey()) || { seconds: 0, pages: 0 };
+    let next = { seconds: pace.seconds + seconds, pages: pace.pages + pages };
+    if (next.pages > 400) {
+      next = { seconds: next.seconds / 2, pages: next.pages / 2 };
+    }
+    StorageService.setItem(this.readingPaceKey(), next);
+  }
+
+  // Minutes per page, or null until there are enough pages to say honestly.
+  getPaceMinPerPage() {
+    const pace = StorageService.getItem(this.readingPaceKey());
+    if (!pace || pace.pages < 10) {
+      return null;
+    }
+    return pace.seconds / 60 / pace.pages;
+  }
+
   getCurrentReadingPosition() {
     const { lastBookId, books } = this.getReadingPositions();
     return (lastBookId && books[lastBookId]) || null;

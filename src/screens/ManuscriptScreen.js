@@ -16,6 +16,7 @@ import enhancedStorage from '../utils/enhancedStorage';
 import { getReaderSetting } from '../utils/readerSettings';
 import { showToast } from '../components/Toaster';
 import { DS } from '../styles/global';
+import WidgetOpenMorph from '../widget/WidgetOpenMorph';
 
 // The reader itself lives in ios/RNPdfViewer.swift — page, chrome, scrubber,
 // highlights, gutter and thread sheet. What is left here is the wiring the
@@ -31,6 +32,12 @@ const lastRoomKey = (bookId) => `commentRoom:${bookId}`;
 // publishes it. Long enough that dragging the scrubber or flicking through
 // pages costs one request at the end rather than one per page.
 const UNLOCK_SETTLE_MS = 1500;
+
+// A page turned forward after this long counts toward the reader's pace (the
+// widgets' "3 h left"). Quicker is skimming or scrubbing; slower is the phone
+// left on the nightstand.
+const PACE_MIN_SECONDS = 5;
+const PACE_MAX_SECONDS = 10 * 60;
 
 const ManuscriptScreen = ({ route, navigation }) => {
   const { book } = route.params;
@@ -83,10 +90,12 @@ const ManuscriptScreen = ({ route, navigation }) => {
     if (roomId || shelfRooms.length === 0) {
       return;
     }
+    // A widget tap asks for a particular room's layer (WIDGETS_13a_13f.md).
+    const requested = route.params?.roomId;
     const remembered = enhancedStorage.getUserPreference(lastRoomKey(book.book_id));
-    const match = shelfRooms.find((r) => r.id === remembered);
+    const match = shelfRooms.find((r) => r.id === requested) || shelfRooms.find((r) => r.id === remembered);
     setRoomId(match?.id || shelfRooms[0].id);
-  }, [shelfRooms, roomId, book.book_id]);
+  }, [shelfRooms, roomId, book.book_id, route.params?.roomId]);
 
   const entry = byBook[book.book_id];
   const threads = useMemo(() => entry?.threads || [], [entry]);
@@ -101,7 +110,16 @@ const ManuscriptScreen = ({ route, navigation }) => {
   // (inactive, then background) doesn't write and publish the same page twice.
   const lastSavedRef = useRef(null);
 
+  // The last page turn, and the reading time not yet written to storage.
+  const lastTurnRef = useRef(null);
+  const paceRef = useRef({ seconds: 0, pages: 0 });
+
   const persistPosition = useCallback(() => {
+    const pace = paceRef.current;
+    if (pace.pages > 0) {
+      enhancedStorage.recordReadingPace(pace.seconds, pace.pages);
+      paceRef.current = { seconds: 0, pages: 0 };
+    }
     const currentPage = currentPageRef.current;
     const totalPages = totalPagesRef.current;
     const last = lastSavedRef.current;
@@ -192,6 +210,16 @@ const ManuscriptScreen = ({ route, navigation }) => {
     currentPageRef.current = page;
     totalPagesRef.current = total;
 
+    const now = Date.now();
+    const last = lastTurnRef.current;
+    if (last && page === last.page + 1) {
+      const seconds = (now - last.at) / 1000;
+      if (seconds >= PACE_MIN_SECONDS && seconds <= PACE_MAX_SECONDS) {
+        paceRef.current = { seconds: paceRef.current.seconds + seconds, pages: paceRef.current.pages + 1 };
+      }
+    }
+    lastTurnRef.current = { page, at: now };
+
     const entry = useCommentsStore.getState().byBook[book.book_id];
     if (roomId && entry?.lockedCount > 0 && page > (entry.furthestPage || 0)) {
       clearTimeout(unlockTimerRef.current);
@@ -199,10 +227,11 @@ const ManuscriptScreen = ({ route, navigation }) => {
     }
   }, [roomId, book.book_id, unlockReachedComments]);
 
-  const handleLoadComplete = useCallback((total, hash) => {
+  const handleLoadComplete = useCallback((total, hash, chapters) => {
     totalPagesRef.current = total;
     fileHashRef.current = hash || '';
-  }, []);
+    enhancedStorage.setBookChapters(book.book_id, chapters);
+  }, [book.book_id]);
 
   const handleError = useCallback((message) => {
     log.error(`PDF error for ${book.title}: ${message}`);
@@ -349,6 +378,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         onCreateHighlight={handleCreateHighlight}
         onRemoveHighlight={handleRemoveHighlight}
       />
+      {route.params?.fromWidget ? <WidgetOpenMorph book={book} /> : null}
 
       {/* Only asked when the book really is in more than one room. */}
       <PickerSheet

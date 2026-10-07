@@ -5,27 +5,39 @@ import enhancedStorage from '../utils/enhancedStorage';
 import findReaderBook from '../utils/readerBook';
 import log from '../utils/logger';
 
-// Taps on the home-screen widget (WIDGET_5a_5b.md). The whole widget is one
-// link:
-//   readpanda://read/{bookId}?page={p}  → the reader (5a)
-//   readpanda://room/{roomId}           → Room Detail (5b)
-//   readpanda://library                 → Discover (empty state, 3a)
+// Taps on the widgets (WIDGET_5a_5b.md, WIDGETS_13a_13f.md):
+//   readpanda://read/{bookId}?page={p}&room={roomId}
+//                                         → the reader; `room` turns that
+//                                           room's comment layer on (13b, 13d)
+//   readpanda://room/{roomId}             → Room Detail (5b)
+//   readpanda://book/{bookId}?title=…     → Book detail (13e's covers)
+//   readpanda://bucket/{id}?kind=curated|user&name=…
+//                                         → the bucket (13d's Up next)
+//   readpanda://library                   → Discover (empty states)
 //
 // The reader reopens at the book's saved position, which is the page the
 // widget was showing, so `page` isn't needed to get there.
 
-const WIDGET_LINK_RE = /^readpanda:\/\/(read|room|library)(?:\/([^/?#]+))?\/?(?:[?#].*)?$/;
+const WIDGET_LINK_RE = /^readpanda:\/\/(read|room|library|book|bucket)(?:\/([^/?#]+))?\/?(?:\?([^#]*))?(?:#.*)?$/;
+
+const parseQuery = (query) => Object.fromEntries((query || '')
+  .split('&')
+  .filter(Boolean)
+  .map((pair) => {
+    const [key, value = ''] = pair.split('=');
+    return [decodeURIComponent(key), decodeURIComponent(value.replace(/\+/g, ' '))];
+  }));
 
 export const parseWidgetLink = (url) => {
   const match = WIDGET_LINK_RE.exec((url || '').trim());
   if (!match) {
     return null;
   }
-  const [, kind, id] = match;
+  const [, kind, id, query] = match;
   if (kind !== 'library' && !id) {
     return null;
   }
-  return { kind, id: id ? decodeURIComponent(id) : null };
+  return { kind, id: id ? decodeURIComponent(id) : null, params: parseQuery(query) };
 };
 
 // The reader needs the book's manuscript URL. The stored reading position has
@@ -62,7 +74,30 @@ const useWidgetDeepLink = ({ isAuthenticated, navigationRef }) => {
       if (link.kind === 'read') {
         const book = await bookFor(link.id);
         if (book) {
-          whenReady(() => navigationRef.current?.navigate('Main', { screen: 'ManuscriptScreen', params: { book } }));
+          whenReady(() => navigationRef.current?.navigate('Main', {
+            screen: 'ManuscriptScreen',
+            params: { book, roomId: link.params.room || null, fromWidget: true },
+          }));
+        }
+      } else if (link.kind === 'book') {
+        // Book detail renders from a seed and fetches the rest by id.
+        const book = { book_id: link.id, title: link.params.title || '' };
+        whenReady(() => navigationRef.current?.navigate('Main', { screen: 'BookDetail', params: { book } }));
+      } else if (link.kind === 'bucket') {
+        const name = link.params.name || '';
+        if (link.params.kind === 'curated') {
+          whenReady(() => navigationRef.current?.navigate('Main', {
+            screen: 'CuratedBucket',
+            params: { bucketId: link.id, name },
+          }));
+        } else {
+          whenReady(() => navigationRef.current?.navigate('Main', {
+            screen: 'Tabs',
+            params: {
+              screen: 'MyBooks',
+              params: { screen: 'MyBucket', initial: false, params: { bucketId: link.id, name } },
+            },
+          }));
         }
       } else if (link.kind === 'room') {
         // RoomLobbyScreen fetches the full detail from the id.
