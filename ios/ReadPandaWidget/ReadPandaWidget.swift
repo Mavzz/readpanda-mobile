@@ -10,6 +10,9 @@
 //  saves, backgrounding, new comments). Between those, hourly entries keep the
 //  time-aware copy honest ("Tonight's chapter" shouldn't still say so at 9am).
 //
+//  Between books (WIDGETS_13a_13f.md 13e) replaces 5a for three days after a
+//  book is finished, when nothing else is on the go.
+//
 
 import AppIntents
 import SwiftUI
@@ -26,33 +29,6 @@ enum WidgetFace: String, AppEnum {
         .continueReading: "Continue reading",
         .roomPulse: "Room pulse",
     ]
-}
-
-struct RoomEntity: AppEntity {
-    let id: String
-    let name: String
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Room"
-    static var defaultQuery = RoomQuery()
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(name)")
-    }
-}
-
-/// The rooms the app last wrote — pinning offers exactly what the widget can show.
-struct RoomQuery: EntityQuery {
-    func entities(for identifiers: [String]) async throws -> [RoomEntity] {
-        allRooms().filter { identifiers.contains($0.id) }
-    }
-
-    func suggestedEntities() async throws -> [RoomEntity] {
-        allRooms()
-    }
-
-    private func allRooms() -> [RoomEntity] {
-        (WidgetState.load().rooms ?? []).map { RoomEntity(id: $0.id, name: $0.name) }
-    }
 }
 
 struct ReadPandaWidgetIntent: WidgetConfigurationIntent {
@@ -95,7 +71,7 @@ struct ReadPandaProvider: AppIntentTimelineProvider {
         // The widget gallery shows real data when there is some, and the
         // sample otherwise, so the preview never looks broken.
         let state = WidgetState.load()
-        let shown = context.isPreview && state.currentBook == nil ? .sample : state
+        let shown = context.isPreview && state.shelf.isEmpty ? .sample : state
         return ReadPandaEntry(date: .now, state: shown, face: configuration.face, pinnedRoomId: configuration.room?.id)
     }
 
@@ -129,24 +105,22 @@ struct ReadPandaWidgetView: View {
         let state = entry.state
         if entry.face == .roomPulse, let room = state.pulseRoom(pinnedId: entry.pinnedRoomId) {
             RoomPulseFace(room: room)
-                .widgetURL(URL(string: "readpanda://room/\(encoded(room.id))"))
+                .widgetURL(WidgetLink.room(room))
         } else if let book = state.currentBook {
             // Room pulse with no rooms falls back to the book rather than an
             // empty card.
             ContinueReadingFace(book: book, streak: state.streakDays, date: entry.date)
-                .widgetURL(URL(string: "readpanda://read/\(encoded(book.id))?page=\(max(0, book.currentPage - 1))"))
+                .widgetURL(WidgetLink.reader(book))
+        } else if let finished = state.betweenBooks(at: entry.date) {
+            let picks = state.nextPicks(after: finished)
+            BetweenBooksFace(finished: finished, label: picks.label, picks: picks.books, date: entry.date)
         } else {
             StartReadingFace()
-                .widgetURL(URL(string: "readpanda://library"))
+                .widgetURL(WidgetLink.library)
         }
-    }
-
-    private func encoded(_ value: String) -> String {
-        value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value
     }
 }
 
-@main
 struct ReadPandaWidget: Widget {
     let kind = "ReadPandaWidget"
 
@@ -162,48 +136,11 @@ struct ReadPandaWidget: Widget {
     }
 }
 
-// MARK: - Sample (gallery preview and placeholder)
-
-extension WidgetState {
-    static let sample = WidgetState(
-        currentBook: WidgetBook(
-            id: "sample",
-            title: "Data Mining",
-            page: 31,
-            totalPages: 746,
-            lastReadAt: Date().timeIntervalSince1970 * 1000,
-            roomId: "sample-room",
-            coverFile: nil,
-            duotone: ["#2e3a54", "#151d32"],
-            friendAhead: FriendAhead(name: "Grace", pagesAhead: 24)
-        ),
-        streak: 6,
-        rooms: [
-            WidgetRoom(
-                id: "sample-room",
-                name: "AI Learning",
-                bookId: "sample",
-                bookTitle: "Data Mining",
-                coverFile: nil,
-                duotone: ["#2e3a54", "#151d32"],
-                memberInitials: ["G", "M", "R"],
-                unlockedUnreadCount: 3,
-                teaser: Teaser(author: "Grace", text: "page 29 gets wild…"),
-                myPage: 31,
-                medianPage: 118,
-                totalPages: 746,
-                lastActivityAt: nil,
-                leader: FriendAhead(name: "Grace", pagesAhead: 24)
-            ),
-        ],
-        updatedAt: nil
-    )
-}
-
 #Preview(as: .systemMedium) {
     ReadPandaWidget()
 } timeline: {
     ReadPandaEntry(date: .now, state: .sample, face: .continueReading, pinnedRoomId: nil)
     ReadPandaEntry(date: .now, state: .sample, face: .roomPulse, pinnedRoomId: nil)
+    ReadPandaEntry(date: .now, state: .sampleBetweenBooks, face: .continueReading, pinnedRoomId: nil)
     ReadPandaEntry(date: .now, state: .empty, face: .continueReading, pinnedRoomId: nil)
 }

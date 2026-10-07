@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9FAE6CC80457E4347C0D0596 /* WidgetSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */; };
+		567112E6988F15F08C7C6EEE /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */; };
+		C4A654855CB132C19F9C1FC8 /* WidgetFaces13.swift in Sources */ = {isa = PBXBuildFile; fileRef = D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */; };
+		49752B6790F9F9AA9EBC2BCC /* LockScreenFaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952D78843981E3FB592E7A0D /* LockScreenFaces.swift */; };
+		A21980F153DBE1DB1BCA3087 /* Widgets13.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0738B9046DF08956A9ED1D50 /* Widgets13.swift */; };
+		3ACD955F969C70EDB70A0EAF /* WidgetSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */; };
 		063E89BF1012E5BD1EE8FA5A /* WidgetCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */; };
 		0A9C25F22E5DBFFC00F1734F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0A9C25F12E5DBFFC00F1734F /* GoogleService-Info.plist */; };
 		0AC96C182E5259E800C72562 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AC96C172E5259E800C72562 /* PDFKit.framework */; };
@@ -66,6 +72,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSelection.swift; sourceTree = "<group>"; };
+		E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
+		D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetFaces13.swift; sourceTree = "<group>"; };
+		952D78843981E3FB592E7A0D /* LockScreenFaces.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LockScreenFaces.swift; sourceTree = "<group>"; };
+		0738B9046DF08956A9ED1D50 /* Widgets13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Widgets13.swift; sourceTree = "<group>"; };
+		0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSamples.swift; sourceTree = "<group>"; };
 		01E4145AF4470B1C955EDC22 /* WidgetState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetState.swift; sourceTree = "<group>"; };
 		0305DA42206041BAB933A98C /* Manrope-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Regular.ttf"; path = "../src/assets/fonts/Manrope-Regular.ttf"; sourceTree = "<group>"; };
 		035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Medium.ttf"; path = "../src/assets/fonts/Manrope-Medium.ttf"; sourceTree = "<group>"; };
@@ -214,6 +226,12 @@
 				DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */,
 				49E8EC0CD2E349134101080E /* WidgetTheme.swift */,
 				31D61C4CA21B7A7533420458 /* WidgetFaces.swift */,
+				81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */,
+				E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */,
+				D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */,
+				952D78843981E3FB592E7A0D /* LockScreenFaces.swift */,
+				0738B9046DF08956A9ED1D50 /* Widgets13.swift */,
+				0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */,
 				1C8124D92774C4B8369CF03F /* Assets.xcassets */,
 				B7E4CF0D210CDB8ED23E5EBC /* Info.plist */,
 				2EE3D61D7ABF0F64F2F908E3 /* ReadPandaWidget.entitlements */,
@@ -445,6 +463,12 @@
 				063E89BF1012E5BD1EE8FA5A /* WidgetCopy.swift in Sources */,
 				738C9C1C2842C918407FE593 /* WidgetTheme.swift in Sources */,
 				DA5C1AD847DF1BE5669AB236 /* WidgetFaces.swift in Sources */,
+				9FAE6CC80457E4347C0D0596 /* WidgetSelection.swift in Sources */,
+				567112E6988F15F08C7C6EEE /* WidgetIntents.swift in Sources */,
+				C4A654855CB132C19F9C1FC8 /* WidgetFaces13.swift in Sources */,
+				49752B6790F9F9AA9EBC2BCC /* LockScreenFaces.swift in Sources */,
+				A21980F153DBE1DB1BCA3087 /* Widgets13.swift in Sources */,
+				3ACD955F969C70EDB70A0EAF /* WidgetSamples.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

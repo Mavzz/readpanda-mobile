@@ -26,7 +26,8 @@ class WidgetBridge: NSObject {
     private static let stateFile = "widget-state.json"
     private static let coversFolder = "Covers"
     /// Plenty for a 104pt-wide cover at 3x, and small enough for the widget's
-    /// memory limit.
+    /// memory limit — a few dozen of these across the faces is still well
+    /// under it.
     private static let coverMaxPixels = 360
 
     /// Writes happen in order, off the main thread.
@@ -69,33 +70,39 @@ class WidgetBridge: NSObject {
         let covers = container.appendingPathComponent(Self.coversFolder)
         try? FileManager.default.createDirectory(at: covers, withIntermediateDirectories: true)
 
-        var root = (state as? [String: Any]) ?? [:]
         var missing: [(url: URL, file: String)] = []
+        var referenced: [String] = []
 
-        // Point each record at its cached cover, noting the ones still to fetch.
-        func attachCover(_ record: [String: Any]) -> [String: Any] {
-            var record = record
+        // Every record anywhere in the state with a `coverUrl` — books, rooms,
+        // the covers in a bucket — is pointed at its cached cover, and the ones
+        // still to fetch are noted.
+        func attachCovers(_ value: Any) -> Any {
+            if let list = value as? [Any] {
+                return list.map(attachCovers)
+            }
+            guard var record = value as? [String: Any] else {
+                return value
+            }
+            for (key, child) in record where child is [Any] || child is [String: Any] {
+                record[key] = attachCovers(child)
+            }
             guard let raw = record["coverUrl"] as? String, !raw.isEmpty, let url = URL(string: raw) else {
                 return record
             }
             let file = Self.coverFileName(for: raw)
             if FileManager.default.fileExists(atPath: covers.appendingPathComponent(file).path) {
                 record["coverFile"] = file
+                referenced.append(file)
             } else if !missing.contains(where: { $0.file == file }) {
                 missing.append((url: url, file: file))
             }
             return record
         }
 
-        if let book = root["currentBook"] as? [String: Any] {
-            root["currentBook"] = attachCover(book)
-        }
-        if let rooms = root["rooms"] as? [[String: Any]] {
-            root["rooms"] = rooms.map(attachCover)
-        }
+        let root = (attachCovers((state as? [String: Any]) ?? [:]) as? [String: Any]) ?? [:]
 
         save(root, to: container)
-        pruneCovers(in: covers, keeping: Self.referencedCovers(in: root) + missing.map { $0.file })
+        pruneCovers(in: covers, keeping: referenced + missing.map { $0.file })
 
         guard !missing.isEmpty else {
             return
@@ -133,19 +140,6 @@ class WidgetBridge: NSObject {
     private static func coverFileName(for url: String) -> String {
         let digest = SHA256.hash(data: Data(url.utf8)).map { String(format: "%02x", $0) }.joined()
         return String(digest.prefix(24)) + ".jpg"
-    }
-
-    private static func referencedCovers(in root: [String: Any]) -> [String] {
-        var files: [String] = []
-        if let file = (root["currentBook"] as? [String: Any])?["coverFile"] as? String {
-            files.append(file)
-        }
-        for room in (root["rooms"] as? [[String: Any]]) ?? [] {
-            if let file = room["coverFile"] as? String {
-                files.append(file)
-            }
-        }
-        return files
     }
 
     /// Covers for books no longer on the widget are dropped, so the container

@@ -39,7 +39,10 @@ const normalizeRoom = (room) => ({
   createdAt: room.created_at,
   updatedAt: room.updated_at,
   adminId: room.admin_id,
-  currentBookId: room.current_book_id,
+  // GET /room/{id} (and /room/join, which returns the same) nests the book
+  // rather than flattening its id. Without the fallback, merging a detail into
+  // `rooms` wiped the id the list had and Home lost track of the room's book.
+  currentBookId: room.current_book_id ?? room.current_book?.book_id ?? null,
   currentBucketId: room.current_bucket_id,
   currentBookTitle: room.current_book?.title || room.current_book_title || null,
   coverUrl: room.current_book?.cover_image_url || room.current_book_cover_url || null,
@@ -54,6 +57,10 @@ const normalizeRoom = (room) => ({
   unreadCount: room.unread_count || 0,
   groupProgressPct: room.group_progress_pct ?? 0,
   status: room.status || null,
+  // The room's reading schedule ({ target_page, due_at, start_page }) — what
+  // the deadline widgets count down to (WIDGETS_13a_13f.md 13b). The API
+  // doesn't send one yet; until it does, the widgets show their solo faces.
+  schedule: room.schedule || null,
 });
 
 // Fixture used by the Home/Rooms redesign (1a/1c) so the screens have
@@ -185,7 +192,18 @@ const useRoomStore = create((set, get) => ({
         // Joining a room that is already reading something is an unambiguous
         // signal: adopt its book if the reader has none, or pick the room's
         // social layer back up if they're already reading it on their own.
-        useReadingProgressStore.getState().attachRoom(joined, { adopt: true });
+        //
+        // /room/join returns the full Room Detail, book included. An older API
+        // returned only the room row — no book, so nothing to adopt — and the
+        // join must still land, so ask for the detail in that case.
+        let room = joined;
+        if (!room.currentBookId) {
+          const detail = await get().fetchRoomDetail(joined.id);
+          if (detail.status === 200) {
+            room = detail.response;
+          }
+        }
+        useReadingProgressStore.getState().attachRoom(room, { adopt: true });
         return { status: 200, response: joined };
       }
 

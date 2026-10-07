@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { requireNativeComponent, Platform } from 'react-native';
 import log from '../utils/logger';
 
@@ -40,15 +40,19 @@ const PdfViewer = ({
   onCreateHighlight,
   onRemoveHighlight,
 }) => {
+  useEffect(() => {
+    log.info(`PdfViewer initialPage for ${bookTitle}: ${initialPage} (sent to native: ${initialPage || 0})`);
+  }, [bookTitle, initialPage]);
+
   const handlePageChanged = useCallback((e) => {
     const { currentPage, totalPages } = e.nativeEvent;
     onPageChanged?.(currentPage, totalPages);
   }, [onPageChanged]);
 
   const handleLoadComplete = useCallback((e) => {
-    const { totalPages, fileHash } = e.nativeEvent;
-    log.info(`PDF loaded: ${bookTitle} — ${totalPages} pages`);
-    onLoadComplete?.(totalPages, fileHash);
+    const { totalPages, fileHash, chapters } = e.nativeEvent;
+    log.info(`PDF loaded: ${bookTitle} — ${totalPages} pages, ${chapters?.length || 0} chapters`);
+    onLoadComplete?.(totalPages, fileHash, chapters || []);
   }, [bookTitle, onLoadComplete]);
 
   const handleError = useCallback((e) => {

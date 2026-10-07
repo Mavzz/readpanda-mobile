@@ -22,7 +22,7 @@ const linking = {
   // Invite and widget links are handled by their own hooks (they need an API
   // call or a store lookup first). Left to React Navigation, their paths would
   // be turned into routes that don't exist.
-  filter: (url) => !/^readpanda:\/\/(join|read|room|library)\b/.test(url),
+  filter: (url) => !/^readpanda:\/\/(join|read|room|library|book|bucket)\b/.test(url),
   config: {
     screens: {
       Auth: {

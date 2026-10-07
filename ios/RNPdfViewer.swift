@@ -111,7 +111,7 @@ class PassthroughView: UIView {
     }
 }
 
-class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRecognizerDelegate {
+class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSheetDelegate, UIGestureRecognizerDelegate {
 
     /// The passage a comment can be anchored to is capped to the same length
     /// the API accepts, so a runaway drag can't produce a write the server
@@ -173,6 +173,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
     /// passes through on the way (page 0 first, then the target), and passing
     /// those on made the scrubber jump about and reported page 0 to JS.
     private var isRepositioning = false
+    /// Set when a document has gone in but the jump to `initialPage` hasn't
+    /// been made yet — see `showDocument(_:)`.
+    private var needsInitialJump = false
 
     // Comments are blue and personal highlights yellow: a pair that stays
     // distinct for the common colour-vision deficiencies. Commented passages
@@ -235,6 +238,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
         pageContainer.addSubview(status)
 
         scrubber.isHidden = true
+        scrubber.delegate = self
         addSubview(scrubber)
 
         sheet.delegate = self
@@ -349,6 +353,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
         sheet.frame = bounds
 
         scheduleOverlayRefresh()
+        applyInitialJumpIfReady()
     }
 
     // MARK: - Props
@@ -375,6 +380,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
 
     @objc var initialPage: NSNumber? {
         didSet {
+            NSLog("[RNPdfViewer] initialPage set: %@ (document loaded: %@)",
+                  initialPage?.stringValue ?? "nil",
+                  pdfView.document == nil ? "no" : "yes")
             goToPage(initialPage?.intValue ?? 0)
         }
     }
@@ -562,6 +570,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
 
     func readerHeaderDidTapSearch(_ header: ReaderHeaderView) {
         onSearch?([:])
+    }
+
+    // MARK: - Scrubber
+
+    /// "N waiting behind you" — take the reader to the earliest one in the
+    /// book. Opening it marks it read, so tapping again moves on to the next.
+    func readerScrubberDidTapWaiting(_ scrubber: ReaderScrubberView) {
+        guard let thread = parsedThreads
+            .filter({ $0.unreadCount > 0 })
+            .min(by: { $0.page < $1.page }) else {
+            return
+        }
+        openThread(anchorKey: thread.anchorKey)
     }
 
     // MARK: - Selection
@@ -1061,9 +1082,50 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
             pageIndex < document.pageCount,
             let page = document.page(at: pageIndex)
         else {
+            NSLog("[RNPdfViewer] goToPage(%ld) skipped (document loaded: %@, pageCount: %ld)",
+                  pageIndex,
+                  pdfView.document == nil ? "no" : "yes",
+                  pdfView.document?.pageCount ?? 0)
             return
         }
+        NSLog("[RNPdfViewer] goToPage(%ld) of %ld", pageIndex, document.pageCount)
         pdfView.go(to: page)
+    }
+
+    /// Puts a freshly loaded document in and queues the jump to the saved
+    /// page. The jump can't be made here: the scrubber appearing (and React
+    /// Native's own sizing) resizes the PDFView in the next layout pass, and
+    /// with autoScales on PDFKit re-lays the document out then and lands back
+    /// on page 1. Page reports stay held until the jump, so page 1 never
+    /// reaches JS as progress.
+    private func showDocument(_ document: PDFDocument) {
+        isRepositioning = true
+        needsInitialJump = true
+        pdfView.document = document
+        setNeedsLayout()
+    }
+
+    /// Makes the queued jump once the PDFView has its real size. Deferred one
+    /// more turn of the run loop so PDFKit has finished its own layout of the
+    /// resized view first.
+    private func applyInitialJumpIfReady() {
+        guard needsInitialJump,
+            pdfView.document != nil,
+            pdfView.bounds.width > 0,
+            pdfView.bounds.height > 0
+        else {
+            return
+        }
+        needsInitialJump = false
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                return
+            }
+            // Read now rather than when queued, in case JS changed it since.
+            self.goToPage(self.initialPage?.intValue ?? 0)
+            self.isRepositioning = false
+            self.reportPage(force: true)
+        }
     }
 
     private func reload() {
@@ -1079,10 +1141,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
 
         if url.isFileURL {
             if let data = try? Data(contentsOf: url), let document = PDFDocument(data: data) {
-                reposition {
-                    pdfView.document = document
-                    goToPage(initialPage?.intValue ?? 0)
-                }
+                showDocument(document)
                 notifyLoadComplete(document: document, data: data)
             } else {
                 fail("Failed to load local PDF file.")
@@ -1111,10 +1170,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
                     guard let self = self else {
                         return
                     }
-                    self.reposition {
-                        self.pdfView.document = document
-                        self.goToPage(self.initialPage?.intValue ?? 0)
-                    }
+                    self.showDocument(document)
                     self.notifyLoadComplete(document: document, data: data)
                 }
             } catch {
@@ -1143,8 +1199,35 @@ class RNPdfView: UIView, ReaderHeaderDelegate, CommentSheetDelegate, UIGestureRe
         onLoadComplete?([
             "totalPages": document.pageCount,
             "fileHash": documentHash,
+            "chapters": Self.chapterStarts(in: document),
         ])
         scheduleOverlayRefresh()
+    }
+
+    /// The first page (0-based) of each chapter, from the PDF's outline — what
+    /// the widgets' "Ch. 2" and chapter gauge are measured against. Many books
+    /// nest their chapters under a single root entry (the title, or "Contents"),
+    /// so a lone top-level entry is looked through. Empty when the PDF has no
+    /// usable outline; the widgets then speak in pages.
+    static func chapterStarts(in document: PDFDocument) -> [Int] {
+        guard var level = document.outlineRoot else {
+            return []
+        }
+        while level.numberOfChildren == 1, let only = level.child(at: 0), only.numberOfChildren > 1 {
+            level = only
+        }
+        var starts = Set<Int>()
+        for i in 0..<level.numberOfChildren {
+            guard let page = level.child(at: i)?.destination?.page else {
+                continue
+            }
+            let index = document.index(for: page)
+            if index >= 0, index < document.pageCount {
+                starts.insert(index)
+            }
+        }
+        // Two entries or fewer isn't a table of contents worth counting in.
+        return starts.count >= 2 ? starts.sorted() : []
     }
 }
 

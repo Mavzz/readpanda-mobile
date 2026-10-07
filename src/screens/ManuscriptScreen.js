@@ -11,10 +11,12 @@ import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import useRoomStore from '../stores/roomStore';
 import useHighlightsStore from '../stores/highlightsStore';
+import { putReadingProgress } from '../services/progressService';
 import enhancedStorage from '../utils/enhancedStorage';
 import { getReaderSetting } from '../utils/readerSettings';
 import { showToast } from '../components/Toaster';
 import { DS } from '../styles/global';
+import WidgetOpenMorph from '../widget/WidgetOpenMorph';
 
 // The reader itself lives in ios/RNPdfViewer.swift — page, chrome, scrubber,
 // highlights, gutter and thread sheet. What is left here is the wiring the
@@ -25,6 +27,17 @@ import { DS } from '../styles/global';
 // the reader picks once and the choice sticks, rather than being asked on every
 // selection.
 const lastRoomKey = (bookId) => `commentRoom:${bookId}`;
+
+// How long a page has to stay put before reading past the spoiler line
+// publishes it. Long enough that dragging the scrubber or flicking through
+// pages costs one request at the end rather than one per page.
+const UNLOCK_SETTLE_MS = 1500;
+
+// A page turned forward after this long counts toward the reader's pace (the
+// widgets' "3 h left"). Quicker is skimming or scrubbing; slower is the phone
+// left on the nightstand.
+const PACE_MIN_SECONDS = 5;
+const PACE_MAX_SECONDS = 10 * 60;
 
 const ManuscriptScreen = ({ route, navigation }) => {
   const { book } = route.params;
@@ -53,6 +66,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   // jumped back and then forward again.
   const savedProgress = useMemo(() => loadProgress(book.book_id), [loadProgress, book.book_id]);
   const initialPage = savedProgress?.currentPage || 0;
+  log.info(`ManuscriptScreen initial page for ${book.title}: ${initialPage}`);
   const [pageMode] = useState(() => getReaderSetting('pageMode'));
   // Seeded from the saved position, not 0: a save that lands before the PDF
   // reports its first page (backgrounding right after opening) must not send
@@ -76,10 +90,12 @@ const ManuscriptScreen = ({ route, navigation }) => {
     if (roomId || shelfRooms.length === 0) {
       return;
     }
+    // A widget tap asks for a particular room's layer (WIDGETS_13a_13f.md).
+    const requested = route.params?.roomId;
     const remembered = enhancedStorage.getUserPreference(lastRoomKey(book.book_id));
-    const match = shelfRooms.find((r) => r.id === remembered);
+    const match = shelfRooms.find((r) => r.id === requested) || shelfRooms.find((r) => r.id === remembered);
     setRoomId(match?.id || shelfRooms[0].id);
-  }, [shelfRooms, roomId, book.book_id]);
+  }, [shelfRooms, roomId, book.book_id, route.params?.roomId]);
 
   const entry = byBook[book.book_id];
   const threads = useMemo(() => entry?.threads || [], [entry]);
@@ -94,7 +110,16 @@ const ManuscriptScreen = ({ route, navigation }) => {
   // (inactive, then background) doesn't write and publish the same page twice.
   const lastSavedRef = useRef(null);
 
+  // The last page turn, and the reading time not yet written to storage.
+  const lastTurnRef = useRef(null);
+  const paceRef = useRef({ seconds: 0, pages: 0 });
+
   const persistPosition = useCallback(() => {
+    const pace = paceRef.current;
+    if (pace.pages > 0) {
+      enhancedStorage.recordReadingPace(pace.seconds, pace.pages);
+      paceRef.current = { seconds: 0, pages: 0 };
+    }
     const currentPage = currentPageRef.current;
     const totalPages = totalPagesRef.current;
     const last = lastSavedRef.current;
@@ -136,17 +161,77 @@ const ManuscriptScreen = ({ route, navigation }) => {
     loadHighlights(book.book_id);
   }, [book.book_id, loadHighlights]);
 
-  // Page position is the reader's business; it only comes back here so the
-  // shelf knows where the book was left.
+  const unlockTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(unlockTimerRef.current), []);
+
+  // The server only hands back comments up to the furthest page it knows the
+  // reader has reached, and that only moves when progress is published —
+  // which otherwise happens on leaving the reader. Without this, a comment
+  // further on stays locked for the whole session: reach its page and there's
+  // nothing there, read on past it and nothing ever says you missed it.
+  //
+  // So once the reader settles past the line while something is still locked
+  // ahead, publish the position and ask again. The thread then arrives unread,
+  // which is what lights its highlight and gutter dot, the header dot and the
+  // scrubber's "waiting behind you" — wherever the reader has got to by then.
+  const unlockReachedComments = useCallback(async () => {
+    if (!roomId) {
+      return;
+    }
+    const entry = useCommentsStore.getState().byBook[book.book_id];
+    const page = currentPageRef.current;
+    if (!entry?.lockedCount || page <= (entry.furthestPage || 0)) {
+      return;
+    }
+    try {
+      const { status, response } = await putReadingProgress(book.book_id, {
+        currentPage: page,
+        totalPages: totalPagesRef.current,
+      });
+      if (status !== 200) {
+        log.error('Failed to publish progress past the spoiler line:', status);
+        return;
+      }
+      // The save says whether the pages it carried us past held anything.
+      // Usually they don't, and then there's nothing new to fetch. An API
+      // that predates the count sends none — fetch, as before.
+      if (response?.newly_unlocked === 0) {
+        return;
+      }
+      await loadComments(roomId, book.book_id);
+    } catch (e) {
+      log.error('Failed to unlock comments the reader has reached:', e);
+    }
+  }, [roomId, book.book_id, loadComments]);
+
+  // Page position is the reader's business; it comes back here so the shelf
+  // knows where the book was left, and so comments unlock as pages are reached.
   const handlePageChanged = useCallback((page, total) => {
     currentPageRef.current = page;
     totalPagesRef.current = total;
-  }, []);
 
-  const handleLoadComplete = useCallback((total, hash) => {
+    const now = Date.now();
+    const last = lastTurnRef.current;
+    if (last && page === last.page + 1) {
+      const seconds = (now - last.at) / 1000;
+      if (seconds >= PACE_MIN_SECONDS && seconds <= PACE_MAX_SECONDS) {
+        paceRef.current = { seconds: paceRef.current.seconds + seconds, pages: paceRef.current.pages + 1 };
+      }
+    }
+    lastTurnRef.current = { page, at: now };
+
+    const entry = useCommentsStore.getState().byBook[book.book_id];
+    if (roomId && entry?.lockedCount > 0 && page > (entry.furthestPage || 0)) {
+      clearTimeout(unlockTimerRef.current);
+      unlockTimerRef.current = setTimeout(unlockReachedComments, UNLOCK_SETTLE_MS);
+    }
+  }, [roomId, book.book_id, unlockReachedComments]);
+
+  const handleLoadComplete = useCallback((total, hash, chapters) => {
     totalPagesRef.current = total;
     fileHashRef.current = hash || '';
-  }, []);
+    enhancedStorage.setBookChapters(book.book_id, chapters);
+  }, [book.book_id]);
 
   const handleError = useCallback((message) => {
     log.error(`PDF error for ${book.title}: ${message}`);
@@ -293,6 +378,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         onCreateHighlight={handleCreateHighlight}
         onRemoveHighlight={handleRemoveHighlight}
       />
+      {route.params?.fromWidget ? <WidgetOpenMorph book={book} /> : null}
 
       {/* Only asked when the book really is in more than one room. */}
       <PickerSheet
