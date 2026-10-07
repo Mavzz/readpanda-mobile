@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -8,6 +7,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { MOTION } from '../styles/motion';
+
+// The gradient is animated itself rather than nested in an animated View: a
+// child sized with absoluteFill doesn't follow a Reanimated-driven width, so
+// it painted nothing.
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 // The last value each bar was shown at, for this app session.
 const lastSeen = new Map();
@@ -40,24 +44,18 @@ const ProgressFill = ({ pct, seenKey, style, colors }) => {
 
   const animatedStyle = useAnimatedStyle(() => ({ width: `${width.value}%` }));
 
-  return (
-    <Animated.View style={[style, colors && styles.clip, animatedStyle]}>
-      {colors ? (
-        <LinearGradient
-          colors={colors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : null}
-    </Animated.View>
-  );
-};
+  if (colors) {
+    return (
+      <AnimatedGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[style, animatedStyle]}
+      />
+    );
+  }
 
-const styles = StyleSheet.create({
-  clip: {
-    overflow: 'hidden',
-  },
-});
+  return <Animated.View style={[style, animatedStyle]} />;
+};
 
 export default ProgressFill;

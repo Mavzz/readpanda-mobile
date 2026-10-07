@@ -144,7 +144,13 @@ class ReaderHeaderView: UIView {
 
 // MARK: - Scrubber
 
+protocol ReaderScrubberDelegate: AnyObject {
+    func readerScrubberDidTapWaiting(_ scrubber: ReaderScrubberView)
+}
+
 class ReaderScrubberView: UIView {
+
+    weak var delegate: ReaderScrubberDelegate?
 
     /// Two ticks closer together than this read as one smudge rather than two
     /// marks, so they merge. Percent of the track.
@@ -155,6 +161,10 @@ class ReaderScrubberView: UIView {
     private let pageCounter = UILabel()
     private let waitingIcon = UIImageView()
     private let waitingLabel = UILabel()
+    /// Sits over the icon and label: "waiting behind you" is only worth saying
+    /// if it takes you there. Reading past a comment otherwise leaves its dot
+    /// on a page you've already left.
+    private let waitingButton = UIButton(type: .custom)
     private let lockedLabel = UILabel()
     private var tickViews: [UIView] = []
 
@@ -201,6 +211,10 @@ class ReaderScrubberView: UIView {
         waitingLabel.textColor = DS.Colors.primary
         addSubview(waitingLabel)
 
+        waitingButton.accessibilityHint = "Opens the earliest unread comment"
+        waitingButton.addTarget(self, action: #selector(tapWaiting), for: .touchUpInside)
+        addSubview(waitingButton)
+
         lockedLabel.font = DS.Fonts.semibold(11)
         lockedLabel.textColor = DS.Colors.onSurfaceVariant
         lockedLabel.textAlignment = .right
@@ -216,6 +230,8 @@ class ReaderScrubberView: UIView {
         waitingIcon.isHidden = !waiting
         waitingLabel.isHidden = !waiting
         waitingLabel.text = waiting ? "\(waitingCount) waiting behind you" : ""
+        waitingButton.isHidden = !waiting
+        waitingButton.accessibilityLabel = waitingLabel.text
 
         // Everything still ahead of the reader is one number and no more — no
         // page, no preview. The server never sends anything else.
@@ -293,5 +309,12 @@ class ReaderScrubberView: UIView {
             width: max(0, waitingWidth - iconWidth),
             height: rowHeight
         )
+        // The row is 14pt tall; the tap target gets the 44pt minimum.
+        waitingButton.frame = CGRect(x: waitingX, y: rowY, width: waitingWidth, height: rowHeight)
+            .insetBy(dx: -8, dy: -(44 - rowHeight) / 2)
+    }
+
+    @objc private func tapWaiting() {
+        delegate?.readerScrubberDidTapWaiting(self)
     }
 }

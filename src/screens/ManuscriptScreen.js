@@ -11,6 +11,7 @@ import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import useRoomStore from '../stores/roomStore';
 import useHighlightsStore from '../stores/highlightsStore';
+import { putReadingProgress } from '../services/progressService';
 import enhancedStorage from '../utils/enhancedStorage';
 import { getReaderSetting } from '../utils/readerSettings';
 import { showToast } from '../components/Toaster';
@@ -25,6 +26,11 @@ import { DS } from '../styles/global';
 // the reader picks once and the choice sticks, rather than being asked on every
 // selection.
 const lastRoomKey = (bookId) => `commentRoom:${bookId}`;
+
+// How long a page has to stay put before reading past the spoiler line
+// publishes it. Long enough that dragging the scrubber or flicking through
+// pages costs one request at the end rather than one per page.
+const UNLOCK_SETTLE_MS = 1500;
 
 const ManuscriptScreen = ({ route, navigation }) => {
   const { book } = route.params;
@@ -53,6 +59,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   // jumped back and then forward again.
   const savedProgress = useMemo(() => loadProgress(book.book_id), [loadProgress, book.book_id]);
   const initialPage = savedProgress?.currentPage || 0;
+  log.info(`ManuscriptScreen initial page for ${book.title}: ${initialPage}`);
   const [pageMode] = useState(() => getReaderSetting('pageMode'));
   // Seeded from the saved position, not 0: a save that lands before the PDF
   // reports its first page (backgrounding right after opening) must not send
@@ -136,12 +143,61 @@ const ManuscriptScreen = ({ route, navigation }) => {
     loadHighlights(book.book_id);
   }, [book.book_id, loadHighlights]);
 
-  // Page position is the reader's business; it only comes back here so the
-  // shelf knows where the book was left.
+  const unlockTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(unlockTimerRef.current), []);
+
+  // The server only hands back comments up to the furthest page it knows the
+  // reader has reached, and that only moves when progress is published —
+  // which otherwise happens on leaving the reader. Without this, a comment
+  // further on stays locked for the whole session: reach its page and there's
+  // nothing there, read on past it and nothing ever says you missed it.
+  //
+  // So once the reader settles past the line while something is still locked
+  // ahead, publish the position and ask again. The thread then arrives unread,
+  // which is what lights its highlight and gutter dot, the header dot and the
+  // scrubber's "waiting behind you" — wherever the reader has got to by then.
+  const unlockReachedComments = useCallback(async () => {
+    if (!roomId) {
+      return;
+    }
+    const entry = useCommentsStore.getState().byBook[book.book_id];
+    const page = currentPageRef.current;
+    if (!entry?.lockedCount || page <= (entry.furthestPage || 0)) {
+      return;
+    }
+    try {
+      const { status, response } = await putReadingProgress(book.book_id, {
+        currentPage: page,
+        totalPages: totalPagesRef.current,
+      });
+      if (status !== 200) {
+        log.error('Failed to publish progress past the spoiler line:', status);
+        return;
+      }
+      // The save says whether the pages it carried us past held anything.
+      // Usually they don't, and then there's nothing new to fetch. An API
+      // that predates the count sends none — fetch, as before.
+      if (response?.newly_unlocked === 0) {
+        return;
+      }
+      await loadComments(roomId, book.book_id);
+    } catch (e) {
+      log.error('Failed to unlock comments the reader has reached:', e);
+    }
+  }, [roomId, book.book_id, loadComments]);
+
+  // Page position is the reader's business; it comes back here so the shelf
+  // knows where the book was left, and so comments unlock as pages are reached.
   const handlePageChanged = useCallback((page, total) => {
     currentPageRef.current = page;
     totalPagesRef.current = total;
-  }, []);
+
+    const entry = useCommentsStore.getState().byBook[book.book_id];
+    if (roomId && entry?.lockedCount > 0 && page > (entry.furthestPage || 0)) {
+      clearTimeout(unlockTimerRef.current);
+      unlockTimerRef.current = setTimeout(unlockReachedComments, UNLOCK_SETTLE_MS);
+    }
+  }, [roomId, book.book_id, unlockReachedComments]);
 
   const handleLoadComplete = useCallback((total, hash) => {
     totalPagesRef.current = total;
