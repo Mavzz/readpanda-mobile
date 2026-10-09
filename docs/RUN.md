@@ -138,7 +138,15 @@ on pushes to `master`.
 
 ```bash
 yarn lint:check    # ESLint, zero warnings allowed
+yarn test          # Jest
 ```
+
+Tests live in `__tests__` folders next to the code they cover. Native modules
+don't exist under Jest: `jest.setup.js` stubs the ones most components use
+(icons, gradients, the logger), and a test that needs storage or the API mocks
+`enhancedStorage` or the service module itself (see
+`src/stores/__tests__/readingProgressStore.test.js`). CI runs them on every
+pull request (`.github/workflows/test.yml`).
 
 For Swift changes, CI compiles with the Xcode on GitHub's `macos-latest`
 image, which can be older than yours. Code that builds locally can fail there.

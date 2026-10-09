@@ -1,0 +1,39 @@
+name: Test
+
+# Jest unit and component tests. Runs on Linux in under a minute, so it goes
+# on every pull request — unlike the macOS Xcode builds, which only run on
+# master.
+
+on:
+  pull_request:
+  push:
+    branches: ["master", "develop/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  jest:
+    name: Jest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Test
+        run: yarn test --ci
