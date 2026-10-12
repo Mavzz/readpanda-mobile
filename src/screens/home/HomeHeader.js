@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   // Notifications modal (same treatment as CommonHeader's)
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(6, 13, 32, 0.7)',
+    backgroundColor: DS.colors.scrim,
     justifyContent: 'flex-end',
   },
   modalContent: {

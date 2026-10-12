@@ -39,6 +39,11 @@ export const DS = {
     // Glassmorphism surface (surfaceContainer at 70% opacity = B3 in hex)
     surfaceContainerGlass: '#171f33B3',
 
+    // Scrims behind modals: the deepest surface at 70% over a page, and a
+    // neutral dim over an image while it loads.
+    scrim: 'rgba(6, 13, 32, 0.7)',
+    imageScrim: 'rgba(0, 0, 0, 0.5)',
+
     // Error / notification
     error: '#ffb4ab',
   },
@@ -76,6 +81,8 @@ export const DS = {
   // 12a type roles: spread into a style, e.g. { ...DS.type.rowTitle, color }.
   type: {
     pageTitle: { fontSize: 26, fontFamily: 'Manrope-ExtraBold', letterSpacing: -0.5 },
+    // iPad page titles (IPAD_AND_HOME_14_16.md § 1 Tokens).
+    pageTitleLarge: { fontSize: 30, fontFamily: 'Manrope-ExtraBold', letterSpacing: -0.6 },
     objectTitle: { fontSize: 22, fontFamily: 'Manrope-ExtraBold', letterSpacing: -0.4 },
     sheetTitle: { fontSize: 17, fontFamily: 'Manrope-ExtraBold' },
     modalNavTitle: { fontSize: 16, fontFamily: 'Manrope-ExtraBold' },
@@ -98,6 +105,20 @@ export const DS = {
     section: 24,
     headerToContent: 10,
     listGap: 10,
+  },
+
+  // iPad layouts (IPAD_AND_HOME_14_16.md § 1). Size classes come from window
+  // width alone, so Slide Over and narrow Split View get the phone layout and a
+  // 13" iPad in portrait (1032pt) gets the landscape one. Read through
+  // useLayout(), not directly.
+  layout: {
+    regularMin: 700,
+    wideMin: 1000,
+    pagePad: { compact: 24, regular: 36, wide: 44 },
+    // No line of app text runs wider than this; sheets cap at the same width.
+    textMax: 640,
+    sheetMax: 640,
+    formSheet: 540,
   },
 
   // 12a hit targets.

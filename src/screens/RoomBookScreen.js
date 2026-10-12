@@ -39,7 +39,7 @@ const RoomBookScreen = () => {
 
   useEffect(() => {
     loadShelf();
-  }, []);
+  }, [loadShelf]);
 
   // This screen is the pace track — one room, one book. Keyed on the room so
   // it re-asks if the shelf row arrives after the first render.

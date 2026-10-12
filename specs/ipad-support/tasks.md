@@ -5,14 +5,14 @@ done and `yarn lint:check` passes. Every screen task includes checking
 `compact` (iPhone) for regressions. Tasks 1–4 unblock `specs/home-redesign/`.
 
 ### Foundation
-- [ ] 1. Turn on the native iPad target for the app and widget (R1.1–R1.4)
-- [ ] 2. Add `DS.layout`, `DS.type.pageTitleLarge` and the `useLayout()` hook (R2.1, R2.2, R2.4)
-- [ ] 3. Add the `ReadableColumn` and `SplitLayout` components (R2.4)
-- [ ] 4. Tab bar: centered with icons beside labels on large layouts, height from safe-area insets (R3.1–R3.3)
+- [x] 1. Turn on the native iPad target for the app and widget (R1.1–R1.4)
+- [x] 2. Add `DS.layout`, `DS.type.pageTitleLarge` and the `useLayout()` hook (R2.1, R2.2, R2.4)
+- [x] 3. Add the `ReadableColumn` and `SplitLayout` components (R2.4)
+- [x] 4. Tab bar: centered with icons beside labels on large layouts, height from safe-area insets (R3.1–R3.3)
 
 ### Presentation
-- [ ] 5. Form sheets for Create room (all steps), New bucket and Paywall on large layouts (R4.1)
-- [ ] 6. `Popover` component, with PickerSheet/sort rendering through it on large layouts (R4.2)
+- [x] 5. Form sheets for Create room (all steps) and Paywall on large layouts; New bucket stays full screen (R4.1)
+- [x] 6. `Popover` component, with PickerSheet/sort rendering through it on large layouts (R4.2)
 
 ### Screens
 - [ ] 7. Onboarding (14a) and Login/SignUp (15a) (R5.1, R5.2)
@@ -36,3 +36,8 @@ done and `yarn lint:check` passes. Every screen task includes checking
 - [ ] 21. Run the handoff §7 QA checklist on iPad mini, Air 11" and Pro 13" × portrait/landscape × full/Split ½/⅓, plus a full iPhone regression pass (all)
 
 ## Notes
+- Task 1: nothing else needed. `Info.plist` already had the iPad orientations and a launch storyboard, no `UIRequiresFullScreen`, and no native orientation locks. Fixed 10 lint warnings from before this work so `lint:check` passes (added `DS.colors.scrim` / `imageScrim`).
+- Task 2: dropped `DS.layout.coverMin` from the design. `columns()` takes the handoff's fixed counts, so nothing reads it. Also exported `sizeClassFor(width)` for code outside React.
+- Task 4: only the iPad bar's height comes from safe-area insets. The phone keeps its fixed 85/25 so iPhone stays unchanged (R2.3). Items are centred with auto margins instead of a custom `tabBar`. Glass still uses the `surfaceContainerHigh` fallback, since no blur library is installed. Not yet checked visually: it needs a signed-in session.
+- Task 5: New bucket stays full screen (spec R4.1 updated; 15h draws it full width). Create room's steps 2–3 happen on the Room screen after `replace('RoomLobbyScreen')`, as on the phone and as 15k draws it, not inside the sheet as 15j's text says. Keeping parity with the phone. The size is UIKit's default form sheet (540×620), with no custom sizing.
+- Task 6: `PickerSheet` takes an optional `anchorRef`. With it, it's a popover on iPad (See all's sort pill so far); without it, it's a bottom sheet capped at 640pt and centred (Room prompts, Add to bucket). The reader's room chip is native and is task 18.

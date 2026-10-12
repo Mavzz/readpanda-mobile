@@ -8,8 +8,10 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
+import useLayout from '../hooks/useLayout';
 import BookCoverGradient from './BookCoverGradient';
 import PressableScale from './PressableScale';
+import Popover from './Popover';
 
 // One sheet for all three Room Detail prompts (ROOM_DETAIL_2a-2.md):
 // "Choose a book", "Read through a bucket", and "Which book first?".
@@ -18,77 +20,100 @@ import PressableScale from './PressableScale';
 // its own `icon`. A boolean `checked` swaps the chevron for a tick, for
 // sheets that toggle membership (Book detail's Add to bucket) rather than
 // navigate.
-const PickerSheet = ({ visible, title, subtitle, items = [], onSelect, onClose, emptyText }) => (
-  <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-    <Pressable style={styles.backdrop} onPress={onClose}>
-      <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>{title}</Text>
-            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-          </View>
-          <PressableScale
-            onPress={onClose}
-            style={styles.closeButton}
-            accessibilityLabel="Close"
-            accessibilityRole="button"
-          >
-            <Icon name="close" size={20} color={DS.colors.onSurfaceVariant} />
-          </PressableScale>
-        </View>
+//
+// On iPad a sheet that belongs to one control (pass that control's wrapper as
+// `anchorRef`) opens as a popover anchored to it; any other sheet stays a
+// bottom sheet, capped at 640pt and centered (IPAD_AND_HOME_14_16.md § 1).
+const PickerSheet = ({ anchorRef, ...props }) => {
+  const { isLarge } = useLayout();
+  const { visible, onClose } = props;
 
-        {items.length === 0 ? (
-          <View style={styles.empty}>
-            <Icon name="book-outline" size={32} color={DS.colors.onSurfaceVariant} />
-            <Text style={styles.emptyText}>{emptyText || 'Nothing to show yet.'}</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <PressableScale
-                onPress={() => onSelect(item)}
-                style={styles.row}
-              >
-                {item.isBucket || item.icon ? (
-                  <View style={styles.bucketTile}>
-                    <Icon name={item.icon || 'albums-outline'} size={20} color={DS.colors.primary} />
-                  </View>
-                ) : (
-                  <BookCoverGradient
-                    coverUrl={item.coverUrl}
-                    title={item.title}
-                    width={40}
-                    height={56}
-                    borderRadius={10}
-                    titleFontSize={7}
-                  />
-                )}
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle} numberOfLines={1}>{item.title}</Text>
-                  {item.subtitle ? (
-                    <Text style={styles.rowSubtitle} numberOfLines={1}>{item.subtitle}</Text>
-                  ) : null}
-                </View>
-                {typeof item.checked === 'boolean' ? (
-                  <Icon
-                    name={item.checked ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={22}
-                    color={item.checked ? DS.colors.primary : DS.colors.onSurfaceVariant}
-                  />
-                ) : (
-                  <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
-                )}
-              </PressableScale>
-            )}
-          />
-        )}
+  if (isLarge && anchorRef) {
+    return (
+      <Popover visible={visible} anchorRef={anchorRef} onClose={onClose}>
+        <PickerContent {...props} />
+      </Popover>
+    );
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        <Pressable style={[styles.sheet, isLarge && styles.sheetLarge]} onPress={(e) => e.stopPropagation()}>
+          <PickerContent {...props} />
+        </Pressable>
       </Pressable>
-    </Pressable>
-  </Modal>
+    </Modal>
+  );
+};
+
+const PickerContent = ({ title, subtitle, items = [], onSelect, onClose, emptyText }) => (
+  <>
+    <View style={styles.header}>
+      <View style={styles.headerText}>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      </View>
+      <PressableScale
+        onPress={onClose}
+        style={styles.closeButton}
+        accessibilityLabel="Close"
+        accessibilityRole="button"
+      >
+        <Icon name="close" size={20} color={DS.colors.onSurfaceVariant} />
+      </PressableScale>
+    </View>
+
+    {items.length === 0 ? (
+      <View style={styles.empty}>
+        <Icon name="book-outline" size={32} color={DS.colors.onSurfaceVariant} />
+        <Text style={styles.emptyText}>{emptyText || 'Nothing to show yet.'}</Text>
+      </View>
+    ) : (
+      <FlatList
+        data={items}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <PressableScale
+            onPress={() => onSelect(item)}
+            style={styles.row}
+          >
+            {item.isBucket || item.icon ? (
+              <View style={styles.bucketTile}>
+                <Icon name={item.icon || 'albums-outline'} size={20} color={DS.colors.primary} />
+              </View>
+            ) : (
+              <BookCoverGradient
+                coverUrl={item.coverUrl}
+                title={item.title}
+                width={40}
+                height={56}
+                borderRadius={10}
+                titleFontSize={7}
+              />
+            )}
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle} numberOfLines={1}>{item.title}</Text>
+              {item.subtitle ? (
+                <Text style={styles.rowSubtitle} numberOfLines={1}>{item.subtitle}</Text>
+              ) : null}
+            </View>
+            {typeof item.checked === 'boolean' ? (
+              <Icon
+                name={item.checked ? 'checkmark-circle' : 'ellipse-outline'}
+                size={22}
+                color={item.checked ? DS.colors.primary : DS.colors.onSurfaceVariant}
+              />
+            ) : (
+              <Icon name="chevron-forward" size={18} color={DS.colors.onSurfaceVariant} />
+            )}
+          </PressableScale>
+        )}
+      />
+    )}
+  </>
 );
 
 const styles = StyleSheet.create({
@@ -104,6 +129,11 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     paddingTop: 20,
     paddingBottom: 28,
+  },
+  sheetLarge: {
+    width: '100%',
+    maxWidth: DS.layout.sheetMax,
+    alignSelf: 'center',
   },
 
   header: {

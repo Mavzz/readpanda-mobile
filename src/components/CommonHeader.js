@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(6, 13, 32, 0.7)',
+    backgroundColor: DS.colors.scrim,
     justifyContent: 'flex-end',
   },
   modalContent: {

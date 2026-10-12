@@ -42,7 +42,7 @@ and falls back to the phone layout in narrow multitasking windows.
 3. THE active tab and each tab's stack SHALL be kept when the layout changes.
 
 ### R4. Presentation
-1. WHEN on `regular`/`wide` THE Create room flow (all steps) and New bucket SHALL open as a centered 540pt form sheet over the dimmed screen.
+1. WHEN on `regular`/`wide` THE Create room flow (all steps, 15j) and the Paywall SHALL open as a centered 540pt form sheet over the dimmed screen. New bucket SHALL stay a full-screen takeover, because 15h draws it at full width with a 6-column picker. *(Changed 2026-10-11 while building task 5: handoff §1's text lists New bucket as a form sheet, but its drawing doesn't.)*
 2. WHEN on `regular`/`wide` THE sheets owned by one control (the reader's room chip / comment layer 15n, sort pickers) SHALL open as a popover anchored to that control, with the same options.
 3. THE comments sheet (14j) SHALL keep the phone's medium/large detents, capped at 640pt wide and centered, with the passage still visible.
 

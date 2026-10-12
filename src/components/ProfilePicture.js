@@ -204,8 +204,6 @@ const ProfilePicture = ({
             width: size * 0.25,
             height: size * 0.25,
             borderRadius: (size * 0.25) / 2,
-            right: -2,
-            bottom: -2,
           }]}>
             <Icon
               name="camera"
@@ -259,6 +257,8 @@ const styles = StyleSheet.create({
   },
   editIndicator: {
     position: 'absolute',
+    right: -2,
+    bottom: -2,
     backgroundColor: DS.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: DS.colors.imageScrim,
     alignItems: 'center',
     justifyContent: 'center',
     top: 0,

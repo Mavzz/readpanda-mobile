@@ -35,7 +35,7 @@ const SoloBookScreen = () => {
 
   useEffect(() => {
     loadShelf();
-  }, []);
+  }, [loadShelf]);
 
   const dismissUpsell = () => {
     enhancedStorage.storeUserPreference(upsellKey, true);

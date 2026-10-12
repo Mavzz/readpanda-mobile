@@ -10,6 +10,7 @@ import RoomLobbyScreen from '../screens/roomLobby/RoomLobbyScreen';
 import BookDetailScreen from '../screens/BookDetailScreen';
 import CuratedBucketScreen from '../screens/CuratedBucketScreen';
 import PaywallScreen from '../screens/PaywallScreen';
+import useLayout from '../hooks/useLayout';
 import { DS } from '../styles/global';
 
 const Stack = createNativeStackNavigator();
@@ -39,8 +40,21 @@ const createFlow = {
   contentStyle: { backgroundColor: DS.colors.background },
 };
 
+// On iPad, short tasks open as a centered form sheet over the dimmed screen
+// instead (IPAD_AND_HOME_14_16.md § 1, 15j). UIKit sizes it at 540×620,
+// which is the handoff's size. New bucket is not one: 15h draws it full width
+// with a 6-column picker, so it stays a takeover.
+const formSheet = {
+  headerShown: false,
+  presentation: 'formSheet',
+  contentStyle: { backgroundColor: DS.colors.background },
+};
+
 // Main Stack Navigator that wraps the Tab Navigator
 const MainStackNavigator = () => {
+  const { isLarge } = useLayout();
+  const shortTask = isLarge ? formSheet : createFlow;
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -65,7 +79,7 @@ const MainStackNavigator = () => {
         options={nativeHeader('Select Interests')}
       />
       <Stack.Screen name="CreateBucketScreen" component={CreateBucketScreen} options={createFlow} />
-      <Stack.Screen name="CreateRoomScreen" component={CreateRoomScreen} options={createFlow} />
+      <Stack.Screen name="CreateRoomScreen" component={CreateRoomScreen} options={shortTask} />
       <Stack.Screen name="RoomLobbyScreen" component={RoomLobbyScreen} />
       {/* Book detail (8c) is opened from Discover, any bucket and search, so
           it sits here beside the reader rather than in one tab's stack — and,
@@ -75,7 +89,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="CuratedBucket" component={CuratedBucketScreen} />
       {/* ReadPanda+ (usePlusGate). A takeover like the create flows it
           interrupts, so it reads as a step, not a sheet over them. */}
-      <Stack.Screen name="Paywall" component={PaywallScreen} options={createFlow} />
+      <Stack.Screen name="Paywall" component={PaywallScreen} options={shortTask} />
     </Stack.Navigator>
   );
 };

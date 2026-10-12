@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +16,8 @@ import PressableScale from './PressableScale';
 const SeeAllHeader = ({ title, subtitle, sort, onAdd, addLabel = 'New' }) => {
   const navigation = useNavigation();
   const [sorting, setSorting] = useState(false);
+  // The sort sheet opens as a popover off the pill on iPad.
+  const sortAnchor = useRef(null);
   const current = sort?.options.find((o) => o.value === sort.value);
 
   return (
@@ -31,15 +33,17 @@ const SeeAllHeader = ({ title, subtitle, sort, onAdd, addLabel = 'New' }) => {
         </PressableScale>
         <View style={styles.actions}>
           {current ? (
-            <PressableScale
-              onPress={() => setSorting(true)}
-              style={styles.sortPill}
-              accessibilityLabel={`Sort: ${current.label}`}
-              accessibilityRole="button"
-            >
-              <Icon name="swap-vertical" size={14} color={DS.colors.onSurface} />
-              <Text style={styles.sortText}>{current.label}</Text>
-            </PressableScale>
+            <View ref={sortAnchor} collapsable={false}>
+              <PressableScale
+                onPress={() => setSorting(true)}
+                style={styles.sortPill}
+                accessibilityLabel={`Sort: ${current.label}`}
+                accessibilityRole="button"
+              >
+                <Icon name="swap-vertical" size={14} color={DS.colors.onSurface} />
+                <Text style={styles.sortText}>{current.label}</Text>
+              </PressableScale>
+            </View>
           ) : null}
           {onAdd ? (
             <PressableScale
@@ -61,6 +65,7 @@ const SeeAllHeader = ({ title, subtitle, sort, onAdd, addLabel = 'New' }) => {
 
       {sort ? (
         <PickerSheet
+          anchorRef={sortAnchor}
           visible={sorting}
           title="Sort by"
           items={sort.options.map((o) => ({
