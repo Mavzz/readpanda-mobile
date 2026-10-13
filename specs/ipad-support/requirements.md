@@ -34,7 +34,7 @@ and falls back to the phone layout in narrow multitasking windows.
 2. WHEN the window resizes (rotation, Split View, Stage Manager) THE layout SHALL update without a reload, and the scroll position SHALL be kept.
 3. WHEN the layout is `compact` THE screen SHALL render exactly as it does on iPhone.
 4. THE page side padding SHALL be 36pt on `regular` and 40–44pt on `wide`. No line of text SHALL be wider than 640pt.
-5. Every iPad screen SHALL have the same actions, sections and states as its phone screen. The only iPad-only additions are the reader's Scroll/Spread switch and the extra-large widget.
+5. Every iPad screen SHALL have the same actions, sections and states as its phone screen. The only iPad-only addition is the extra-large widget.
 
 ### R3. Tab bar
 1. WHEN the layout is `regular`/`wide` THE tab bar SHALL show the same 4 tabs (Home · Discover · My Books · Rooms), centered, with the icon and label side by side, and a gap of 56pt (`wide`) or 48pt (`regular`).
@@ -48,7 +48,7 @@ and falls back to the phone layout in narrow multitasking windows.
 
 ### R5. Screen layouts (`regular`/`wide`)
 Each criterion means "WHEN the layout is `regular`/`wide`, THE screen SHALL…". Details are in the handoff tables.
-1. **Onboarding (14a):** a centered 520pt column. The cover row updates live as genres are picked.
+1. **Onboarding (14a):** the Interest screen, centred in a 520pt column. *(14a's new content is the phone screen's redesign too, so it's specced in `specs/interests-redesign/`. This spec covers only the iPad column.)*
 2. **Login (15a):** brand panel on the left with the form in a 400pt column (`wide`); stacked in a 440pt column (`regular`).
 3. **Book detail (14c):** 280pt cover on the left, 620pt content column, no scrolling needed on `wide`. Action order: Start reading · Read with a room · +.
 4. **Cover grid / See all (14d):** 6 columns `wide` / 5 `regular`, covers about 160pt, search beside the title.
@@ -65,25 +65,30 @@ Each criterion means "WHEN the layout is `regular`/`wide`, THE screen SHALL…".
 15. **Settings (15m):** the same rows in two 500pt columns. Sign out / Delete account last, with confirmation.
 
 ### R6. Reader
+*(Revised 2026-10-13 after device testing. 14g's Spread was built, then dropped: two fixed-layout PDF pages side by side shrank the text to about half size and read badly in both orientations. The Scroll/Spread switch, per-orientation modes and floating bars are gone.)*
 1. THE reader (native `RNPdfViewer` / `ReaderChromeView` / scrubber) SHALL lay out correctly at every window width and orientation.
-2. **Scroll (14f):** THE reader SHALL stack the PDF pages vertically, each fit to 600pt wide at 1×, centered on `background`, with 16pt gaps. Pinch zoom goes from 1× to 3×, and rotating resets to fit-600. Comment dots sit in the margin outside the page, and the bars are hidden until a center tap.
-3. **Spread (14g):** THE reader SHALL show facing pages side by side, fit to the height, with page 1 alone on the right so even pages are always on the left. Swiping or tapping the edges turns the page, and the book's real page numbers are used.
-4. THE top bar SHALL hold the room chip and the Scroll/Spread switch on one row. THE reader SHALL have no Aa control on any device.
-5. THE mode default SHALL follow the real orientation (width > height), not the layout. EACH orientation SHALL remember its own choice. Defaults: portrait = Scroll, landscape = Spread.
-6. WHEN the mode changes or the window rotates/resizes THE reader SHALL keep the same anchor (page + rect in page coordinates).
-7. WHEN the layout is `compact` THE reader SHALL behave exactly as it does on the phone (no switch).
+2. **Scroll on iPad (14f):** WHEN the layout is `regular`/`wide` and Page turning is Scroll, THE reader SHALL stack the PDF pages vertically, fit to the window, centered on `background`. Pinch zoom goes from 1× to 3×, and a resize goes back to fit.
+3. THE header and scrubber SHALL stay fixed. Pages SHALL sit one 12pt gap from the header, the scrubber, the window edges and each other.
+4. Settings → Page turning (Scroll / Page) SHALL work on iPad as on iPhone. THE reader SHALL have no Aa control and no Scroll/Spread switch.
+5. WHEN the window rotates or resizes, or the layout changes, THE reader SHALL keep the same anchor (page + rect in page coordinates), and the comment dots SHALL stay on their passages.
+6. WHEN the layout is `compact` THE reader SHALL behave exactly as it does on the phone.
 
 ### R7. Widgets and deep links
 1. THE widget extension SHALL offer an iPad-only `.systemExtraLarge` widget (14k): 13d on the left, 13c shelf rows plus the bucket on the right, the same fallbacks as 13a–13f, and up to 4 `Link` targets of at least 44pt.
 2. Existing widget sizes SHALL render correctly on iPad.
 3. WHEN a widget or invite deep link opens the app on iPad THE target screen SHALL open just as it does on iPhone.
 
+## Later
+- Floating, auto-hiding header and scrubber, so the page gets the full screen. Tried in Spread; it worked but didn't match Scroll. Revisit with a design for the reader as a whole.
+
 ## Open questions
 - [x] Tabs: a centered bottom bar, not a side rail.
-- [x] Reader landscape: Spread by default, with Scroll available.
+- [x] Reader landscape: Spread by default, with Scroll available. *(Reversed after device testing: Spread was dropped, see R6.)*
 - [x] Comments: a sheet capped at 640pt. The Room screen is the exception, with comments in its right column.
 - [x] Coverage: every screen. Below 700pt the phone layout is used.
 - [x] Minimum OS: the same as iPhone.
 - [x] 13" portrait gets `wide` on purpose; the reader's default still follows the real orientation.
-- [x] PDF reader: no reflow. Scroll is fit-600 pages; Spread is a two-page book layout.
+- [x] PDF reader: no reflow. Scroll fits pages to the window. (Spread was dropped, see R6.)
 - [x] Visuals: `ReadPanda Design Review.dc.html` now has `14a`–`16e`. Those sections are the high-fidelity spec, and the markdown handoff is the behaviour spec.
+- [x] **14a vs the phone (2026-10-13):** the design now makes 14a *the* Interest screen, with no step counter, on phone and iPad alike. The content redesign is moved to `specs/interests-redesign/`.
+- [x] **14i vs the phone (2026-10-13):** the design added 2c, the phone version of the active Room, with the same content stacked. Active Room (2c phone + 14i iPad) is moved to `specs/room-active/`. This spec keeps 15k's layout for the setup state (2a).

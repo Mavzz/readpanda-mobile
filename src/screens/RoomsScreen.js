@@ -22,9 +22,12 @@ import GradientPill from '../components/GradientPill';
 import haptics from '../utils/haptics';
 import ProgressFill from '../components/ProgressFill';
 import RollingCount from '../components/RollingCount';
+import useLayout from '../hooks/useLayout';
 
 // Merges the old Join Room + My Rooms tabs — invite-only clubs, one place.
 // See design_handoff_redesign § 1c.
+const CARD_GAP = 16;
+
 const RoomsScreen = () => {
   const navigation = useNavigation();
   const gate = usePlusGate();
@@ -36,6 +39,9 @@ const RoomsScreen = () => {
   // Local, not the store's `loading`: Home refreshes rooms too, and that
   // shouldn't spin this tab's pull-to-refresh indicator.
   const [refreshing, setRefreshing] = useState(false);
+  const { width, isLarge, pagePad } = useLayout();
+  // 15i: a 2-column grid of the same cards on iPad.
+  const cardWidth = isLarge ? (width - pagePad * 2 - CARD_GAP) / 2 : undefined;
   const codeInputRef = useRef(null);
 
   // The first-run nudges on Home and the Reading tab (FIRST_RUN_3a_3b.md
@@ -109,7 +115,7 @@ const RoomsScreen = () => {
 
   const renderRoom = ({ item: room }) => (
     <TouchableOpacity
-      style={styles.roomCard}
+      style={[styles.roomCard, isLarge && styles.roomCardLarge, isLarge && { width: cardWidth }]}
       activeOpacity={0.85}
       onPress={() => openRoom(room)}
     >
@@ -161,22 +167,55 @@ const RoomsScreen = () => {
 
   log.debug('RoomsDetails', { rooms, refreshing, inviteCode });
 
+  // Join-by-code and New. On iPad (15i) they move up into the title row.
+  const actions = (
+    <View style={[styles.actionRow, isLarge && styles.actionRowLarge]}>
+      <View style={[styles.inviteField, isLarge && styles.inviteFieldLarge]}>
+        <Icon name="key-outline" size={16} color={DS.colors.onSurfaceVariant} />
+        <TextInput
+          ref={codeInputRef}
+          style={styles.inviteInput}
+          value={inviteCode}
+          onChangeText={(t) => setInviteCode(t.toUpperCase())}
+          placeholder="Enter invite code"
+          placeholderTextColor={DS.colors.placeholder}
+          maxLength={6}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          onSubmitEditing={handleJoinRoom}
+          returnKeyType="join"
+        />
+      </View>
+      <GradientPill onPress={handleCreateRoom} style={styles.newButton}>
+        <Icon name="add" size={17} color={DS.colors.onPrimary} />
+        <Text style={styles.newButtonText}>{isLarge ? 'New room' : 'New'}</Text>
+      </GradientPill>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <SafeAreaView style={styles.safeTop} edges={['top']}>
-        <View style={styles.headerBlock}>
-          <Text style={styles.title}>Rooms</Text>
-          <Text style={styles.subtitle}>Private clubs with your people — no set meeting time.</Text>
+        <View style={[styles.headerBlock, isLarge && styles.headerBlockLarge, isLarge && { paddingHorizontal: pagePad }]}>
+          <View style={isLarge && styles.headerText}>
+            <Text style={[styles.title, isLarge && styles.titleLarge]}>Rooms</Text>
+            <Text style={styles.subtitle}>Private clubs with your people — no set meeting time.</Text>
+          </View>
+          {isLarge ? actions : null}
         </View>
       </SafeAreaView>
 
       <FlatList
+        // numColumns can't change on a mounted list; a new layout remounts it.
+        key={isLarge ? 'grid' : 'list'}
+        numColumns={isLarge ? 2 : 1}
+        columnWrapperStyle={isLarge ? styles.cardRow : undefined}
         data={rooms}
         keyExtractor={(room) => String(room.id)}
         renderItem={renderRoom}
         style={styles.content}
-        contentContainerStyle={styles.contentInner}
+        contentContainerStyle={[styles.contentInner, isLarge && { paddingHorizontal: pagePad }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -188,29 +227,7 @@ const RoomsScreen = () => {
         }
         ListHeaderComponent={
           <>
-            {/* ── Action row ─────────────────────────────────────── */}
-            <View style={styles.actionRow}>
-              <View style={styles.inviteField}>
-                <Icon name="key-outline" size={16} color={DS.colors.onSurfaceVariant} />
-                <TextInput
-                  ref={codeInputRef}
-                  style={styles.inviteInput}
-                  value={inviteCode}
-                  onChangeText={(t) => setInviteCode(t.toUpperCase())}
-                  placeholder="Enter invite code"
-                  placeholderTextColor={DS.colors.placeholder}
-                  maxLength={6}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  onSubmitEditing={handleJoinRoom}
-                  returnKeyType="join"
-                />
-              </View>
-              <GradientPill onPress={handleCreateRoom} style={styles.newButton}>
-                <Icon name="add" size={17} color={DS.colors.onPrimary} />
-                <Text style={styles.newButtonText}>New</Text>
-              </GradientPill>
-            </View>
+            {isLarge ? null : actions}
 
             {rooms.length > 0 ? <Text style={styles.sectionLabel}>Your rooms</Text> : null}
           </>
@@ -251,6 +268,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 22,
   },
+  headerBlockLarge: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 20,
+    paddingBottom: 24,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleLarge: {
+    ...DS.type.pageTitleLarge,
+  },
   title: {
     fontSize: 26,
     fontFamily: DS.font.extraBold,
@@ -271,6 +302,14 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 22,
     marginBottom: 26,
+  },
+  actionRowLarge: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  inviteFieldLarge: {
+    flex: 0,
+    width: 280,
   },
   inviteField: {
     flex: 1,
@@ -308,6 +347,13 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
     marginBottom: 12,
+  },
+  cardRow: {
+    gap: CARD_GAP,
+    marginBottom: CARD_GAP,
+  },
+  roomCardLarge: {
+    marginBottom: 0,
   },
   roomCard: {
     flexDirection: 'row',

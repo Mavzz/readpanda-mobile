@@ -49,6 +49,9 @@ class ReaderHeaderView: UIView {
         didSet { unreadDot.isHidden = !showsComment || unreadCount == 0 }
     }
 
+    /// Where the comment button sits, for anchoring the room popover (15n).
+    var commentButtonFrame: CGRect { commentButton.frame }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setup()

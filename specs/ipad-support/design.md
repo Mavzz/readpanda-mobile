@@ -53,13 +53,13 @@ different. That keeps all actions and state in one place and enforces R2.5
 - **Popovers.** React Native has no built-in popover. Add a small `<Popover anchorRef>` component in `src/components/Popover.js` that measures the anchor with `measureInWindow` and renders a positioned card in a `Modal`. `PickerSheet` renders through it on large layouts. The native reader's room chip uses `UIPopoverPresentationController` in Swift.
 
 ### Reader (native)
-- `RNPdfViewer.swift`: replace the `UIScreen.main.bounds` initial frames (lines 131–132) with `.zero`, since `layoutSubviews` already sets them.
-- **Scroll (14f).** `displayMode = .singlePageContinuous`, vertical. Each page is fit to 600pt: `scaleFactor = 600 / pageWidth`, with `minScaleFactor` set to that and `maxScaleFactor` at 3×. Center it on `background` with 16pt page gaps (`pageBreakMargins`). Rotation resets the scale to fit-600. Comment dots move into the margin outside the page bounds.
-- **Spread (14g).** `displayMode = .twoUp`, `displaysAsBook = true` (page 1 alone on the right), `usePageViewController(true)` for swiping, `autoScales = true` to fit the height. Edge taps turn the page.
-- **Anchor.** Both modes render the same PDF pages, so the anchor is `{page, rect}` in page coordinates. Before a mode or size change, read it from `pdfView.currentDestination` / the visible rect, and restore it with `go(to: rect, on: page)` afterwards. Trigger when `bounds.size` changes in `layoutSubviews`.
-- **Mode setting.** `readerSettings` already has `pageMode` (`scroll` | `page`) for the phone. On large layouts, add `reader_mode_portrait` / `reader_mode_landscape` (`scroll` | `spread`, defaulting to scroll / spread). The key is chosen by the real orientation (`width > height`), not by `sizeClass`. On `compact`, `pageMode` keeps working as it does today. Both are passed to the native view as props, along with `sizeClass`.
-- `ReaderChromeView.swift`: a top-bar row with the room chip and a `UISegmentedControl` (Scroll | Spread), shown only on large layouts. There's no Aa control in the current code, so "remove Aa" is just a rule not to add one.
-- `CommentSheetView.swift`: cap the width at 640 and center it on large widths, keeping the existing detents.
+- **iPad layout.** JS sends `largeLayout` (from `useLayout().isLarge`). With Page turning set to Scroll, the reader uses `.singlePageContinuous` fit to the window. Page turning set to Page keeps the phone's paged reader.
+- **One 12pt gap.** It applies between a page and the window edge, header, scrubber or next page. A 6pt container inset plus a 6pt `pageBreakMargins`. PDFKit's margins are in page units and scale with the page, so the margin is sized as 6 ÷ scale and solved together with the fit (`fitWithFixedGap`). This was verified on device with a temporary geometry log: 12pt at the sides and between pages, in both orientations.
+- **Zoom.** Pinch from fit (1×) to 3×; a resize goes back to fit.
+- **Anchor.** `pdfView.currentDestination` is noted before a resize or layout switch and restored a run-loop turn later. Resizes are detected on the page container's size.
+- **Comment dots.** They live in a layer over the page container, not inside it, so they can use the side margin. They're converted through the PDF view, rebound to PDFKit's new scroll view on every display-mode change, refreshed after a restore, and hidden for pages not on screen.
+- **Comments sheet.** Constraints centre it and cap it at 640pt; below 640pt it fills the width, so iPhone is unchanged.
+- **Dropped:** Spread (`.twoUp` + `displaysAsBook`, hand fit, measured centring, height trim), the Scroll/Spread switch, the per-orientation settings, and floating auto-hiding bars. See R6.
 
 ### Widgets
 - `ios/ReadPandaWidget/`: a new `ExtraLargeWidget` with `.supportedFamilies([.systemExtraLarge])` that composes the existing 13d large view and the 13c shelf rows. It reads the same `widgetState` payload, so nothing changes on the RN side. Add it to the widget bundle.

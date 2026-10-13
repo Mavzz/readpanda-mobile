@@ -254,6 +254,793 @@
                 }
             </style>
         </helmet>
+        <section class="dv-turn" id="t18">
+            <div class="dv-thd"><a class="dv-tid" href="#t18">18</a><span class="dv-tname">Room schedules: set by the
+                    creator, free <span
+                        style="background:#222a3e;color:#ffddb8;border-radius:9999px;padding:3px 10px;font-size:12px;font-weight:800;vertical-align:middle">On
+                        hold</span></span></div>
+            <p class="blk-sub" style="margin-bottom:18px">The schedule strip (<a href="#2c">2c</a>, <a
+                    href="#14i">14i</a>), Home deadlines (<a href="#16e">16e</a>) and deadline widgets (<a
+                    href="#13b">13b</a>) all read <span class="mono">room.schedule</span>, but nothing could create one.
+                This adds the creator's "Set the pace" step, the edit sheet, and the creator / member / no-schedule
+                states. Schedules are free, so they come off the Paywall list.</p>
+            <div class="intro">
+                <div class="ic">
+                    <h4>Who can do what</h4>
+                    <ul>
+                        <li><b>Room creator</b> (<span class="mono">room.adminId === me</span>): sets, edits and removes
+                            the schedule. Sees Edit on the Schedule card.</li>
+                        <li><b>Members:</b> see the schedule read-only, with "Set by {creator}". No Edit link.</li>
+                        <li>The server rejects schedule writes from anyone else (403). Hiding the link isn't enough.
+                        </li>
+                    </ul>
+                </div>
+                <div class="ic">
+                    <h4>How a schedule is built</h4>
+                    <ul>
+                        <li>Chapters come from the PDF's table of contents. If the PDF has none, the book is split into
+                            equal page ranges ("Part 1 · pp. 1–24").</li>
+                        <li>Two ways to set the pace: <b>chapters per week</b> (1–3) or <b>finish by</b> a date, which
+                            spreads the chapters evenly.</li>
+                        <li>Deadlines land on the start date's weekday. Each one is a chapter's last page plus a date.
+                        </li>
+                        <li>Deadlines that have already passed are locked.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="dv-opts">
+
+                <div class="dv-opt" id="18a">
+                    <div class="dv-olabel"><a class="dv-oid" href="#18a">18a</a>iPhone: Set the pace (setup, after
+                        picking the book)</div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        hint-size="402px,874px">
+                        <div
+                            style="height:100%;box-sizing:border-box;background:#0b1326;padding:58px 20px 34px;font-family:'Manrope',sans-serif;display:flex;flex-direction:column;gap:18px">
+                            <span
+                                style="display:flex;align-items:center;gap:4px;color:#ffddb8;font-size:15px;font-weight:700"><ion-icon
+                                    name="chevron-back" style="font-size:20px"></ion-icon>AI Learning</span>
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                                <div style="font-size:28px;font-weight:800;color:#dae2fd;letter-spacing:-0.6px">Set the
+                                    pace</div>
+                                <div style="font-size:14px;font-weight:500;color:#c6cde8;line-height:1.45">Data Mining ·
+                                    6 chapters · 142 pages. Everyone sees the same deadlines.</div>
+                            </div>
+                            <div
+                                style="display:grid;grid-template-columns:1fr 1fr;background:#060d20;border-radius:9999px;padding:4px">
+                                <span
+                                    style="height:40px;border-radius:9999px;background:#222a3e;color:#ffddb8;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">Chapters
+                                    per week</span><span
+                                    style="height:40px;color:#d6c3b2;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">Finish
+                                    by</span></div>
+                            <div
+                                style="background:#131b2e;border-radius:20px;padding:6px 6px 6px 18px;display:flex;flex-direction:column">
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;min-height:56px">
+                                    <span style="font-size:15px;font-weight:700;color:#dae2fd">1 chapter a
+                                        week</span><span
+                                        style="display:flex;background:#222a3e;border-radius:9999px"><span
+                                            style="width:48px;height:40px;display:flex;align-items:center;justify-content:center;color:#8b93ad"><ion-icon
+                                                name="remove" style="font-size:18px"></ion-icon></span><span
+                                            style="width:48px;height:40px;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon
+                                                name="add" style="font-size:18px"></ion-icon></span></span></div>
+                                <div style="height:1px;background:#222a3e;margin-right:12px"></div>
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;min-height:56px;padding-right:12px">
+                                    <span style="font-size:15px;font-weight:700;color:#dae2fd">Starts</span><span
+                                        style="height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#dae2fd"><ion-icon
+                                            name="calendar-outline" style="font-size:14px"></ion-icon>Mon, Sep 14</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:4px">
+                                <div style="display:flex;justify-content:space-between;align-items:baseline"><span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Deadlines</span><span
+                                        style="font-size:12px;font-weight:700;color:#ffddb8">Finishes Oct 26</span>
+                                </div>
+                                <div style="display:flex;flex-direction:column">
+                                    <div
+                                        style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:7px 0">
+                                        <span style="color:#dae2fd">Ch. 1 · pp. 1–18</span><span
+                                            style="color:#d6c3b2">Sep 21</span></div>
+                                    <div
+                                        style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:7px 0">
+                                        <span style="color:#dae2fd">Ch. 2 · pp. 19–40</span><span
+                                            style="color:#d6c3b2">Sep 28</span></div>
+                                    <div
+                                        style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:7px 0">
+                                        <span style="color:#dae2fd">Ch. 3 · pp. 41–66</span><span
+                                            style="color:#d6c3b2">Oct 5</span></div>
+                                    <div
+                                        style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:7px 0">
+                                        <span style="color:#dae2fd">Ch. 4 · pp. 67–90</span><span
+                                            style="color:#d6c3b2">Oct 12</span></div>
+                                    <div
+                                        style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:7px 0">
+                                        <span style="color:#dae2fd">Ch. 5 · pp. 91–118</span><span
+                                            style="color:#d6c3b2">Oct 19</span></div>
+                                    <div
+                                        style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:7px 0">
+                                        <span style="color:#dae2fd">Ch. 6 · pp. 119–142</span><span
+                                            style="color:#d6c3b2">Oct 26</span></div>
+                                </div>
+                                <span style="font-size:12px;font-weight:500;color:#c6cde8">About 24 pages a week. You
+                                    can move any date later.</span>
+                            </div>
+                            <div style="flex:1"></div>
+                            <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch"><span
+                                    style="height:54px;border-radius:9999px;background:linear-gradient(135deg,#ffddb8,#ffb95f);color:#472a00;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:7px">Set
+                                    schedule</span><span
+                                    style="height:44px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#d6c3b2">Skip
+                                    for now</span></div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">Opens right after the creator picks the book in <a href="#2a">2a</a>, and again from
+                        "Set the pace" on an empty Schedule card (<a href="#18c">18c</a>). The deadline list updates
+                        live as the stepper or date changes. "Finish by" swaps the stepper row for a date and spreads 6
+                        chapters evenly; if that's more than 3 a week it shows "That's 4 chapters a week" under the
+                        list. Skip leaves the room with no schedule.</p>
+                </div>
+
+                <div class="dv-opt" id="18b">
+                    <div class="dv-olabel"><a class="dv-oid" href="#18b">18b</a>iPhone: Edit schedule sheet (creator)
+                    </div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        hint-size="402px,874px">
+                        <div
+                            style="height:100%;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;overflow:hidden">
+                            <div style="padding:58px 20px 0;display:flex;flex-direction:column;gap:12px;opacity:0.35">
+                                <span style="color:#ffddb8;font-size:15px;font-weight:700">‹ Rooms</span>
+                                <div style="font-size:26px;font-weight:800;color:#dae2fd">AI Learning</div>
+                            </div>
+                            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45)"></div>
+                            <div
+                                style="position:absolute;left:0;right:0;bottom:0;top:118px;background:#131b2e;border-radius:32px 32px 0 0;padding:10px 20px 34px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+                                <div
+                                    style="width:36px;height:5px;border-radius:9999px;background:#3a4258;align-self:center">
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center"><span
+                                        style="font-size:15px;font-weight:600;color:#d6c3b2">Cancel</span><span
+                                        style="font-size:16px;font-weight:800;color:#dae2fd">Edit schedule</span><span
+                                        style="font-size:15px;font-weight:800;color:#ffddb8">Save</span></div>
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#0b1326;border-radius:16px;padding:12px 14px">
+                                    <span style="font-size:13px;font-weight:600;color:#c6cde8">1 chapter a week · weekly
+                                        on Mondays</span><span
+                                        style="font-size:13px;font-weight:800;color:#ffddb8">Change pace</span></div>
+                                <div style="display:flex;flex-direction:column;gap:6px">
+                                    <div
+                                        style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:transparent;border-radius:16px;min-height:36px">
+                                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                                style="font-size:14px;font-weight:800;color:#8b93ad">Ch. 1</span><span
+                                                style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 1–18</span>
+                                        </div><span
+                                            style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#8b93ad"><ion-icon
+                                                name="lock-closed-outline" style="font-size:13px"></ion-icon>Sep
+                                            21</span>
+                                    </div>
+                                    <div
+                                        style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:transparent;border-radius:16px;min-height:36px">
+                                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                                style="font-size:14px;font-weight:800;color:#8b93ad">Ch. 2</span><span
+                                                style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 19–40</span>
+                                        </div><span
+                                            style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#8b93ad"><ion-icon
+                                                name="lock-closed-outline" style="font-size:13px"></ion-icon>Sep
+                                            28</span>
+                                    </div>
+                                    <div
+                                        style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:transparent;border-radius:16px;min-height:36px">
+                                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                                style="font-size:14px;font-weight:800;color:#8b93ad">Ch. 3</span><span
+                                                style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 41–66</span>
+                                        </div><span
+                                            style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#8b93ad"><ion-icon
+                                                name="lock-closed-outline" style="font-size:13px"></ion-icon>Oct
+                                            5</span>
+                                    </div>
+                                    <div
+                                        style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:#171f33;border-radius:16px;min-height:36px">
+                                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                                style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 4<span
+                                                    style="color:#ffddb8"> · now</span></span><span
+                                                style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 67–90</span>
+                                        </div><span
+                                            style="flex:none;height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#dae2fd"><ion-icon
+                                                name="calendar-outline" style="font-size:14px"></ion-icon>Oct 12</span>
+                                    </div>
+                                    <div
+                                        style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:#171f33;border-radius:16px;min-height:36px">
+                                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                                style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 5</span><span
+                                                style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 91–118</span>
+                                        </div><span
+                                            style="flex:none;height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;box-shadow:inset 0 0 0 2px #ffb95f;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#ffddb8"><ion-icon
+                                                name="calendar-outline" style="font-size:14px"></ion-icon>Oct 21</span>
+                                    </div>
+                                    <div
+                                        style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:#171f33;border-radius:16px;min-height:36px">
+                                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                                style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 6</span><span
+                                                style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 119–142 ·
+                                                moved with Ch. 5</span></div><span
+                                            style="flex:none;height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#ffddb8"><ion-icon
+                                                name="calendar-outline" style="font-size:14px"></ion-icon>Oct 28</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:12px;padding:4px 2px">
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:700;color:#dae2fd">Move later chapters
+                                            too</span><span style="font-size:12px;font-weight:500;color:#c6cde8">Keeps
+                                            the same gap between deadlines</span></div><span
+                                        style="flex:none;width:51px;height:31px;border-radius:9999px;background:#ffb95f;position:relative"><span
+                                            style="position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff"></span></span>
+                                </div>
+                                <div
+                                    style="display:flex;flex-direction:column;gap:14px;align-items:center;margin-top:auto">
+                                    <span style="font-size:12px;font-weight:500;color:#c6cde8;text-align:center">The 6
+                                        members get a notification when you save.</span><span
+                                        style="font-size:14px;font-weight:700;color:#ffb4ab">Remove schedule</span>
+                                </div>
+                            </div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">Opens from Edit on the Schedule card, large detent only. Tapping a date opens the
+                        iOS compact date picker. Here the creator moved Ch. 5 from Oct 19 to Oct 21, and with "Move
+                        later chapters too" on, Ch. 6 moved 2 days with it. Changed dates are amber until saved. Past
+                        deadlines are locked. "Change pace" opens the <a href="#18a">18a</a> controls for the chapters
+                        that haven't started yet. "Remove schedule" asks first: "Members will lose the deadlines.
+                        Reading positions and comments stay." Save is inactive until something changes.</p>
+                </div>
+
+                <div class="dv-opt" id="18c" style="width:860px">
+                    <div class="dv-olabel"><a class="dv-oid" href="#18c">18c</a>Schedule card: creator, member, no
+                        schedule</div>
+                    <div
+                        style="background:#0b1326;border-radius:28px;padding:28px;font-family:'Manrope',sans-serif;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 20px">
+                        <div style="display:flex;flex-direction:column;gap:8px"><span
+                                style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">1
+                                · Creator</span>
+                            <div
+                                style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px">
+                                <div style="display:flex;justify-content:space-between;align-items:baseline"><span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Schedule</span><span
+                                        style="font-size:12px;font-weight:700;color:#ffddb8">Edit</span></div>
+                                <div style="display:flex;gap:6px">
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div style="height:8px;border-radius:9999px;background:#ffb95f"></div><span
+                                            style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 3</span><span
+                                            style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 5</span>
+                                    </div>
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div
+                                            style="height:8px;border-radius:9999px;background:#222a3e;box-shadow:0 0 0 2px #dae2fd">
+                                        </div><span style="font-size:11px;font-weight:800;color:#ffddb8">Ch. 4 ·
+                                            now</span><span style="font-size:10.5px;font-weight:600;color:#ffddb8">Oct
+                                            12</span>
+                                    </div>
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                            style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 5</span><span
+                                            style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 19</span>
+                                    </div>
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                            style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 6</span><span
+                                            style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 26</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px"><span
+                                style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">2
+                                · Member</span>
+                            <div
+                                style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px">
+                                <div style="display:flex;justify-content:space-between;align-items:baseline"><span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Schedule</span><span
+                                        style="font-size:12px;font-weight:600;color:#8b93ad">Set by Mira</span></div>
+                                <div style="display:flex;gap:6px">
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div style="height:8px;border-radius:9999px;background:#ffb95f"></div><span
+                                            style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 3</span><span
+                                            style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 5</span>
+                                    </div>
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div
+                                            style="height:8px;border-radius:9999px;background:#222a3e;box-shadow:0 0 0 2px #dae2fd">
+                                        </div><span style="font-size:11px;font-weight:800;color:#ffddb8">Ch. 4 ·
+                                            now</span><span style="font-size:10.5px;font-weight:600;color:#ffddb8">Oct
+                                            12</span>
+                                    </div>
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                            style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 5</span><span
+                                            style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 19</span>
+                                    </div>
+                                    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                                        <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                            style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 6</span><span
+                                            style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 26</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px"><span
+                                style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">3
+                                · No schedule, creator</span>
+                            <div
+                                style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px">
+                                <div style="display:flex;justify-content:space-between;align-items:baseline"><span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Schedule</span>
+                                </div><span style="font-size:14px;font-weight:600;color:#c6cde8;line-height:1.45">Give
+                                    the room deadlines so everyone reads at the same speed.</span><span
+                                    style="align-self:flex-start;height:36px;padding:0 14px;border-radius:9999px;background:#222a3e;color:#ffddb8;font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px"><ion-icon
+                                        name="calendar-outline" style="font-size:14px"></ion-icon>Set the pace</span>
+                            </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px"><span
+                                style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">4
+                                · No schedule, member</span>
+                            <div
+                                style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px">
+                                <div style="display:flex;justify-content:space-between;align-items:baseline"><span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Schedule</span>
+                                </div><span style="font-size:14px;font-weight:600;color:#c6cde8;line-height:1.45">No
+                                    deadlines yet. Mira can set them. Read at your own speed until then.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ocap">The same card in <a href="#2c">2c</a> and <a href="#14i">14i</a>. Only the creator
+                        sees Edit or "Set the pace". Members see who set it. With no schedule, Home shows the "No
+                        schedule" room card (<a href="#16e">16e</a>) and widgets use their no-deadline versions.</p>
+                </div>
+
+                <div class="dv-opt" id="18d" style="width:1218px">
+                    <div class="dv-olabel"><a class="dv-oid" href="#18d">18d</a>iPad: Edit schedule form sheet over 14i
+                    </div>
+                    <div
+                        style="width:1194px;height:834px;border:12px solid #18181c;border-radius:44px;overflow:hidden;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;box-shadow:0 30px 60px rgba(0,0,0,0.25)">
+                        <div
+                            style="position:absolute;inset:0;padding:40px 44px;display:grid;grid-template-columns:3fr 2fr;gap:20px;opacity:0.35">
+                            <div style="display:flex;flex-direction:column;gap:20px">
+                                <div style="font-size:30px;font-weight:800;color:#dae2fd">AI Learning</div>
+                                <div style="height:260px;border-radius:28px;background:#131b2e"></div>
+                                <div style="height:140px;border-radius:28px;background:#131b2e"></div>
+                            </div>
+                            <div style="margin-top:56px;border-radius:28px;background:#131b2e"></div>
+                        </div>
+                        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45)"></div>
+                        <div
+                            style="position:absolute;left:50%;top:52px;transform:translateX(-50%);width:540px;height:706px;box-sizing:border-box;background:#131b2e;border-radius:28px;padding:22px 24px 26px;display:flex;flex-direction:column;gap:16px;box-shadow:0 30px 60px rgba(0,0,0,0.4)">
+                            <div style="display:flex;justify-content:space-between;align-items:center"><span
+                                    style="font-size:15px;font-weight:600;color:#d6c3b2">Cancel</span><span
+                                    style="font-size:16px;font-weight:800;color:#dae2fd">Edit schedule</span><span
+                                    style="font-size:15px;font-weight:800;color:#ffddb8">Save</span></div>
+                            <div
+                                style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#0b1326;border-radius:16px;padding:12px 14px">
+                                <span style="font-size:13px;font-weight:600;color:#c6cde8">1 chapter a week · weekly on
+                                    Mondays</span><span style="font-size:13px;font-weight:800;color:#ffddb8">Change
+                                    pace</span></div>
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                                <div
+                                    style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:transparent;border-radius:16px;min-height:36px">
+                                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:800;color:#8b93ad">Ch. 1</span><span
+                                            style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 1–18</span></div>
+                                    <span
+                                        style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#8b93ad"><ion-icon
+                                            name="lock-closed-outline" style="font-size:13px"></ion-icon>Sep 21</span>
+                                </div>
+                                <div
+                                    style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:transparent;border-radius:16px;min-height:36px">
+                                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:800;color:#8b93ad">Ch. 2</span><span
+                                            style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 19–40</span>
+                                    </div><span
+                                        style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#8b93ad"><ion-icon
+                                            name="lock-closed-outline" style="font-size:13px"></ion-icon>Sep 28</span>
+                                </div>
+                                <div
+                                    style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:transparent;border-radius:16px;min-height:36px">
+                                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:800;color:#8b93ad">Ch. 3</span><span
+                                            style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 41–66</span>
+                                    </div><span
+                                        style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#8b93ad"><ion-icon
+                                            name="lock-closed-outline" style="font-size:13px"></ion-icon>Oct 5</span>
+                                </div>
+                                <div
+                                    style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:#171f33;border-radius:16px;min-height:36px">
+                                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 4<span
+                                                style="color:#ffddb8"> · now</span></span><span
+                                            style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 67–90</span>
+                                    </div><span
+                                        style="flex:none;height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#dae2fd"><ion-icon
+                                            name="calendar-outline" style="font-size:14px"></ion-icon>Oct 12</span>
+                                </div>
+                                <div
+                                    style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:#171f33;border-radius:16px;min-height:36px">
+                                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 5</span><span
+                                            style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 91–118</span>
+                                    </div><span
+                                        style="flex:none;height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;box-shadow:inset 0 0 0 2px #ffb95f;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#ffddb8"><ion-icon
+                                            name="calendar-outline" style="font-size:14px"></ion-icon>Oct 21</span>
+                                </div>
+                                <div
+                                    style="display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:#171f33;border-radius:16px;min-height:36px">
+                                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span
+                                            style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 6</span><span
+                                            style="font-size:11.5px;font-weight:600;color:#8b93ad">pp. 119–142 · moved
+                                            with Ch. 5</span></div><span
+                                        style="flex:none;height:36px;padding:0 12px;border-radius:9999px;background:#222a3e;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#ffddb8"><ion-icon
+                                            name="calendar-outline" style="font-size:14px"></ion-icon>Oct 28</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:12px;padding:4px 2px">
+                                <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span
+                                        style="font-size:14px;font-weight:700;color:#dae2fd">Move later chapters
+                                        too</span><span style="font-size:12px;font-weight:500;color:#c6cde8">Keeps the
+                                        same gap between deadlines</span></div><span
+                                    style="flex:none;width:51px;height:31px;border-radius:9999px;background:#ffb95f;position:relative"><span
+                                        style="position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff"></span></span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:14px;align-items:center;margin-top:auto">
+                                <span style="font-size:12px;font-weight:500;color:#c6cde8;text-align:center">The 6
+                                    members get a notification when you save.</span><span
+                                    style="font-size:14px;font-weight:700;color:#ffb4ab">Remove schedule</span></div>
+                        </div>
+                    </div>
+                    <p class="ocap">The same content as <a href="#18b">18b</a> in a 540pt form sheet, the same size as
+                        Create room (<a href="#15j">15j</a>). "Set the pace" (<a href="#18a">18a</a>) uses the same form
+                        sheet: on iPad, the setup in <a href="#15k">15k</a> continues inside it. Under 700pt it becomes
+                        the phone sheet.</p>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="dv-turn" id="t17">
+            <div class="dv-thd"><a class="dv-tid" href="#t17">17</a><span class="dv-tname">Sign up, redesigned for
+                    iPhone and iPad</span></div>
+            <p class="blk-sub" style="margin-bottom:18px">The current screen (<span class="mono">SignUpScreen.js</span>)
+                is a 4-field form that floats in the middle of the screen. On a 13" iPad it fills about a fifth of the
+                display. This version puts one-tap sign-up first, uses fewer fields, shows errors inline and gives the
+                iPad a real layout. It replaces the Sign Up screen in turn 1.</p>
+            <div class="intro">
+                <div class="ic">
+                    <h4>What changed</h4>
+                    <ul>
+                        <li><b>Apple and Google first</b>, email below. App Store rule 4.8 requires Sign in with Apple
+                            whenever Google sign-in is offered, so Apple is new backend work.</li>
+                        <li><b>Labels above fields.</b> Placeholders disappear while you type, so they can't be the only
+                            label.</li>
+                        <li><b>No Confirm Password.</b> Instead there's a show/hide eye, and iOS suggests a strong
+                            password.</li>
+                        <li><b>Inline errors</b> under the field instead of <span class="mono">Alert</span>. Username
+                            availability is checked when you leave the field.</li>
+                    </ul>
+                </div>
+                <div class="ic">
+                    <h4>Rules</h4>
+                    <ul>
+                        <li>iPhone: Create account stays above the keyboard. Return moves to the next field, and Go on
+                            the last field submits.</li>
+                        <li>The fields' <span class="mono">textContentType</span> is <span class="mono">username</span>,
+                            <span class="mono">emailAddress</span> and <span class="mono">newPassword</span>, so
+                            AutoFill and strong passwords work.</li>
+                        <li>iPad, chosen by width as in turn 14: <span class="mono">≥ 1000pt</span> is the split layout
+                            (<a href="#17c">17c</a>, including a 13" in portrait), <span class="mono">700–999pt</span>
+                            is the centered card (<a href="#17d">17d</a>), and anything narrower uses the phone layout.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="dv-opts">
+
+                <div class="dv-opt" id="17a">
+                    <div class="dv-olabel"><a class="dv-oid" href="#17a">17a</a>iPhone: default</div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        hint-size="402px,874px">
+                        <div
+                            style="min-height:874px;box-sizing:border-box;background:#0b1326;padding:70px 24px 34px;font-family:'Manrope',sans-serif;display:flex;flex-direction:column;gap:22px">
+                            <div style="font-size:15px;font-weight:800;color:#ffddb8;letter-spacing:-0.2px">ReadPanda
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                                <div
+                                    style="font-size:30px;font-weight:800;color:#dae2fd;letter-spacing:-0.6px;line-height:1.15">
+                                    Create your account</div>
+                                <div style="font-size:15px;font-weight:500;color:#c6cde8;line-height:1.45">Read with
+                                    friends, one chapter at a time.</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:10px">
+                                <div
+                                    style="height:52px;border-radius:9999px;background:#ffffff;color:#000;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+                                    <ion-icon name="logo-apple" style="font-size:19px"></ion-icon>Continue with Apple
+                                </div>
+                                <div
+                                    style="height:52px;border-radius:9999px;background:#222a3e;color:#dae2fd;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+                                    <ion-icon name="logo-google"
+                                        style="font-size:17px;color:#ffddb8"></ion-icon>Continue with Google</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <div style="flex:1;height:1px;background:#514537;opacity:0.5"></div><span
+                                    style="font-size:13px;font-weight:600;color:#c6cde8">or use email</span>
+                                <div style="flex:1;height:1px;background:#514537;opacity:0.5"></div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:14px">
+                                <div style="display:flex;flex-direction:column;gap:6px"><span
+                                        style="font-size:12px;font-weight:700;color:#d6c3b2">Username</span>
+                                    <div
+                                        style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;gap:2px;padding:0 16px;font-size:16px;color:#8f96b0">
+                                        <span style="color:#d6c3b2">@</span>yourname</div>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:6px"><span
+                                        style="font-size:12px;font-weight:700;color:#d6c3b2">Email</span>
+                                    <div
+                                        style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;padding:0 16px;font-size:16px;color:#8f96b0">
+                                        you@example.com</div>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:6px"><span
+                                        style="font-size:12px;font-weight:700;color:#d6c3b2">Password</span>
+                                    <div
+                                        style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:16px;color:#8f96b0">
+                                        <span>At least 8 characters</span><ion-icon name="eye-outline"
+                                            style="font-size:19px;color:#d6c3b2"></ion-icon></div>
+                                </div>
+                            </div>
+                            <div
+                                style="height:54px;border-radius:9999px;background:linear-gradient(135deg,#ffddb8,#ffb95f);color:#472a00;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">
+                                Create account</div>
+                            <div style="flex:1"></div>
+                            <div
+                                style="display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center">
+                                <div style="font-size:15px;color:#d6c3b2">Already have an account? <span
+                                        style="color:#ffddb8;font-weight:700">Log in</span></div>
+                                <div style="font-size:12px;line-height:1.5;color:#c6cde8;max-width:300px">By continuing
+                                    you agree to the <span style="color:#ffddb8">Terms</span> and <span
+                                        style="color:#ffddb8">Privacy Policy</span>.</div>
+                            </div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">One-tap options come first because most people never type a password. Log in moves
+                        to the bottom, within thumb reach, and its title-sized "Login!" link is gone. The terms line is
+                        required once Apple sign-in is added.</p>
+                </div>
+
+                <div class="dv-opt" id="17b">
+                    <div class="dv-olabel"><a class="dv-oid" href="#17b">17b</a>iPhone: typing, with an error</div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        keyboard="{{ true }}" hint-size="402px,874px">
+                        <div
+                            style="min-height:100%;box-sizing:border-box;background:#0b1326;padding:66px 24px 14px;font-family:'Manrope',sans-serif;display:flex;flex-direction:column;gap:16px">
+                            <div style="font-size:22px;font-weight:800;color:#dae2fd;letter-spacing:-0.4px">Create your
+                                account</div>
+                            <div style="display:flex;flex-direction:column;gap:6px"><span
+                                    style="font-size:12px;font-weight:700;color:#d6c3b2">Username</span>
+                                <div
+                                    style="height:52px;border-radius:16px;background:#060d20;box-shadow:inset 0 0 0 2px #ffb4ab;display:flex;align-items:center;gap:2px;padding:0 16px;font-size:16px;color:#dae2fd">
+                                    <span style="color:#d6c3b2">@</span>mira</div><span
+                                    style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#ffb4ab"><ion-icon
+                                        name="alert-circle" style="font-size:14px"></ion-icon>@mira is taken. Try <span
+                                        style="color:#ffddb8;text-decoration:underline">@mira.reads</span></span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:6px"><span
+                                    style="font-size:12px;font-weight:700;color:#d6c3b2">Email</span>
+                                <div
+                                    style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:16px;color:#dae2fd">
+                                    <span>mira@hey.com</span><ion-icon name="checkmark-circle"
+                                        style="font-size:18px;color:#7fd1a8"></ion-icon></div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:6px"><span
+                                    style="font-size:12px;font-weight:700;color:#d6c3b2">Password</span>
+                                <div
+                                    style="height:52px;border-radius:16px;background:#060d20;box-shadow:inset 0 0 0 2px #ffb95f;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:16px;color:#dae2fd;letter-spacing:2px">
+                                    <span>••••••<span
+                                            style="display:inline-block;width:2px;height:20px;background:#ffb95f;vertical-align:middle;margin-left:2px"></span></span><ion-icon
+                                        name="eye-outline" style="font-size:19px;color:#d6c3b2"></ion-icon></div><span
+                                    style="font-size:12px;font-weight:600;color:#c6cde8">2 more characters</span>
+                            </div>
+                            <div style="flex:1"></div>
+                            <div
+                                style="height:54px;border-radius:9999px;background:#222a3e;color:#c6cde8;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">
+                                Create account</div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">The screen scrolls up so the focused field and Create account stay above the
+                        keyboard. The button stays inactive (<span class="mono">#222a3e</span>) until every field is
+                        valid, and it never opens an alert. A server error such as 409 "username taken" shows under its
+                        own field. The old catch block's "Login failed" title goes away.</p>
+                </div>
+
+                <div class="dv-opt" id="17c" style="width:1056px">
+                    <div class="dv-olabel"><a class="dv-oid" href="#17c">17c</a>iPad ≥ 1000pt: split (13" portrait
+                        shown)</div>
+                    <div
+                        style="width:1032px;height:1376px;border:12px solid #18181c;border-radius:48px;overflow:hidden;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;box-shadow:0 30px 60px rgba(0,0,0,0.25);display:grid;grid-template-columns:5fr 7fr">
+                        <div
+                            style="position:absolute;top:0;left:0;right:0;height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 28px;font-size:12px;font-weight:700;color:#dae2fd;z-index:2">
+                            <span>2:29 AM Tue Oct 13</span><span
+                                style="display:flex;gap:6px;align-items:center"><ion-icon name="wifi"
+                                    style="font-size:14px"></ion-icon><ion-icon name="battery-full"
+                                    style="font-size:18px"></ion-icon></span></div>
+                        <div
+                            style="background:#060d20;padding:76px 52px 64px;display:flex;flex-direction:column;gap:40px">
+                            <div style="font-size:17px;font-weight:800;color:#ffddb8;letter-spacing:-0.2px">ReadPanda
+                            </div>
+                            <div style="flex:1"></div>
+                            <div
+                                style="font-size:44px;font-weight:800;color:#dae2fd;letter-spacing:-1.2px;line-height:1.1;text-wrap:pretty">
+                                Read together, a chapter at a time.</div>
+                            <div style="display:flex;flex-direction:column;gap:22px">
+                                <div style="display:flex;gap:14px;align-items:flex-start"><span
+                                        style="width:40px;height:40px;border-radius:50%;background:#171f33;color:#ffddb8;display:flex;align-items:center;justify-content:center;flex:none"><ion-icon
+                                            name="people-outline" style="font-size:18px"></ion-icon></span>
+                                    <div style="display:flex;flex-direction:column;gap:3px"><span
+                                            style="font-size:15px;font-weight:800;color:#dae2fd">Rooms with a shared
+                                            pace</span><span
+                                            style="font-size:14px;font-weight:500;color:#c6cde8;line-height:1.45">Each
+                                            chapter has a due date, so nobody falls behind.</span></div>
+                                </div>
+                                <div style="display:flex;gap:14px;align-items:flex-start"><span
+                                        style="width:40px;height:40px;border-radius:50%;background:#171f33;color:#ffddb8;display:flex;align-items:center;justify-content:center;flex:none"><ion-icon
+                                            name="chatbubble-outline" style="font-size:17px"></ion-icon></span>
+                                    <div style="display:flex;flex-direction:column;gap:3px"><span
+                                            style="font-size:15px;font-weight:800;color:#dae2fd">Comments on the
+                                            page</span><span
+                                            style="font-size:14px;font-weight:500;color:#c6cde8;line-height:1.45">Comments
+                                            past your page stay blurred until you get there.</span></div>
+                                </div>
+                                <div style="display:flex;gap:14px;align-items:flex-start"><span
+                                        style="width:40px;height:40px;border-radius:50%;background:#171f33;color:#ffddb8;display:flex;align-items:center;justify-content:center;flex:none"><ion-icon
+                                            name="flame-outline" style="font-size:18px"></ion-icon></span>
+                                    <div style="display:flex;flex-direction:column;gap:3px"><span
+                                            style="font-size:15px;font-weight:800;color:#dae2fd">A streak that keeps you
+                                            going</span><span
+                                            style="font-size:14px;font-weight:500;color:#c6cde8;line-height:1.45">A few
+                                            pages a night is enough to keep it.</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding:76px 56px 56px;display:flex;flex-direction:column">
+                            <div style="display:flex;justify-content:flex-end;font-size:15px;color:#d6c3b2">Already have
+                                an account?&nbsp;<span style="color:#ffddb8;font-weight:700">Log in</span></div>
+                            <div style="flex:1;display:flex;align-items:center;justify-content:center">
+                                <div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:22px">
+                                    <div style="display:flex;flex-direction:column;gap:6px">
+                                        <div style="font-size:32px;font-weight:800;color:#dae2fd;letter-spacing:-0.7px">
+                                            Create your account</div>
+                                        <div style="font-size:15px;font-weight:500;color:#c6cde8">It takes about 30
+                                            seconds.</div>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                                        <div
+                                            style="height:52px;border-radius:9999px;background:#ffffff;color:#000;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+                                            <ion-icon name="logo-apple" style="font-size:18px"></ion-icon>Apple</div>
+                                        <div
+                                            style="height:52px;border-radius:9999px;background:#222a3e;color:#dae2fd;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+                                            <ion-icon name="logo-google"
+                                                style="font-size:16px;color:#ffddb8"></ion-icon>Google</div>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:12px">
+                                        <div style="flex:1;height:1px;background:#514537;opacity:0.5"></div><span
+                                            style="font-size:13px;font-weight:600;color:#c6cde8">or use email</span>
+                                        <div style="flex:1;height:1px;background:#514537;opacity:0.5"></div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:14px">
+                                        <div style="display:flex;flex-direction:column;gap:6px"><span
+                                                style="font-size:12px;font-weight:700;color:#d6c3b2">Username</span>
+                                            <div
+                                                style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;gap:2px;padding:0 16px;font-size:16px;color:#8f96b0">
+                                                <span style="color:#d6c3b2">@</span>yourname</div>
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:6px"><span
+                                                style="font-size:12px;font-weight:700;color:#d6c3b2">Email</span>
+                                            <div
+                                                style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;padding:0 16px;font-size:16px;color:#8f96b0">
+                                                you@example.com</div>
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:6px"><span
+                                                style="font-size:12px;font-weight:700;color:#d6c3b2">Password</span>
+                                            <div
+                                                style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:16px;color:#8f96b0">
+                                                <span>At least 8 characters</span><ion-icon name="eye-outline"
+                                                    style="font-size:19px;color:#d6c3b2"></ion-icon></div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style="height:54px;border-radius:9999px;background:linear-gradient(135deg,#ffddb8,#ffb95f);color:#472a00;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">
+                                        Create account</div>
+                                </div>
+                            </div>
+                            <div style="font-size:12px;color:#c6cde8;text-align:center">By continuing you agree to the
+                                <span style="color:#ffddb8">Terms</span> and <span style="color:#ffddb8">Privacy
+                                    Policy</span>.</div>
+                        </div>
+                    </div>
+                    <p class="ocap">The left panel uses the empty space to explain the app, using only features it
+                        already has (rooms, comments, streaks). Apple and Google sit side by side because the form is
+                        wide enough. With a hardware keyboard nothing moves. With the on-screen keyboard, the right
+                        column scrolls and the left panel stays put.</p>
+                </div>
+
+                <div class="dv-opt" id="17d" style="width:858px">
+                    <div class="dv-olabel"><a class="dv-oid" href="#17d">17d</a>iPad 700–999pt: centered card (11"
+                        portrait)</div>
+                    <div
+                        style="width:834px;height:1194px;border:12px solid #18181c;border-radius:44px;overflow:hidden;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;box-shadow:0 30px 60px rgba(0,0,0,0.25);display:flex;flex-direction:column">
+                        <div
+                            style="height:28px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 28px;font-size:12px;font-weight:700;color:#dae2fd">
+                            <span>9:41 Tue Oct 13</span><span style="display:flex;gap:6px;align-items:center"><ion-icon
+                                    name="wifi" style="font-size:14px"></ion-icon><ion-icon name="battery-full"
+                                    style="font-size:18px"></ion-icon></span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 40px 0">
+                            <span style="font-size:17px;font-weight:800;color:#ffddb8">ReadPanda</span><span
+                                style="font-size:15px;color:#d6c3b2">Have an account?&nbsp;<span
+                                    style="color:#ffddb8;font-weight:700">Log in</span></span></div>
+                        <div
+                            style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:0 40px">
+                            <div
+                                style="width:100%;max-width:480px;box-sizing:border-box;background:#131b2e;border-radius:32px;padding:40px;display:flex;flex-direction:column;gap:22px">
+                                <div style="display:flex;flex-direction:column;gap:6px">
+                                    <div style="font-size:32px;font-weight:800;color:#dae2fd;letter-spacing:-0.7px">
+                                        Create your account</div>
+                                    <div style="font-size:15px;font-weight:500;color:#c6cde8">Read with friends, one
+                                        chapter at a time.</div>
+                                </div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                                    <div
+                                        style="height:52px;border-radius:9999px;background:#ffffff;color:#000;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+                                        <ion-icon name="logo-apple" style="font-size:18px"></ion-icon>Apple</div>
+                                    <div
+                                        style="height:52px;border-radius:9999px;background:#222a3e;color:#dae2fd;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+                                        <ion-icon name="logo-google"
+                                            style="font-size:16px;color:#ffddb8"></ion-icon>Google</div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <div style="flex:1;height:1px;background:#514537;opacity:0.5"></div><span
+                                        style="font-size:13px;font-weight:600;color:#c6cde8">or use email</span>
+                                    <div style="flex:1;height:1px;background:#514537;opacity:0.5"></div>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:14px">
+                                    <div style="display:flex;flex-direction:column;gap:6px"><span
+                                            style="font-size:12px;font-weight:700;color:#d6c3b2">Username</span>
+                                        <div
+                                            style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;gap:2px;padding:0 16px;font-size:16px;color:#8f96b0">
+                                            <span style="color:#d6c3b2">@</span>yourname</div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:6px"><span
+                                            style="font-size:12px;font-weight:700;color:#d6c3b2">Email</span>
+                                        <div
+                                            style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;padding:0 16px;font-size:16px;color:#8f96b0">
+                                            you@example.com</div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:6px"><span
+                                            style="font-size:12px;font-weight:700;color:#d6c3b2">Password</span>
+                                        <div
+                                            style="height:52px;border-radius:16px;background:#060d20;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:16px;color:#8f96b0">
+                                            <span>At least 8 characters</span><ion-icon name="eye-outline"
+                                                style="font-size:19px;color:#d6c3b2"></ion-icon></div>
+                                    </div>
+                                </div>
+                                <div
+                                    style="height:54px;border-radius:9999px;background:linear-gradient(135deg,#ffddb8,#ffb95f);color:#472a00;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">
+                                    Create account</div>
+                            </div>
+                            <div style="font-size:12px;color:#c6cde8;text-align:center">By continuing you agree to the
+                                <span style="color:#ffddb8">Terms</span> and <span style="color:#ffddb8">Privacy
+                                    Policy</span>.</div>
+                        </div>
+                    </div>
+                    <p class="ocap">The same form as the phone, capped at 480pt on a tonal card (<span
+                            class="mono">#131b2e</span>, no border). Log in moves to the top bar because the bottom of
+                        an iPad is out of reach. In Split View under 700pt it becomes <a href="#17a">17a</a>.</p>
+                </div>
+
+            </div>
+        </section>
+
         <section class="dv-turn" id="t16">
             <div class="dv-thd"><a class="dv-tid" href="#t16">16</a><span class="dv-tname">Home, fuller: tonight, your
                     week, your people</span></div>
@@ -2563,7 +3350,7 @@
                                                     style="background:#ffb95f;color:#2b1800;font-size:10px;font-weight:800;border-radius:9999px;padding:3px 8px">3
                                                     new</span></div>
                                             <div style="font-size:12.5px;font-weight:500;color:#d6c3b2">Data Mining ·
-                                                Ch. 4 by Fri Oct 11</div>
+                                                Ch. 4 by Mon Oct 12</div>
                                             <div style="display:flex;align-items:center;gap:10px;margin-top:auto">
                                                 <div style="display:flex"><span
                                                         style="width:24px;height:24px;border-radius:50%;background:#3d4a68;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#dae2fd;flex:none;border:2px solid #131b2e;"></span><span
@@ -3558,15 +4345,7 @@
                         <div
                             style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px">
                             <div style="width:100%;max-width:520px;display:flex;flex-direction:column;gap:28px">
-                                <div style="display:flex;gap:6px"><span
-                                        style="width:28px;height:4px;border-radius:9999px;background:#ffb95f"></span><span
-                                        style="width:28px;height:4px;border-radius:9999px;background:#ffb95f"></span><span
-                                        style="width:28px;height:4px;border-radius:9999px;background:#222a3e"></span>
-                                </div>
                                 <div style="display:flex;flex-direction:column;gap:10px">
-                                    <div
-                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">
-                                        Step 2 of 3</div>
                                     <div
                                         style="font-size:34px;font-weight:800;color:#dae2fd;letter-spacing:-0.8px;line-height:1.15;text-wrap:pretty">
                                         What do you like to read?</div>
@@ -3635,9 +4414,10 @@
                             style="height:5px;width:140px;border-radius:9999px;background:#dae2fd;opacity:0.5;margin:0 auto 10px;flex:none">
                         </div>
                     </div>
-                    <p class="ocap">The phone flow, centered in a 520pt column. The extra space isn't filled with art:
-                        the cover row below the chips updates as you pick, so the choice shows its result right away. In
-                        landscape the same column stays centered.</p>
+                    <p class="ocap">The phone interests screen (<span class="mono">InterestScreen</span>, the only
+                        onboarding screen), centered in a 520pt column. No step counter: it's a single screen. The extra
+                        space isn't filled with art: the cover row below the chips updates as you pick, so the choice
+                        shows its result right away. In landscape the same column stays centered.</p>
                 </div>
 
                 <div class="dv-opt" id="14b" style="width:1218px">
@@ -4543,6 +5323,9 @@
                                     <span
                                         style="height:42px;padding:0 18px;border-radius:9999px;background:#171f33;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#dae2fd"><ion-icon
                                             name="person-add-outline" style="font-size:16px"></ion-icon>Invite</span>
+                                    <span
+                                        style="height:42px;width:42px;border-radius:9999px;background:#171f33;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon
+                                            name="ellipsis-horizontal" style="font-size:18px"></ion-icon></span>
                                 </div>
                             </div>
                             <div
@@ -4579,20 +5362,20 @@
                                                     style="height:8px;border-radius:9999px;background:#222a3e;box-shadow:0 0 0 2px #dae2fd">
                                                 </div><span style="font-size:11px;font-weight:800;color:#ffddb8">Ch. 4 ·
                                                     now</span><span
-                                                    style="font-size:10.5px;font-weight:600;color:#ffddb8">Fri Oct
-                                                    11</span>
+                                                    style="font-size:10.5px;font-weight:600;color:#ffddb8">Mon Oct
+                                                    12</span>
                                             </div>
                                             <div style="display:flex;flex-direction:column;gap:6px">
                                                 <div style="height:8px;border-radius:9999px;background:#222a3e"></div>
                                                 <span style="font-size:11px;font-weight:700;color:#8b93ad">Ch.
                                                     5</span><span
-                                                    style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 18</span>
+                                                    style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 19</span>
                                             </div>
                                             <div style="display:flex;flex-direction:column;gap:6px">
                                                 <div style="height:8px;border-radius:9999px;background:#222a3e"></div>
                                                 <span style="font-size:11px;font-weight:700;color:#8b93ad">Ch.
                                                     6</span><span
-                                                    style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 25</span>
+                                                    style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 26</span>
                                             </div>
                                         </div>
                                         <div
@@ -4693,7 +5476,8 @@
                     <p class="ocap">The schedule spreads into a 6-week strip, and "where everyone is" puts each member
                         as a dot along the book (your dot has an amber ring). Comments go in the right column. Only
                         comments up to your position show; the rest are just a count. In portrait, the comments column
-                        moves under the schedule.</p>
+                        moves under the schedule. Phone version: <a href="#2c">2c</a>, which has the same content. Edit
+                        is shown to the room creator only (<a href="#18c">18c</a>).</p>
                 </div>
 
                 <div class="dv-opt" id="14j" style="width:1218px">
@@ -4918,6 +5702,57 @@
                         shelf rows and the bucket on the right. It follows the same fallback rules: with no room the
                         panel is hidden, and with no bucket it shows Curated. The widget allows 4 tap targets instead of
                         3 because each target is still at least 44pt.</p>
+                </div>
+
+                <div class="dv-opt" id="14l" style="width:1218px">
+                    <div class="dv-olabel"><a class="dv-oid" href="#14l">14l</a>Room ⋯ menu (iPad, creator)</div>
+                    <div
+                        style="width:1194px;height:834px;border:12px solid #18181c;border-radius:44px;overflow:hidden;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;box-shadow:0 30px 60px rgba(0,0,0,0.25)">
+                        <div
+                            style="position:absolute;inset:0;padding:40px 44px;display:flex;flex-direction:column;gap:22px">
+                            <span
+                                style="display:flex;align-items:center;gap:4px;color:#ffddb8;font-size:15px;font-weight:700"><ion-icon
+                                    name="chevron-back" style="font-size:20px"></ion-icon>Rooms</span>
+                            <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                                <div style="display:flex;flex-direction:column;gap:6px">
+                                    <div style="font-size:30px;font-weight:800;color:#dae2fd;letter-spacing:-0.6px">AI
+                                        Learning</div>
+                                    <div style="font-size:13px;font-weight:600;color:#d6c3b2">6 readers · Data Mining ·
+                                        since Sep 14</div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:12px"><span
+                                        style="height:42px;padding:0 18px;border-radius:9999px;background:#171f33;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#dae2fd"><ion-icon
+                                            name="person-add-outline"
+                                            style="font-size:16px"></ion-icon>Invite</span><span
+                                        style="height:42px;width:42px;border-radius:9999px;background:#ffddb8;display:flex;align-items:center;justify-content:center;color:#472a00"><ion-icon
+                                            name="ellipsis-horizontal" style="font-size:18px"></ion-icon></span></div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;flex:1">
+                                <div style="display:flex;flex-direction:column;gap:20px">
+                                    <div style="height:280px;border-radius:28px;background:#131b2e"></div>
+                                    <div style="height:130px;border-radius:28px;background:#131b2e"></div>
+                                </div>
+                                <div style="border-radius:28px;background:#131b2e;margin-bottom:24px"></div>
+                            </div>
+                        </div>
+                        <div style="position:absolute;right:44px;top:156px">
+                            <div
+                                style="width:260px;background:rgba(34,42,62,0.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5);font-family:'Manrope',sans-serif">
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;font-size:16px;font-weight:600;color:#dae2fd">
+                                    <span>Copy invite code</span><ion-icon name="copy-outline"
+                                        style="font-size:18px"></ion-icon></div>
+                                <div style="height:8px;background:rgba(6,13,32,0.5)"></div>
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;font-size:16px;font-weight:600;color:#ffb4ab">
+                                    <span>Delete room</span><ion-icon name="trash-outline"
+                                        style="font-size:18px"></ion-icon></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ocap">The same menu as <a href="#2d">2d</a>, opening as a popover under ⋯ with no dimming,
+                        as iPadOS does. The confirmation (<a href="#2e">2e</a>) shows as a popover alert anchored to the
+                        same button.</p>
                 </div>
 
             </div>
@@ -9246,6 +10081,291 @@
                         40% opacity until the name is non-empty.</p>
                 </div>
 
+                <div class="dv-opt" id="2c">
+                    <div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Room: active (phone version of 14i)</div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        hint-size="402px,874px">
+                        <div
+                            style="height:100%;box-sizing:border-box;background:#0b1326;padding:58px 0 0;font-family:'Manrope',sans-serif;display:flex;flex-direction:column;overflow:hidden">
+                            <div
+                                style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:0 20px">
+                                <span
+                                    style="display:flex;align-items:center;gap:4px;color:#ffddb8;font-size:15px;font-weight:700"><ion-icon
+                                        name="chevron-back" style="font-size:20px"></ion-icon>Rooms</span>
+                                <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px">
+                                    <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                                        <div style="font-size:26px;font-weight:800;color:#dae2fd;letter-spacing:-0.5px">
+                                            AI Learning</div>
+                                        <div style="font-size:12px;font-weight:600;color:#d6c3b2">6 readers · Data
+                                            Mining</div>
+                                    </div>
+                                    <span style="flex:none;display:flex;gap:8px"><span
+                                            style="flex:none;height:44px;width:44px;border-radius:9999px;background:#171f33;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon
+                                                name="person-add-outline" style="font-size:18px"></ion-icon></span><span
+                                            style="flex:none;height:44px;width:44px;border-radius:9999px;background:#171f33;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon
+                                                name="ellipsis-horizontal"
+                                                style="font-size:18px"></ion-icon></span></span>
+                                </div>
+                                <div
+                                    style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px">
+                                    <div style="display:flex;justify-content:space-between;align-items:baseline"><span
+                                            style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Schedule</span><span
+                                            style="font-size:12px;font-weight:700;color:#ffddb8">Edit</span></div>
+                                    <div style="display:flex;gap:6px;overflow:hidden;margin-right:-16px">
+                                        <div style="flex:none;width:68px;display:flex;flex-direction:column;gap:6px">
+                                            <div
+                                                style="height:8px;border-radius:9999px;background:linear-gradient(90deg,#ffb95f 40%,#222a3e 40%)">
+                                            </div><span style="font-size:11px;font-weight:700;color:#dae2fd">Ch.
+                                                2</span><span style="font-size:10.5px;font-weight:600;color:#8b93ad">Sep
+                                                28</span>
+                                        </div>
+                                        <div style="flex:none;width:68px;display:flex;flex-direction:column;gap:6px">
+                                            <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                                style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 3</span><span
+                                                style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 5</span>
+                                        </div>
+                                        <div style="flex:none;width:68px;display:flex;flex-direction:column;gap:6px">
+                                            <div
+                                                style="height:8px;border-radius:9999px;background:#222a3e;box-shadow:0 0 0 2px #dae2fd">
+                                            </div><span style="font-size:11px;font-weight:800;color:#ffddb8">Ch. 4 ·
+                                                now</span><span
+                                                style="font-size:10.5px;font-weight:600;color:#ffddb8">Mon Oct 12</span>
+                                        </div>
+                                        <div style="flex:none;width:68px;display:flex;flex-direction:column;gap:6px">
+                                            <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                                style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 5</span><span
+                                                style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 19</span>
+                                        </div>
+                                        <div style="flex:none;width:68px;display:flex;flex-direction:column;gap:6px">
+                                            <div style="height:8px;border-radius:9999px;background:#222a3e"></div><span
+                                                style="font-size:11px;font-weight:700;color:#dae2fd">Ch. 6</span><span
+                                                style="font-size:10.5px;font-weight:600;color:#8b93ad">Oct 26</span>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style="display:flex;gap:12px;align-items:center;background:#171f33;border-radius:18px;padding:12px">
+                                        <div
+                                            style="width:38px;height:54px;border-radius:8px;background:linear-gradient(160deg,#2e3a54,#151d32);flex:none">
+                                        </div>
+                                        <div style="flex:1;min-width:0">
+                                            <div style="font-size:14px;font-weight:800;color:#dae2fd">Ch. 2 · Page 31
+                                            </div>
+                                            <div style="font-size:11.5px;font-weight:600;color:#d6c3b2;margin-top:2px">3
+                                                comments waiting at p. 34</div>
+                                        </div>
+                                        <span
+                                            style="height:44px;padding:0 16px;border-radius:9999px;background:linear-gradient(135deg,#ffddb8,#ffb95f);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;color:#472a00;flex:none"><ion-icon
+                                                name="play" style="font-size:13px"></ion-icon>Continue</span>
+                                    </div>
+                                </div>
+                                <div
+                                    style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                                    <span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Where
+                                        everyone is</span>
+                                    <div style="position:relative;height:40px;margin-right:28px">
+                                        <div
+                                            style="position:absolute;left:0;right:-28px;top:18px;height:4px;border-radius:9999px;background:#060d20">
+                                        </div><span
+                                            style="position:absolute;left:8%;top:6px;width:28px;height:28px;border-radius:50%;background:#3d4a68;border:2px solid #ffb95f;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#dae2fd">M</span><span
+                                            style="position:absolute;left:38%;top:6px;width:28px;height:28px;border-radius:50%;background:#54405e;border:2px solid #131b2e;box-sizing:border-box;"></span><span
+                                            style="position:absolute;left:46%;top:6px;width:28px;height:28px;border-radius:50%;background:#2f4d47;border:2px solid #131b2e;box-sizing:border-box;"></span><span
+                                            style="position:absolute;left:52%;top:6px;width:28px;height:28px;border-radius:50%;background:#5a4a2e;border:2px solid #131b2e;box-sizing:border-box;"></span><span
+                                            style="position:absolute;left:80%;top:6px;width:28px;height:28px;border-radius:50%;background:#3e3a62;border:2px solid #131b2e;box-sizing:border-box;"></span>
+                                    </div>
+                                    <span style="font-size:12px;font-weight:600;color:#d6c3b2">Most of the room is in
+                                        Ch. 3.</span>
+                                </div>
+                                <div
+                                    style="background:#131b2e;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px">
+                                    <span
+                                        style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Recent
+                                        · unlocked for you</span>
+                                    <div style="display:flex;gap:10px">
+                                        <div
+                                            style="width:30px;height:30px;border-radius:50%;background:#54405e;flex:none">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:2px">
+                                            <div style="display:flex;gap:8px;align-items:baseline"><span
+                                                    style="font-size:12.5px;font-weight:800;color:#dae2fd">Grace</span><span
+                                                    style="font-size:10.5px;font-weight:600;color:#8b93ad">p. 28 ·
+                                                    2d</span></div>
+                                            <div style="font-size:13px;font-weight:500;color:#c6cde8;line-height:1.5">
+                                                This is the bit that finally made vectors click for me.</div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;gap:10px">
+                                        <div
+                                            style="width:30px;height:30px;border-radius:50%;background:#2f4d47;flex:none">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;gap:2px">
+                                            <div style="display:flex;gap:8px;align-items:baseline"><span
+                                                    style="font-size:12.5px;font-weight:800;color:#dae2fd">Ade</span><span
+                                                    style="font-size:10.5px;font-weight:600;color:#8b93ad">p. 22 ·
+                                                    3d</span></div>
+                                            <div style="font-size:13px;font-weight:500;color:#c6cde8;line-height:1.5">
+                                                Anyone else running the examples in RStudio Cloud?</div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style="display:flex;gap:10px;align-items:center;background:#171f33;border-radius:14px;padding:12px">
+                                        <ion-icon name="lock-closed-outline"
+                                            style="font-size:16px;color:#8b93ad"></ion-icon><span
+                                            style="font-size:12px;font-weight:600;color:#8b93ad">14 more unlock as you
+                                            read</span></div>
+                                </div>
+                            </div>
+                            <div
+                                style="flex:none;display:flex;justify-content:space-around;padding:10px 12px 30px;background:rgba(23,31,51,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
+                                <span
+                                    style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2;font-size:10px;font-weight:600"><ion-icon
+                                        name="book-outline" style="font-size:22px"></ion-icon>Home</span>
+                                <span
+                                    style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2;font-size:10px;font-weight:600"><ion-icon
+                                        name="compass-outline" style="font-size:22px"></ion-icon>Discover</span>
+                                <span
+                                    style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#d6c3b2;font-size:10px;font-weight:600"><ion-icon
+                                        name="bookmarks-outline" style="font-size:22px"></ion-icon>My Books</span>
+                                <span
+                                    style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#ffddb8;font-size:10px;font-weight:700"><ion-icon
+                                        name="people" style="font-size:22px"></ion-icon>Rooms</span>
+                            </div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">The same three sections as <a href="#14i">14i</a>, stacked in one column: schedule,
+                        where everyone is, recent comments. The 6-week strip becomes a sideways scroller that starts one
+                        week before "now". Invite shrinks to an icon button (44pt, labelled "Invite" for VoiceOver), and
+                        the members row is removed because the dots already show everyone. Edit is shown to the room
+                        creator only, and members see "Set by {creator}" instead (<a href="#18c">18c</a>). This is the
+                        room once a book and schedule are set. Before that it's <a href="#2a">2a</a>.</p>
+                </div>
+
+                <div class="dv-opt" id="2d">
+                    <div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Room ⋯ menu: member and creator</div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        hint-size="402px,874px">
+                        <div
+                            style="height:100%;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;overflow:hidden">
+                            <div style="padding:58px 20px 0;display:flex;flex-direction:column;gap:16px"><span
+                                    style="color:#ffddb8;font-size:15px;font-weight:700;display:flex;align-items:center;gap:4px"><ion-icon
+                                        name="chevron-back" style="font-size:20px"></ion-icon>Rooms</span>
+                                <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                                    <div style="display:flex;flex-direction:column;gap:4px">
+                                        <div style="font-size:26px;font-weight:800;color:#dae2fd;letter-spacing:-0.5px">
+                                            AI Learning</div>
+                                        <div style="font-size:12px;font-weight:600;color:#d6c3b2">6 readers · Data
+                                            Mining</div>
+                                    </div><span style="display:flex;gap:8px"><span
+                                            style="height:44px;width:44px;border-radius:9999px;background:#171f33;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon
+                                                name="person-add-outline" style="font-size:18px"></ion-icon></span><span
+                                            style="height:44px;width:44px;border-radius:9999px;background:#ffddb8;display:flex;align-items:center;justify-content:center;color:#472a00;position:relative;z-index:3"><ion-icon
+                                                name="ellipsis-horizontal"
+                                                style="font-size:18px"></ion-icon></span></span>
+                                </div>
+                                <div style="height:220px;border-radius:24px;background:#131b2e"></div>
+                                <div style="height:120px;border-radius:24px;background:#131b2e"></div>
+                                <div style="height:200px;border-radius:24px;background:#131b2e"></div>
+                            </div>
+                            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.4)"></div>
+                            <div
+                                style="position:absolute;right:20px;top:176px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+                                <span
+                                    style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Member</span>
+                                <div
+                                    style="width:250px;background:rgba(34,42,62,0.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5);font-family:'Manrope',sans-serif">
+                                    <div
+                                        style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;font-size:16px;font-weight:600;color:#dae2fd">
+                                        <span>Copy invite code</span><ion-icon name="copy-outline"
+                                            style="font-size:18px"></ion-icon></div>
+                                    <div style="height:8px;background:rgba(6,13,32,0.5)"></div>
+                                    <div
+                                        style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;font-size:16px;font-weight:600;color:#ffb4ab">
+                                        <span>Leave room</span><ion-icon name="exit-outline"
+                                            style="font-size:18px"></ion-icon></div>
+                                </div>
+                            </div>
+                            <div
+                                style="position:absolute;right:20px;top:336px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+                                <span
+                                    style="font-size:11px;font-weight:700;color:#d6c3b2;text-transform:uppercase;letter-spacing:1px">Creator</span>
+                                <div
+                                    style="width:250px;background:rgba(34,42,62,0.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5);font-family:'Manrope',sans-serif">
+                                    <div
+                                        style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;font-size:16px;font-weight:600;color:#dae2fd">
+                                        <span>Copy invite code</span><ion-icon name="copy-outline"
+                                            style="font-size:18px"></ion-icon></div>
+                                    <div style="height:8px;background:rgba(6,13,32,0.5)"></div>
+                                    <div
+                                        style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:0 16px;font-size:16px;font-weight:600;color:#ffb4ab">
+                                        <span>Delete room</span><ion-icon name="trash-outline"
+                                            style="font-size:18px"></ion-icon></div>
+                                </div>
+                            </div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">Leave and Delete move out of the bottom of the room into a ⋯ menu next to Invite,
+                        using the native iOS pull-down menu (<span class="mono">UIMenu</span>). Both versions are drawn
+                        here, but only one opens at a time. Members get Leave room. The creator gets Delete room
+                        instead. To leave, the creator deletes the room, because there's no way to hand the room to
+                        someone else yet. Copy invite code is the existing code, no new feature.</p>
+                </div>
+
+                <div class="dv-opt" id="2e">
+                    <div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Confirm: Leave / Delete</div>
+                    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
+                        hint-size="402px,874px">
+                        <div
+                            style="height:100%;position:relative;background:#0b1326;font-family:'Manrope',sans-serif;overflow:hidden">
+                            <div style="padding:58px 20px 0;display:flex;flex-direction:column;gap:16px"><span
+                                    style="color:#ffddb8;font-size:15px;font-weight:700;display:flex;align-items:center;gap:4px"><ion-icon
+                                        name="chevron-back" style="font-size:20px"></ion-icon>Rooms</span>
+                                <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                                    <div style="display:flex;flex-direction:column;gap:4px">
+                                        <div style="font-size:26px;font-weight:800;color:#dae2fd;letter-spacing:-0.5px">
+                                            AI Learning</div>
+                                        <div style="font-size:12px;font-weight:600;color:#d6c3b2">6 readers · Data
+                                            Mining</div>
+                                    </div><span style="display:flex;gap:8px"><span
+                                            style="height:44px;width:44px;border-radius:9999px;background:#171f33;display:flex;align-items:center;justify-content:center;color:#dae2fd"><ion-icon
+                                                name="person-add-outline" style="font-size:18px"></ion-icon></span><span
+                                            style="height:44px;width:44px;border-radius:9999px;background:#171f33;display:flex;align-items:center;justify-content:center;color:#dae2fd;position:relative;z-index:3"><ion-icon
+                                                name="ellipsis-horizontal"
+                                                style="font-size:18px"></ion-icon></span></span>
+                                </div>
+                                <div style="height:220px;border-radius:24px;background:#131b2e"></div>
+                                <div style="height:120px;border-radius:24px;background:#131b2e"></div>
+                                <div style="height:200px;border-radius:24px;background:#131b2e"></div>
+                            </div>
+                            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5)"></div>
+                            <div
+                                style="position:absolute;left:10px;right:10px;bottom:34px;display:flex;flex-direction:column;gap:8px">
+                                <div
+                                    style="background:rgba(34,42,62,0.96);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:16px;overflow:hidden;text-align:center">
+                                    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:4px"><span
+                                            style="font-size:13px;font-weight:700;color:#c6cde8">Delete AI
+                                            Learning?</span><span
+                                            style="font-size:13px;font-weight:500;color:#c6cde8;line-height:1.45">Comments
+                                            in this room will be removed for everyone. Each member keeps their own
+                                            reading position.</span></div>
+                                    <div style="height:1px;background:rgba(218,226,253,0.12)"></div>
+                                    <div
+                                        style="min-height:56px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#ffb4ab">
+                                        Delete room</div>
+                                </div>
+                                <div
+                                    style="min-height:56px;border-radius:16px;background:#222a3e;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#dae2fd">
+                                    Cancel</div>
+                            </div>
+                        </div>
+                    </x-import>
+                    <p class="ocap">The creator's Delete confirmation, shown as an iOS action sheet. Leave uses the same
+                        sheet, with the title "Leave AI Learning?", the text "You'll stop seeing this room's comments.
+                        Your reading position stays." and the button "Leave room". After leaving or deleting, the app
+                        goes back to Rooms with a toast: "Left AI Learning" or "Deleted AI Learning".</p>
+                </div>
+
+
+
             </div>
         </section>
 
@@ -10438,8 +11558,10 @@
                 </div>
 
                 <div class="dv-opt" id="1b">
-                    <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Reading — async book club made visible
-                    </div>
+                    <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><s>Reading — async book club made
+                            visible</s> <span
+                            style="background:#ffb4ab;color:#690005;border-radius:9999px;padding:2px 9px;font-size:11px;font-weight:800">Replaced
+                            by <a href="#2c" style="color:#690005">2c</a></span></div>
                     <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}"
                         hint-size="402px,874px">
                         <div

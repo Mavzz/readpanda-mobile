@@ -24,13 +24,13 @@ import Popover from './Popover';
 // On iPad a sheet that belongs to one control (pass that control's wrapper as
 // `anchorRef`) opens as a popover anchored to it; any other sheet stays a
 // bottom sheet, capped at 640pt and centered (IPAD_AND_HOME_14_16.md § 1).
-const PickerSheet = ({ anchorRef, ...props }) => {
+const PickerSheet = ({ anchorRef, anchorRect, ...props }) => {
   const { isLarge } = useLayout();
   const { visible, onClose } = props;
 
-  if (isLarge && anchorRef) {
+  if (isLarge && (anchorRef || anchorRect)) {
     return (
-      <Popover visible={visible} anchorRef={anchorRef} onClose={onClose}>
+      <Popover visible={visible} anchorRef={anchorRef} anchorRect={anchorRect} onClose={onClose}>
         <PickerContent {...props} />
       </Popover>
     );

@@ -18,6 +18,8 @@ import log from '../utils/logger';
 import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
+import useLayout from '../hooks/useLayout';
+import ReadableColumn from '../components/ReadableColumn';
 import readpandaLogo from '../assets/readpandaLogo_New.png';
 
 const Login = ({ navigation }) => {
@@ -26,6 +28,7 @@ const Login = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { sizeClass } = useLayout();
   let status, response;
 
   const handleLogin = async (signUpType = '') => {
@@ -78,62 +81,92 @@ const Login = ({ navigation }) => {
     }
   };
 
+  const wide = sizeClass === 'wide';
+
+  const brand = (
+    <View style={wide ? styles.brandPanel : styles.brand}>
+      <Image
+        source={readpandaLogo}
+        style={wide ? styles.logoLarge : styles.logo}
+      />
+      <Text style={wide ? styles.headlineLarge : styles.headline}>
+        Your book club,{'\n'}on everyone&apos;s schedule
+      </Text>
+      <Text style={wide ? styles.subtitleLarge : styles.subtitle}>
+        Read together. Comment freely. No spoilers.
+      </Text>
+    </View>
+  );
+
+  const form = (
+    <>
+      <View style={styles.fields}>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          placeholderTextColor={DS.colors.placeholder}
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor={DS.colors.placeholder}
+          value={password}
+          onChangeText={setPassword}
+          autoCapitalize="none"
+          secureTextEntry={true}
+        />
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color={DS.colors.primary} />
+      ) : (
+        <>
+          <PrimaryButton title="Step inside" onPress={() => handleLogin('Email')} />
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <SSOButton onPress={() => handleLogin('Google')} title="Continue with Google" />
+        </>
+      )}
+
+      <View style={styles.footer}>
+        <Text style={styles.footerLabel}>New here?</Text>
+        <Pressable onPress={() => navigation.navigate('SignUp')}>
+          <Text style={styles.footerLink}> Create an account</Text>
+        </Pressable>
+      </View>
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <View style={styles.container}>
-        <View style={styles.brand}>
-          <Image
-            source={readpandaLogo}
-            style={styles.logo}
-          />
-          <Text style={styles.headline}>Your book club,{'\n'}on everyone&apos;s schedule</Text>
-          <Text style={styles.subtitle}>Read together. Comment freely. No spoilers.</Text>
+      {wide ? (
+        // 15a: the brand panel on the left, the form in a 400pt column on
+        // the right, so the fields never stretch.
+        <View style={styles.split}>
+          {brand}
+          <View style={styles.formSide}>
+            <View style={styles.formColumn}>{form}</View>
+          </View>
         </View>
-
-        <View style={styles.fields}>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            placeholderTextColor={DS.colors.placeholder}
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor={DS.colors.placeholder}
-            value={password}
-            onChangeText={setPassword}
-            autoCapitalize="none"
-            secureTextEntry={true}
-          />
+      ) : (
+        // Phone, and the iPad portrait layout: the same single column,
+        // capped at 440pt on iPad.
+        <View style={styles.container}>
+          <ReadableColumn maxWidth={440}>
+            {brand}
+            {form}
+          </ReadableColumn>
         </View>
-
-        {loading ? (
-          <ActivityIndicator size="large" color={DS.colors.primary} />
-        ) : (
-          <>
-            <PrimaryButton title="Step inside" onPress={() => handleLogin('Email')} />
-
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.orText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <SSOButton onPress={() => handleLogin('Google')} title="Continue with Google" />
-          </>
-        )}
-
-        <View style={styles.footer}>
-          <Text style={styles.footerLabel}>New here?</Text>
-          <Pressable onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.footerLink}> Create an account</Text>
-          </Pressable>
-        </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -151,6 +184,50 @@ const styles = StyleSheet.create({
   brand: {
     alignItems: 'center',
     marginBottom: 26,
+  },
+  split: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  brandPanel: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: DS.colors.surfaceContainer,
+    borderRadius: DS.radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 22,
+    padding: 40,
+  },
+  formSide: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formColumn: {
+    width: 400,
+  },
+  logoLarge: {
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+  },
+  headlineLarge: {
+    fontSize: 36,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onSurface,
+    letterSpacing: -0.8,
+    textAlign: 'center',
+    lineHeight: 41,
+  },
+  subtitleLarge: {
+    fontSize: 15,
+    fontFamily: DS.font.medium,
+    color: DS.colors.onSurfaceVariant,
+    textAlign: 'center',
   },
   logo: {
     width: 190,

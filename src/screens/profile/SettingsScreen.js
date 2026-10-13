@@ -14,6 +14,7 @@ import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/
 import { DS } from '../../styles/global';
 import useSubscriptionStore from '../../stores/subscriptionStore';
 import packageJson from '../../../package.json';
+import useLayout from '../../hooks/useLayout';
 import profileStyles from './profileStyles';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
 import { ChoiceSheet, ConfirmSheet } from './SettingsSheets';
@@ -31,6 +32,7 @@ const pickedGenreCount = (preferences) => Object.values(preferences || {})
   .filter((p) => p?.preference_value).length;
 
 const SettingsScreen = () => {
+  const { isLarge, pagePad } = useLayout();
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -74,10 +76,103 @@ const SettingsScreen = () => {
 
   const comingSoon = (what) => () => showToast(`${what} is coming soon`, 'info');
 
+  const plusGroup = (
+    <SettingsGroup title="ReadPanda+">
+      <SettingsRow
+        icon="sparkles-outline"
+        label="ReadPanda+"
+        value={isPlus ? 'Active' : 'Free plan'}
+        onPress={() => navigation.navigate('Paywall', { reason: 'settings' })}
+      />
+    </SettingsGroup>
+  );
+
+  const readingGroup = (
+    <SettingsGroup title="Reading">
+      <SettingsRow
+        icon="swap-vertical-outline"
+        label="Page turning"
+        value={labelForSetting('pageMode', pageMode)}
+        onPress={() => setChoice('pageMode')}
+      />
+      <SettingsRow
+        icon="contrast-outline"
+        label="Page theme"
+        value={labelForSetting('pageTheme', pageTheme)}
+        onPress={() => setChoice('pageTheme')}
+      />
+      <SettingsRow
+        icon="pricetags-outline"
+        label="Genres I like"
+        value={`${genres} picked`}
+        onPress={() => navigation.navigate('Interest')}
+      />
+    </SettingsGroup>
+  );
+
+  const roomsGroup = (
+    <SettingsGroup title="Rooms & privacy">
+      <SettingsRow
+        icon="notifications-outline"
+        label="Notifications"
+        value="Comments, nudges"
+        // The detail screen is out of scope; the system settings are
+        // where they're switched today.
+        onPress={() => Linking.openSettings()}
+      />
+      <SettingsRow
+        icon="eye-outline"
+        label="Who sees my progress"
+        value={labelForSetting('progressVisibility', progressVisibility)}
+        onPress={() => setChoice('progressVisibility')}
+      />
+      <SettingsRow
+        icon="shield-checkmark-outline"
+        label="Spoiler protection"
+        switchValue={spoilerProtection === 'on'}
+        onSwitchChange={(on) => setSpoilerProtection(on ? 'on' : 'off')}
+      />
+    </SettingsGroup>
+  );
+
+  const aboutGroup = (
+    <SettingsGroup title="About">
+      <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={comingSoon('Help & support')} />
+      <SettingsRow
+        icon="document-text-outline"
+        label="Terms & privacy policy"
+        onPress={comingSoon('Terms & privacy policy')}
+      />
+    </SettingsGroup>
+  );
+  // Sign out and Delete account stay last, both behind a confirmation.
+  const accountGroup = (
+    <View style={[profileStyles.groupCard, styles.accountCard]}>
+      <Pressable
+        onPress={() => setConfirm('signOut')}
+        style={({ pressed }) => [styles.accountRow, pressed && styles.accountRowPressed]}
+        accessibilityRole="button"
+      >
+        <Text style={styles.signOut}>Sign out</Text>
+      </Pressable>
+      <View style={styles.accountDivider} />
+      <Pressable
+        onPress={() => setConfirm('delete')}
+        style={({ pressed }) => [styles.accountRow, pressed && styles.accountRowPressed]}
+        accessibilityRole="button"
+      >
+        <Text style={styles.deleteAccount}>Delete account</Text>
+      </Pressable>
+    </View>
+  );
+
   return (
     <SafeAreaView style={profileStyles.screen} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <ScrollView contentContainerStyle={profileStyles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[profileStyles.content, isLarge && { paddingHorizontal: pagePad }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.nav}>
           <PressableScale
             onPress={() => navigation.goBack()}
@@ -90,85 +185,28 @@ const SettingsScreen = () => {
           <Text style={styles.title}>Settings</Text>
         </View>
 
-        <SettingsGroup title="ReadPanda+">
-          <SettingsRow
-            icon="sparkles-outline"
-            label="ReadPanda+"
-            value={isPlus ? 'Active' : 'Free plan'}
-            onPress={() => navigation.navigate('Paywall', { reason: 'settings' })}
-          />
-        </SettingsGroup>
-
-        <SettingsGroup title="Reading">
-          <SettingsRow
-            icon="swap-vertical-outline"
-            label="Page turning"
-            value={labelForSetting('pageMode', pageMode)}
-            onPress={() => setChoice('pageMode')}
-          />
-          <SettingsRow
-            icon="contrast-outline"
-            label="Page theme"
-            value={labelForSetting('pageTheme', pageTheme)}
-            onPress={() => setChoice('pageTheme')}
-          />
-          <SettingsRow
-            icon="pricetags-outline"
-            label="Genres I like"
-            value={`${genres} picked`}
-            onPress={() => navigation.navigate('Interest')}
-          />
-        </SettingsGroup>
-
-        <SettingsGroup title="Rooms & privacy">
-          <SettingsRow
-            icon="notifications-outline"
-            label="Notifications"
-            value="Comments, nudges"
-            // The detail screen is out of scope; the system settings are
-            // where they're switched today.
-            onPress={() => Linking.openSettings()}
-          />
-          <SettingsRow
-            icon="eye-outline"
-            label="Who sees my progress"
-            value={labelForSetting('progressVisibility', progressVisibility)}
-            onPress={() => setChoice('progressVisibility')}
-          />
-          <SettingsRow
-            icon="shield-checkmark-outline"
-            label="Spoiler protection"
-            switchValue={spoilerProtection === 'on'}
-            onSwitchChange={(on) => setSpoilerProtection(on ? 'on' : 'off')}
-          />
-        </SettingsGroup>
-
-        <SettingsGroup title="About">
-          <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={comingSoon('Help & support')} />
-          <SettingsRow
-            icon="document-text-outline"
-            label="Terms & privacy policy"
-            onPress={comingSoon('Terms & privacy policy')}
-          />
-        </SettingsGroup>
-
-        <View style={[profileStyles.groupCard, styles.accountCard]}>
-          <Pressable
-            onPress={() => setConfirm('signOut')}
-            style={({ pressed }) => [styles.accountRow, pressed && styles.accountRowPressed]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.signOut}>Sign out</Text>
-          </Pressable>
-          <View style={styles.accountDivider} />
-          <Pressable
-            onPress={() => setConfirm('delete')}
-            style={({ pressed }) => [styles.accountRow, pressed && styles.accountRowPressed]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.deleteAccount}>Delete account</Text>
-          </Pressable>
-        </View>
+        {isLarge ? (
+          // 15m: the same rows in two 500pt columns, so no row stretches.
+          <View style={styles.columns}>
+            <View style={styles.column}>
+              {plusGroup}
+              {readingGroup}
+              {aboutGroup}
+            </View>
+            <View style={styles.column}>
+              {roomsGroup}
+              {accountGroup}
+            </View>
+          </View>
+        ) : (
+          <>
+            {plusGroup}
+            {readingGroup}
+            {roomsGroup}
+            {aboutGroup}
+            {accountGroup}
+          </>
+        )}
 
         <Text style={styles.footer}>ReadPanda {packageJson.version}</Text>
       </ScrollView>
@@ -207,6 +245,16 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  columns: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    gap: 28,
+  },
+  column: {
+    flex: 1,
+    maxWidth: 500,
+  },
   nav: {
     flexDirection: 'row',
     alignItems: 'center',

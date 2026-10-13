@@ -10,8 +10,9 @@ const OFFSET = 8;
 // from the bottom. RN has no popover, so this measures the anchor in window
 // coordinates on open (and again when the window resizes) and places the card
 // under it, flipping above when there isn't room. Callers wrap the control
-// in a View with collapsable={false} and pass its ref.
-const Popover = ({ visible, anchorRef, onClose, width = 340, maxHeight = 420, children }) => {
+// in a View with collapsable={false} and pass its ref, or, for a native
+// control, pass its window frame as `anchorRect` ({ x, y, w, h }).
+const Popover = ({ visible, anchorRef, anchorRect, onClose, width = 340, maxHeight = 420, children }) => {
   const window = useWindowDimensions();
   const [anchor, setAnchor] = useState(null);
 
@@ -20,8 +21,12 @@ const Popover = ({ visible, anchorRef, onClose, width = 340, maxHeight = 420, ch
       setAnchor(null);
       return;
     }
+    if (anchorRect) {
+      setAnchor(anchorRect);
+      return;
+    }
     anchorRef?.current?.measureInWindow((x, y, w, h) => setAnchor({ x, y, w, h }));
-  }, [visible, anchorRef, window.width, window.height]);
+  }, [visible, anchorRef, anchorRect, window.width, window.height]);
 
   let position = null;
   if (anchor) {

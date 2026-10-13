@@ -15,11 +15,14 @@ import { useScreenTracking } from '../utils/screenTracking';
 import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
+import useLayout from '../hooks/useLayout';
+import ReadableColumn from '../components/ReadableColumn';
 
 const InterestScreen = () => {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const navigation = useNavigation();
+  const { isLarge } = useLayout();
   const username = user.username;
   const Interests = user.preferences;
   log.info(`InterestScreen loaded for user: ${username}`);
@@ -105,7 +108,9 @@ const InterestScreen = () => {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <View style={styles.container}>
+      {/* 14a: the phone flow in a centered 520pt column on iPad, in both
+          orientations. A full-width View on the phone. */}
+      <ReadableColumn maxWidth={520} style={[styles.container, isLarge && styles.containerLarge]}>
         <View style={styles.headingRow}>
           <Text style={styles.headingPlain}>What's your</Text>
           <Text style={styles.headingAccent}> flavour?</Text>
@@ -122,7 +127,7 @@ const InterestScreen = () => {
             />
           }
         />
-      </View>
+      </ReadableColumn>
     </SafeAreaView>
   );
 };
@@ -136,6 +141,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 40,
+  },
+  containerLarge: {
+    paddingHorizontal: 0,
   },
   headingRow: {
     flexDirection: 'row',

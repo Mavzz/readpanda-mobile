@@ -13,6 +13,7 @@ import useCommentsStore from '../stores/commentsStore';
 import { showToast } from '../components/Toaster';
 import log from '../utils/logger';
 import PressableScale from '../components/PressableScale';
+import useLayout from '../hooks/useLayout';
 
 // § 4a / 10d — the full reading shelf, reached from My Books' "See all" (8b).
 // Every book with a position, grouped With rooms / Solo, one row per book
@@ -46,6 +47,7 @@ const ReadingScreen = () => {
   const refreshMemberProgress = useReadingProgressStore((s) => s.refreshMemberProgress);
   const rooms = useRoomStore((s) => s.rooms);
   const [sort, setSort] = useState('recent');
+  const { isLarge, pagePad } = useLayout();
 
   // Subscribing to byBook, not only to the actions: action identities are
   // stable, so reading them alone would leave this tab frozen when comments
@@ -147,6 +149,33 @@ const ReadingScreen = () => {
     );
   }
 
+  // 15g: on iPad the same groups as a 2-column list. SectionList has no
+  // numColumns, so each group's books are paired into rows.
+  const listSections = isLarge
+    ? sections.map((section) => ({
+      ...section,
+      data: section.data.reduce((rows, book, i) => {
+        if (i % 2 === 0) {
+          rows.push([book]);
+        } else {
+          rows[rows.length - 1].push(book);
+        }
+        return rows;
+      }, []),
+    }))
+    : sections;
+
+  const renderPair = ({ item: pair }) => (
+    <View style={styles.pair}>
+      {pair.map((book) => (
+        <View key={book.id} style={styles.pairItem}>
+          {renderRow({ item: book })}
+        </View>
+      ))}
+      {pair.length === 1 ? <View style={styles.pairItem} /> : null}
+    </View>
+  );
+
   const renderRow = ({ item: book }) => (
     <ShelfRow
       book={book}
@@ -168,15 +197,15 @@ const ReadingScreen = () => {
       />
 
       <SectionList
-        sections={sections}
-        keyExtractor={(book) => String(book.id)}
-        renderItem={renderRow}
+        sections={listSections}
+        keyExtractor={(item) => (isLarge ? item.map((b) => b.id).join(':') : String(item.id))}
+        renderItem={isLarge ? renderPair : renderRow}
         renderSectionHeader={({ section }) => (
           <Text style={styles.groupEyebrow}>{section.title}</Text>
         )}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, isLarge && { paddingHorizontal: pagePad }]}
         ListFooterComponent={finishedCount > 0 ? (
           <PressableScale
             onPress={() => showToast('Your finished books are coming soon', 'info')}
@@ -219,6 +248,15 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     paddingBottom: 32,
+  },
+
+  pair: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  pairItem: {
+    flex: 1,
+    minWidth: 0,
   },
 
   // Groups

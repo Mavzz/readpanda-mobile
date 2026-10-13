@@ -380,6 +380,88 @@ struct UpNextSection: View {
     }
 }
 
+// MARK: - 14k · Extra large (iPad)
+
+/// 13d's tonight on the left; on the right the other books in progress as
+/// 13c rows and the bucket up next. The same fallbacks: no room hides the room
+/// panel, no bucket of your own shows Curated.
+///
+/// Every target stays at least 44pt, which leaves room for 4: tonight, the
+/// room, the bucket, then shelf rows with whatever's left. A row past that
+/// still shows, and a tap on it lands on the widget's own target (the
+/// library).
+struct ExtraLargeFace: View {
+    let entry: BookEntry
+    let book: WidgetBook
+
+    private static let maxTargets = 4
+
+    var body: some View {
+        let upNext = entry.state.upNext(after: book)
+        let others = Array(entry.state.inProgress.filter { $0.id != book.id }.prefix(2))
+        let used = 1 + (entry.room == nil ? 0 : 1) + (upNext == nil ? 0 : 1)
+        let rowLinks = max(0, ExtraLargeFace.maxTargets - used)
+
+        HStack(alignment: .top, spacing: 0) {
+            TonightFace(
+                book: book,
+                room: entry.room,
+                deadline: entry.deadline,
+                upNext: nil,
+                pace: entry.pace,
+                date: entry.date
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            VStack(alignment: .leading, spacing: 10) {
+                if !others.isEmpty {
+                    Eyebrow(text: "Also reading")
+                    ForEach(Array(others.enumerated()), id: \.element.id) { index, other in
+                        if index < rowLinks {
+                            Link(destination: WidgetLink.reader(other) ?? WidgetLink.library!) {
+                                row(other)
+                            }
+                        } else {
+                            row(other)
+                        }
+                    }
+                }
+                Spacer(minLength: 0)
+                if let upNext {
+                    Link(destination: WidgetLink.bucket(upNext.source) ?? WidgetLink.library!) {
+                        UpNextSection(source: upNext.source, books: upNext.books)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(WTheme.panel.opacity(0.5))
+        }
+        .widgetURL(WidgetLink.library)
+    }
+
+    private func row(_ other: WidgetBook) -> some View {
+        HStack(spacing: 10) {
+            BookCover(book: other, width: 34, height: 50)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(other.title)
+                    .title(12.5)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(other.started ? "p. \(other.currentPage)" : "New")
+                        .meta(10)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .contentTransition(.numericText())
+                    ProgressTrack(fraction: other.fraction, height: 3)
+                }
+            }
+        }
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 // MARK: - 13e · Medium, between books
 
 struct BetweenBooksFace: View {

@@ -21,6 +21,7 @@ import { googleSignUpLogin, emailSignUp } from '../services/auth';
 import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
+import ReadableColumn from '../components/ReadableColumn';
 
 const SignUp = ({ navigation }) => {
   const signIn = useAuthStore((s) => s.signIn);
@@ -92,67 +93,71 @@ const SignUp = ({ navigation }) => {
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Text style={styles.title}>Sign Up</Text>
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Already have an account?</Text>
-            <Pressable onPress={() => navigation.popTo('Login')}>
-              <Text style={styles.switchLink}> Login!</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          value={username}
-          onChangeText={setUsername}
-          placeholderTextColor={DS.colors.placeholder}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          placeholderTextColor={DS.colors.placeholder}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholderTextColor={DS.colors.placeholder}
-          autoCapitalize="none"
-          secureTextEntry
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholderTextColor={DS.colors.placeholder}
-          autoCapitalize="none"
-          secureTextEntry
-        />
-
-        {loading ? (
-          <ActivityIndicator size="large" color={DS.colors.primary} />
-        ) : (
-          <>
-            <PrimaryButton onPress={() => handleSignUp('Email')} title="Sign Up" />
-
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.orText}>or</Text>
-              <View style={styles.dividerLine} />
+        {/* No iPad drawing for sign-up; it takes Login's portrait column (15a)
+            so the fields never stretch. A full-width View on the phone. */}
+        <ReadableColumn maxWidth={440}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Sign Up</Text>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Already have an account?</Text>
+              <Pressable onPress={() => navigation.popTo('Login')}>
+                <Text style={styles.switchLink}> Login!</Text>
+              </Pressable>
             </View>
+          </View>
 
-            <SSOButton onPress={() => handleSignUp('Google')} title="Sign Up with Google" />
-          </>
-        )}
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+            placeholderTextColor={DS.colors.placeholder}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            placeholderTextColor={DS.colors.placeholder}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholderTextColor={DS.colors.placeholder}
+            autoCapitalize="none"
+            secureTextEntry
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholderTextColor={DS.colors.placeholder}
+            autoCapitalize="none"
+            secureTextEntry
+          />
+
+          {loading ? (
+            <ActivityIndicator size="large" color={DS.colors.primary} />
+          ) : (
+            <>
+              <PrimaryButton onPress={() => handleSignUp('Email')} title="Sign Up" />
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.orText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <SSOButton onPress={() => handleSignUp('Google')} title="Sign Up with Google" />
+            </>
+          )}
+        </ReadableColumn>
       </ScrollView>
     </SafeAreaView>
   );
