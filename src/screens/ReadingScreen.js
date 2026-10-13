@@ -11,7 +11,7 @@ import FirstRunShelf from '../components/FirstRunShelf';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import { showToast } from '../components/Toaster';
-import log from '../utils/logger';
+import openShelfBook from '../utils/openShelfBook';
 import PressableScale from '../components/PressableScale';
 import useLayout from '../hooks/useLayout';
 
@@ -75,10 +75,8 @@ const ReadingScreen = () => {
   const pickABook = () => navigation.navigate('Discover');
   const joinByCode = () => navigation.navigate('Rooms', { focusCode: true });
 
-  const openBook = (book) => {
-    log.info('Opening shelf row:', book.title);
-    navigation.navigate(book.roomName ? 'RoomBookScreen' : 'SoloBookScreen', { bookId: book.id });
-  };
+  // A room book opens its active Room (2c / 14i), a solo one 4b.
+  const openBook = (book) => openShelfBook(navigation, book);
 
   const readNow = (book) => {
     navigation.navigate('ManuscriptScreen', {

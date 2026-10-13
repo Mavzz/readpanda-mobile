@@ -1,6 +1,6 @@
 # Active Room (2c phone · 14i iPad): Requirements
 
-Status: Draft <!-- Draft → Approved -->
+Status: Approved (2026-10-14)
 Design handoff: `ReadPanda Design Review.dc.html` § 2c (phone), § 14i (iPad landscape; in portrait the comments move under the schedule). § 1b is marked "Replaced by 2c": don't build it. § 18 (room schedules) is **On hold**. § 2d / § 2e / § 14l (the ⋯ menu) are **not built for now**: Leave/Delete stay at the bottom (R7).
 
 ## Goal
@@ -20,8 +20,9 @@ Once a room is reading a book, its Room screen is still the setup screen (2a): b
 
 ### R2. Header
 1. THE header SHALL show back, the room name, and "{n} readers · {Book}".
-2. Invite SHALL be a 44pt icon button (VoiceOver label "Invite") that opens the existing invite share.
+2. THE header SHALL have no Invite icon. *(Changed 2026-10-14 after device review: the 2c icon was replaced by the full invite card, R2.4.)*
 3. THE members row SHALL NOT appear, because "Where everyone is" shows every member.
+4. THE invite card from the setup state (code, Copy, Share invite, QR code) SHALL appear below Recent comments (phone, iPad portrait) or under the comments in the right column (iPad landscape), above Leave / Delete.
 
 ### R3. Schedule (on hold)
 1. WHILE turn 18 is on hold THE Schedule card SHALL be hidden for everyone, including its strip, "Edit" and "Set the pace".

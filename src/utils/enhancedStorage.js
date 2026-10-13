@@ -2,9 +2,13 @@ import StorageService from '../services/storageService';
 import { getStore, getTokens, setTokens, clearTokens } from '../services/secureStorage';
 import { STORAGE_CATEGORIES } from '../constants/storageConstants';
 
+// A save more than this many pages past the last one is a jump (the
+// scrubber, a deep link), not pages read.
+const MAX_PAGES_PER_SAVE = 30;
+
 // "2026-09-30" in the reader's own timezone — a streak is about their days,
 // not UTC's.
-const localDay = (date) => {
+export const localDay = (date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
@@ -142,6 +146,7 @@ class EnhancedStorage {
       books: { ...books, [manuscriptId]: entry },
     });
     this.recordReadingDay();
+    this.recordPagesRead((progress?.currentPage ?? 0) - (existing?.progress?.currentPage ?? 0));
   }
 
   // ── Reading days (the widget's streak flame) ─────────────────────────
@@ -159,6 +164,46 @@ class EnhancedStorage {
       return;
     }
     StorageService.setItem(this.readingDaysKey(), [...days.filter((d) => d !== day), day].slice(-60));
+  }
+
+  // The local days read on, newest last (Home's "Your week" dots, 16a).
+  getReadingDays() {
+    return StorageService.getItem(this.readingDaysKey()) || [];
+  }
+
+  // ── Pages per day (Home's "47 pages this week", 16a) ─────────────────
+  // Pages moved forward through, per local day. Only small forward steps
+  // count: going back, or a scrubber jump across half the book, isn't reading.
+  // Two weeks are kept; the week is all that's shown.
+  readingPagesKey() {
+    return this.scopedKey('reading_pages');
+  }
+
+  recordPagesRead(pages, date = new Date()) {
+    if (!(pages > 0) || pages > MAX_PAGES_PER_SAVE) {
+      return;
+    }
+    const day = localDay(date);
+    const all = StorageService.getItem(this.readingPagesKey()) || {};
+    const kept = Object.fromEntries(Object.entries(all).sort(([a], [b]) => a.localeCompare(b)).slice(-13));
+    StorageService.setItem(this.readingPagesKey(), { ...kept, [day]: (all[day] || 0) + pages });
+  }
+
+  // Pages read on the last `days` local days, today included. null when
+  // nothing has been counted yet, so the copy can leave the number out
+  // rather than claim 0.
+  getPagesRead(days = 7, now = new Date()) {
+    const all = StorageService.getItem(this.readingPagesKey());
+    if (!all || Object.keys(all).length === 0) {
+      return null;
+    }
+    let total = 0;
+    const cursor = new Date(now);
+    for (let i = 0; i < days; i += 1) {
+      total += all[localDay(cursor)] || 0;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return total;
   }
 
   getReadingStreak(now = new Date()) {

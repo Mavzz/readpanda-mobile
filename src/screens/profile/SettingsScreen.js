@@ -105,7 +105,7 @@ const SettingsScreen = () => {
         icon="pricetags-outline"
         label="Genres I like"
         value={`${genres} picked`}
-        onPress={() => navigation.navigate('Interest')}
+        onPress={() => navigation.navigate('Interest', { from: 'settings' })}
       />
     </SettingsGroup>
   );

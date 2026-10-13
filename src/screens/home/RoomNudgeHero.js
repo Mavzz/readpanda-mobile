@@ -4,7 +4,7 @@ import homeStyles from './homeStyles';
 
 // Mixed state: a room, but no book yet. The hero nudges toward choosing one —
 // or, for a member, says who they're waiting on.
-const RoomNudgeHero = ({ room, username, onOpenRoom }) => {
+const RoomNudgeHero = ({ room, username, onOpenRoom, bare = false }) => {
   // Choosing what a room reads is creator-only, so a member gets told who
   // they're waiting on rather than a button that would fail. my-rooms doesn't
   // return members yet — like Room Detail, assume the viewer can act until it
@@ -15,6 +15,7 @@ const RoomNudgeHero = ({ room, username, onOpenRoom }) => {
 
   return (
     <HeroCard
+      bare={bare}
       coverUrl={room.coverUrl}
       coverTitle={room.name}
       eyebrow="Your room is waiting"

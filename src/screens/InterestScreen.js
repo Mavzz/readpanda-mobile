@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
-  FlatList,
+  ScrollView,
   Pressable,
   Text,
   StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { primaryButton as PrimaryButton } from '../components/Button';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import log from '../utils/logger';
 import { useScreenTracking } from '../utils/screenTracking';
 import useAuthStore from '../stores/authStore';
@@ -17,17 +18,34 @@ import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 import useLayout from '../hooks/useLayout';
 import ReadableColumn from '../components/ReadableColumn';
+import GradientPill from '../components/GradientPill';
+import PressableScale from '../components/PressableScale';
+import FromYourPicks from './interests/FromYourPicks';
+import usePickCovers from './interests/usePickCovers';
 
+const COLUMN_MAX = 520;
+const GUTTER = 20;
+
+// The interests picker (14a): the app's only onboarding screen, and Settings →
+// Genres I like. One flat list of genre chips, a cover row showing what the
+// picks lead to, then Continue / Skip for now — or just Save from Settings.
+// On iPad the same column, centered at 520pt.
 const InterestScreen = () => {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const navigation = useNavigation();
+  const route = useRoute();
+  const fromSettings = route.params?.from === 'settings';
   const { isLarge } = useLayout();
+  const { width } = useWindowDimensions();
   const username = user.username;
   const Interests = user.preferences;
   log.info(`InterestScreen loaded for user: ${username}`);
   const [interests, setInterests] = useState(Interests);
   const [isUpdated, setIsUpdated] = useState(false);
+  // Subgenres in the order they were picked, so the cover row leads with the
+  // first choice. Seeded with what's already liked.
+  const pickOrder = useRef(null);
   // Sign-up opens this screen as soon as the user is signed in, which can be
   // before their preferences fetch returns. Take the options when they land,
   // unless the reader has already started picking.
@@ -39,46 +57,45 @@ const InterestScreen = () => {
   let status;
   useScreenTracking();
 
-  const toggleSelection = (category, preference_id) => {
+  // 14a has no header; from Settings there's the native one, for Back.
+  useLayoutEffect(() => {
+    navigation.setOptions(fromSettings
+      ? { headerShown: true, title: 'Genres I like' }
+      : { headerShown: false });
+  }, [navigation, fromSettings]);
+
+  const chips = Object.entries(interests || {}).flatMap(([category, items]) => (
+    (items || []).map((item) => ({ ...item, category }))
+  ));
+  const pickedNow = chips.filter((c) => c.preference_value).map((c) => c.preference_subgenre);
+  if (pickOrder.current === null && chips.length > 0) {
+    pickOrder.current = pickedNow;
+  }
+  const picked = [
+    ...(pickOrder.current || []).filter((g) => pickedNow.includes(g)),
+    ...pickedNow.filter((g) => !(pickOrder.current || []).includes(g)),
+  ];
+  const covers = usePickCovers(picked, chips.map((c) => c.preference_subgenre));
+
+  const toggleSelection = (category, item) => {
     setIsUpdated(true);
-    log.info(`Toggling preference for category: ${category} and preference_id: ${preference_id}`);
+    log.info(`Toggling preference for category: ${category} and preference_id: ${item.preference_id}`);
+    const genre = item.preference_subgenre;
+    const order = pickOrder.current || [];
+    pickOrder.current = item.preference_value
+      ? order.filter((g) => g !== genre)
+      : [...order.filter((g) => g !== genre), genre];
     setInterests((prev) => ({
       ...prev,
-      [category]: prev[category].map((item) =>
-        item.preference_id === preference_id
-          ? { ...item, preference_value: !item.preference_value }
-          : item,
+      [category]: prev[category].map((c) =>
+        c.preference_id === item.preference_id
+          ? { ...c, preference_value: !c.preference_value }
+          : c,
       ),
     }));
   };
 
-  const renderTag = ({ item }, category) => (
-    <Pressable
-      key={item.preference_id}
-      onPress={() => toggleSelection(category, item.preference_id)}
-      style={[styles.chip, item.preference_value && styles.chipSelected]}
-    >
-      <Text style={[styles.chipText, item.preference_value && styles.chipTextSelected]}>
-        {item.preference_subgenre}
-      </Text>
-    </Pressable>
-  );
-
-  const renderCategory = ({ item: category }) => (
-    <View style={styles.category} key={category}>
-      <Text style={styles.categoryTitle}>{category}</Text>
-      <View style={styles.chipContainer}>
-        <FlatList
-          data={interests[category]}
-          renderItem={(item) => renderTag(item, category)}
-          keyExtractor={(item) => item.preference_id.toString()}
-          numColumns={3}
-        />
-      </View>
-    </View>
-  );
-
-  const updateUserPreferences = async (username, interests, isUpdated, navigation) => {
+  const updateUserPreferences = async () => {
     log.info('Updating user preferences');
     try {
       if (isUpdated) {
@@ -105,29 +122,72 @@ const InterestScreen = () => {
     }
   };
 
+  // Onboarding's way out without choosing. Continue with nothing picked takes
+  // it too, so an empty set is never saved over what the server had.
+  const skip = () => {
+    log.info('Interests skipped');
+    updateUser({ isNewUser: false });
+    navigation.goBack();
+  };
+
+  const onPrimary = () => {
+    if (!fromSettings && pickedNow.length === 0) {
+      skip();
+      return;
+    }
+    updateUserPreferences();
+  };
+
+  const columnWidth = Math.min(COLUMN_MAX, width - GUTTER * 2);
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={fromSettings ? ['bottom'] : ['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      {/* 14a: the phone flow in a centered 520pt column on iPad, in both
-          orientations. A full-width View on the phone. */}
-      <ReadableColumn maxWidth={520} style={[styles.container, isLarge && styles.containerLarge]}>
-        <View style={styles.headingRow}>
-          <Text style={styles.headingPlain}>What's your</Text>
-          <Text style={styles.headingAccent}> flavour?</Text>
-        </View>
-        <FlatList
-          data={Object.keys(interests)}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item}
-          contentContainerStyle={styles.flatListContent}
-          ListFooterComponent={
-            <PrimaryButton
-              onPress={() => updateUserPreferences(username, interests, isUpdated, navigation)}
-              title="Done!"
-            />
-          }
-        />
-      </ReadableColumn>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, isLarge && styles.scrollLarge]}
+        showsVerticalScrollIndicator={false}
+      >
+        <ReadableColumn maxWidth={COLUMN_MAX} style={styles.column}>
+          <View style={styles.heading}>
+            <Text style={[styles.title, isLarge && styles.titleLarge]}>What do you like to read?</Text>
+            <Text style={styles.lede}>
+              Pick a few. Discover starts here, and you can change it any time in Profile.
+            </Text>
+          </View>
+
+          <View style={styles.chips}>
+            {chips.map((item) => (
+              <Pressable
+                key={item.preference_id}
+                onPress={() => toggleSelection(item.category, item)}
+                style={[styles.chip, item.preference_value && styles.chipSelected]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: !!item.preference_value }}
+              >
+                {item.preference_value ? (
+                  <Icon name="checkmark" size={14} color={DS.colors.onPrimary} />
+                ) : null}
+                <Text style={[styles.chipText, item.preference_value && styles.chipTextSelected]}>
+                  {item.preference_subgenre}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <FromYourPicks covers={covers} columnWidth={columnWidth} />
+
+          <View style={styles.footer}>
+            <GradientPill onPress={onPrimary} style={styles.primary}>
+              <Text style={styles.primaryText}>{fromSettings ? 'Save' : 'Continue'}</Text>
+            </GradientPill>
+            {fromSettings ? null : (
+              <PressableScale onPress={skip} accessibilityRole="button" hitSlop={10}>
+                <Text style={styles.skip}>Skip for now</Text>
+              </PressableScale>
+            )}
+          </View>
+        </ReadableColumn>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -137,69 +197,85 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS.colors.background,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: GUTTER,
     paddingTop: 40,
+    paddingBottom: 32,
   },
-  containerLarge: {
-    paddingHorizontal: 0,
+  // 14a centres the column vertically when there's height to spare.
+  scrollLarge: {
+    justifyContent: 'center',
   },
-  headingRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 24,
+  column: {
+    gap: 28,
   },
-  headingPlain: {
+  heading: {
+    gap: 10,
+  },
+  title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
-    letterSpacing: -0.3,
+    letterSpacing: -0.6,
+    lineHeight: 32,
   },
-  headingAccent: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: DS.colors.primary,
-    letterSpacing: -0.3,
+  titleLarge: {
+    fontSize: 34,
+    letterSpacing: -0.8,
+    lineHeight: 39,
   },
-  flatListContent: {
-    paddingBottom: 40,
+  lede: {
+    fontSize: 15,
+    fontFamily: DS.font.medium,
+    color: DS.colors.body,
+    lineHeight: 22,
   },
-  category: {
-    marginBottom: 28,
-  },
-  categoryTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 12,
-    color: DS.colors.onSurface,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  chipContainer: {
+  chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
     borderRadius: DS.radius.full,
     backgroundColor: DS.colors.surfaceContainerHigh,
-    marginRight: 8,
-    marginBottom: 8,
   },
   chipSelected: {
-    backgroundColor: DS.colors.primary,
+    backgroundColor: DS.colors.primaryContainer,
   },
   chipText: {
-    color: DS.colors.onSurfaceVariant,
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontFamily: DS.font.bold,
+    color: DS.colors.onSurface,
   },
   chipTextSelected: {
+    fontFamily: DS.font.extraBold,
     color: DS.colors.onPrimary,
-    fontWeight: '700',
+  },
+  footer: {
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+  },
+  primary: {
+    alignSelf: 'stretch',
+    height: 54,
+    paddingVertical: 0,
+  },
+  primaryText: {
+    fontSize: 16,
+    fontFamily: DS.font.extraBold,
+    color: DS.colors.onPrimary,
+  },
+  skip: {
+    fontSize: 13,
+    fontFamily: DS.font.bold,
+    color: DS.colors.onSurfaceVariant,
   },
 });
 

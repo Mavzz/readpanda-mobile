@@ -17,6 +17,7 @@ import { showToast } from '../components/Toaster';
 import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
 import PressableScale from '../components/PressableScale';
+import FormSheetFrame from '../components/FormSheetFrame';
 import haptics from '../utils/haptics';
 
 // Creating a room is one decision (the name) plus one setting (privacy).
@@ -171,75 +172,77 @@ const CreateRoomScreen = ({ navigation, route }) => {
   return (
     // Bottom too: the steps strip sits at the foot of a full-screen modal
     // and has to clear the home indicator.
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
+    <FormSheetFrame onClose={() => navigation.goBack()}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={styles.content}>
-          {/* Header (12b modal): × · centred title · text action */}
-          <View style={styles.header}>
-            <PressableScale
-              onPress={() => navigation.goBack()}
-              style={styles.closeButton}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <Icon name="close" size={19} color={DS.colors.onSurface} />
-            </PressableScale>
-            <Text style={styles.headerTitle}>New room</Text>
-            <Pressable
-              onPress={handleCreate}
-              disabled={!canCreate}
-              hitSlop={10}
-              style={styles.headerAction}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canCreate }}
-            >
-              <Text style={[styles.create, canCreate && styles.createReady]}>Create</Text>
-            </Pressable>
-          </View>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.content}>
+            {/* Header (12b modal): × · centred title · text action */}
+            <View style={styles.header}>
+              <PressableScale
+                onPress={() => navigation.goBack()}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Icon name="close" size={19} color={DS.colors.onSurface} />
+              </PressableScale>
+              <Text style={styles.headerTitle}>New room</Text>
+              <Pressable
+                onPress={handleCreate}
+                disabled={!canCreate}
+                hitSlop={10}
+                style={styles.headerAction}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canCreate }}
+              >
+                <Text style={[styles.create, canCreate && styles.createReady]}>Create</Text>
+              </Pressable>
+            </View>
 
-          {/* Name */}
-          <Text style={styles.eyebrow}>NAME YOUR ROOM</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Midnight Club"
-            placeholderTextColor={DS.colors.placeholder}
-            selectionColor={DS.colors.primary}
-            maxLength={50}
-            autoFocus
-            returnKeyType="done"
-            onSubmitEditing={handleCreate}
-          />
-          <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
-
-          {/* Privacy */}
-          <Text style={[styles.eyebrow, styles.privacyEyebrow]}>WHO CAN JOIN</Text>
-          <View style={styles.privacyRow}>
-            <PrivacyCard
-              option={PRIVACY.invite}
-              selected={privacy === PRIVACY.invite.key}
-              onPress={() => { haptics.light(); setPrivacy(PRIVACY.invite.key); }}
+            {/* Name */}
+            <Text style={styles.eyebrow}>NAME YOUR ROOM</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Midnight Club"
+              placeholderTextColor={DS.colors.placeholder}
+              selectionColor={DS.colors.primary}
+              maxLength={50}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleCreate}
             />
-            <PrivacyCard
-              option={PRIVACY.open}
-              selected={privacy === PRIVACY.open.key}
-              onPress={() => { haptics.light(); setPrivacy(PRIVACY.open.key); }}
-            />
+            <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
+
+            {/* Privacy */}
+            <Text style={[styles.eyebrow, styles.privacyEyebrow]}>WHO CAN JOIN</Text>
+            <View style={styles.privacyRow}>
+              <PrivacyCard
+                option={PRIVACY.invite}
+                selected={privacy === PRIVACY.invite.key}
+                onPress={() => { haptics.light(); setPrivacy(PRIVACY.invite.key); }}
+              />
+              <PrivacyCard
+                option={PRIVACY.open}
+                selected={privacy === PRIVACY.open.key}
+                onPress={() => { haptics.light(); setPrivacy(PRIVACY.open.key); }}
+              />
+            </View>
+            <Text style={styles.helper}>Add a description later from the room&apos;s page.</Text>
+
+            <View style={styles.spacer} />
+
+            <StepsStrip />
           </View>
-          <Text style={styles.helper}>Add a description later from the room&apos;s page.</Text>
-
-          <View style={styles.spacer} />
-
-          <StepsStrip />
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </FormSheetFrame>
   );
 };
 

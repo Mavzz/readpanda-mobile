@@ -19,8 +19,8 @@ import useReadingProgressStore from '../stores/readingProgressStore';
 import useBucketsStore from '../stores/bucketsStore';
 import useCommentsStore from '../stores/commentsStore';
 import { showToast } from '../components/Toaster';
-import log from '../utils/logger';
 import usePlusGate from '../hooks/usePlusGate';
+import openShelfBook from '../utils/openShelfBook';
 import PressableScale from '../components/PressableScale';
 import useLayout from '../hooks/useLayout';
 
@@ -84,11 +84,8 @@ const MyBooksScreen = () => {
   const finishedCount = shelf.length - inProgress.length;
   const preview = inProgress.slice(0, PREVIEW_ROWS);
 
-  // Shelf rows open the reading views: 1b for a room book, 4b for a solo one.
-  const openBook = (book) => {
-    log.info('Opening My Books row:', book.title);
-    navigation.navigate(book.roomName ? 'RoomBookScreen' : 'SoloBookScreen', { bookId: book.id });
-  };
+  // A room book opens its active Room (2c / 14i), a solo one 4b.
+  const openBook = (book) => openShelfBook(navigation, book);
 
   const readNow = (book) => {
     navigation.navigate('ManuscriptScreen', {

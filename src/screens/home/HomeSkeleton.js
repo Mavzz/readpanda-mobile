@@ -1,37 +1,23 @@
 import { View, StyleSheet } from 'react-native';
 import { DS } from '../../styles/global';
-import { Bone, EyebrowBone } from '../../components/Skeleton';
-import homeStyles from './homeStyles';
+import { Bone } from '../../components/Skeleton';
 
-// Home before the shelf and rooms have loaded: the hero card (HeroCard's
-// 172pt), then the rooms eyebrow and two room chips.
-const HomeSkeleton = () => (
-  <View>
-    <View style={styles.heroSection}>
-      <Bone width="100%" height={172} radius={DS.radius.hero} />
-    </View>
-    <View style={homeStyles.section}>
-      <EyebrowBone width={140} style={styles.eyebrow} />
-      <View style={styles.chipRow}>
-        <Bone width={150} height={48} radius={DS.radius.full} />
-        <Bone width={130} height={48} radius={DS.radius.full} />
-      </View>
-    </View>
+// Home before the shelf and rooms have loaded: the Continue card's shape and
+// the Your week card under it (16a). `bare` when the screen already pads it.
+const HomeSkeleton = ({ bare = false }) => (
+  <View style={[styles.column, !bare && styles.padded]}>
+    <Bone width="100%" height={230} radius={DS.radius.hero} />
+    <Bone width="100%" height={120} radius={22} />
   </View>
 );
 
 const styles = StyleSheet.create({
-  heroSection: {
+  column: {
+    gap: 24,
+  },
+  padded: {
     paddingHorizontal: 24,
-    paddingTop: 26,
-  },
-  eyebrow: {
-    marginTop: 3,
-    marginBottom: DS.space.headerToContent,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: 10,
+    paddingTop: 18,
   },
 });
 

@@ -41,13 +41,15 @@ const createFlow = {
 };
 
 // On iPad, short tasks open as a centered form sheet over the dimmed screen
-// instead (IPAD_AND_HOME_14_16.md § 1, 15j). UIKit sizes it at 540×620,
-// which is the handoff's size. New bucket is not one: 15h draws it full width
-// with a 6-column picker, so it stays a takeover.
+// instead (IPAD_AND_HOME_14_16.md § 1, 15j). The sheet itself is drawn by the
+// screen (FormSheetFrame) over a transparent modal: UIKit's .formSheet kept a
+// fixed size the React Native content overflowed. New bucket is not one: 15h
+// draws it full width with a 6-column picker, so it stays a takeover.
 const formSheet = {
   headerShown: false,
-  presentation: 'formSheet',
-  contentStyle: { backgroundColor: DS.colors.background },
+  presentation: 'transparentModal',
+  animation: 'fade',
+  contentStyle: { backgroundColor: 'transparent' },
 };
 
 // Main Stack Navigator that wraps the Tab Navigator

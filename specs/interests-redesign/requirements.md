@@ -1,6 +1,6 @@
 # Interests Redesign (14a): Requirements
 
-Status: Draft <!-- Draft → Approved -->
+Status: Approved (2026-10-14)
 Design handoff: `ReadPanda Design Review.dc.html` § 14a, "the phone interests screen (InterestScreen, the only onboarding screen)". On iPad it's centred in a 520pt column (already built in `specs/ipad-support/` task 7).
 
 ## Goal

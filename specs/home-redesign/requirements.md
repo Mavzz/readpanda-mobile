@@ -53,8 +53,8 @@ There are no new backend features.
 
 ### R6. New in your rooms
 1. THE section SHALL show the 3 newest comments across all the reader's rooms: avatar, "Name · p. {p} · Book", and the body (2 lines max).
-2. WHEN a comment is beyond the reader's position THE row SHALL be redacted (blurred overlay or bar) with a lock icon, and SHALL NOT be tappable.
-3. Tapping an unlocked comment SHALL open the reader at that page with the room's layer on. "See all" SHALL open the Room (14i) of the newest row.
+2. WHEN comments exist beyond the reader's position THE section SHALL show one locked line with their count ("{n} more past your page"), never text, and it SHALL NOT be tappable. *(Changed 2026-10-14 while building: the server sends only a count for locked comments, with no author, page or text, so 16b's blurred per-comment rows can't be drawn honestly.)*
+3. Tapping an unlocked comment SHALL open its thread on Home (the thread sheet). "See all" SHALL open the Room of the newest row. *(Changed 2026-10-14: opening the reader at an earlier comment's page would save that page as the reader's position and move them backwards; the reader has no "visit without saving" mode yet.)*
 
 ### R7. Up next
 1. THE section SHALL show the books in progress, excluding the hero, ordered by last opened: max 3 (phone and iPad landscape), 5 (iPad portrait).

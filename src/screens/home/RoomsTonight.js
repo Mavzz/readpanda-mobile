@@ -1,105 +1,75 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
-import homeStyles from './homeStyles';
 import PressableScale from '../../components/PressableScale';
+import SectionHeader from './SectionHeader';
+import RoomTonightCard from './RoomTonightCard';
 
-// "Your rooms tonight" chips. Until there is a room to show — and for a reader
-// who has a book but no rooms yet — the join-by-code row takes its place.
-const RoomsTonight = ({ rooms, ready, onOpenRoom, onJoinByCode }) => {
-  if (rooms.length > 0) {
+// Rooms tonight (16e): every room you're in, nearest deadline first, then
+// rooms with no book, then the rest. Phone: a sideways row of cards that runs
+// to the screen edge (`gutter` is the page padding it bleeds past). iPad: the
+// same states stacked in one card (`stacked`). With no rooms, the join-by-code
+// row (3a) takes the section's place.
+const RoomsTonight = ({ items, ready, stacked = false, gutter = 24, onOpenRoom, onStartRoom, onAllRooms, onJoinByCode }) => {
+  if (items.length === 0) {
+    if (!ready) {
+      return null;
+    }
     return (
-      <View style={homeStyles.section}>
-        <Text style={homeStyles.sectionTitle}>Your rooms tonight · {rooms.length}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {rooms.map((room) => (
-            <TouchableOpacity
-              key={room.id}
-              style={styles.chip}
-              activeOpacity={0.85}
-              onPress={() => onOpenRoom(room)}
-            >
-              <View style={styles.chipIcon}>
-                <Icon name="chatbubbles" size={15} color={DS.colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.chipName}>{room.name}</Text>
-                <Text style={room.unreadCount > 0 ? styles.chipStatusUnread : styles.chipStatus}>
-                  {room.unreadCount > 0 ? `${room.unreadCount} new comments` : (room.status || 'quiet today')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }
-
-  if (!ready) {
-    return null;
-  }
-
-  return (
-    <View style={styles.joinRowWrap}>
-      <PressableScale
-        onPress={onJoinByCode}
-        style={styles.joinRow}
-      >
+      <PressableScale onPress={onJoinByCode} style={styles.joinRow} accessibilityRole="button">
         <View style={styles.joinIcon}>
           <Icon name="key-outline" size={15} color={DS.colors.primary} />
         </View>
         <Text style={styles.joinText}>Got an invite code from a friend?</Text>
         <Text style={styles.joinAction}>Join a room</Text>
       </PressableScale>
+    );
+  }
+
+  return (
+    <View>
+      <SectionHeader title="Rooms tonight" link="All rooms" onLink={onAllRooms} />
+      {stacked ? (
+        <View style={styles.stack}>
+          {items.map((item, i) => (
+            <View key={item.room.id}>
+              {i > 0 ? <View style={styles.divider} /> : null}
+              <RoomTonightCard item={item} inList onOpen={onOpenRoom} onStart={onStartRoom} />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -gutter }}
+          contentContainerStyle={[styles.row, { paddingHorizontal: gutter }]}
+        >
+          {items.map((item) => (
+            <RoomTonightCard key={item.room.id} item={item} onOpen={onOpenRoom} onStart={onStartRoom} />
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // Rooms tonight chips
-  chipRow: {
-    gap: 10,
-    paddingRight: 24,
+  row: {
+    gap: 12,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  stack: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 22,
     backgroundColor: DS.colors.surfaceContainer,
-    borderRadius: DS.radius.full,
-    paddingVertical: 8,
-    paddingRight: 16,
-    paddingLeft: 8,
   },
-  chipIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: DS.colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipName: {
-    fontSize: 13,
-    fontFamily: DS.font.bold,
-    color: DS.colors.onSurface,
-  },
-  chipStatus: {
-    fontSize: 11,
-    fontFamily: DS.font.semibold,
-    color: DS.colors.onSurfaceVariant,
-  },
-  chipStatusUnread: {
-    fontSize: 11,
-    fontFamily: DS.font.semibold,
-    color: DS.colors.primaryContainer,
+  divider: {
+    height: 1,
+    backgroundColor: DS.colors.hairline,
   },
 
-  // Join by code
-  joinRowWrap: {
-    paddingHorizontal: 24,
-    marginTop: 24,
-  },
+  // Join by code (3a, unchanged)
   joinRow: {
     flexDirection: 'row',
     alignItems: 'center',

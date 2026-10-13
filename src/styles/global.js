@@ -39,6 +39,10 @@ export const DS = {
     // Glassmorphism surface (surfaceContainer at 70% opacity = B3 in hex)
     surfaceContainerGlass: '#171f33B3',
 
+    // A missed day in Home's "Your week" (16a): a dimmed amber, so the row
+    // still reads as one streak rather than a scold.
+    streakMissed: '#3a2c18',
+
     // Scrims behind modals: the deepest surface at 70% over a page, and a
     // neutral dim over an image while it loads.
     scrim: 'rgba(6, 13, 32, 0.7)',
