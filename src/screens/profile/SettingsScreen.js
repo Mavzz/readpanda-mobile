@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { showToast } from '../../components/Toaster';
 import useAuthStore from '../../stores/authStore';
-import { logout } from '../../services/auth';
+import { logout, deleteAccount } from '../../services/auth';
 import { unregisterPushDevice } from '../../hooks/usePushNotifications';
 import enhancedStorage from '../../utils/enhancedStorage';
 import log from '../../utils/logger';
@@ -46,6 +46,7 @@ const SettingsScreen = () => {
   // Which ChoiceSheet / ConfirmSheet is open, if any.
   const [choice, setChoice] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useScreenTracking('SettingsScreen');
 
@@ -67,11 +68,28 @@ const SettingsScreen = () => {
     log.info('User signed out successfully');
   };
 
-  // There is no account-deletion endpoint yet; the flow itself is out of
-  // scope for 7b, so confirming says so instead of pretending.
-  const handleDeleteAccount = () => {
+  // Account deletion (account-deletion R3). The sheet stays up with a spinner
+  // until the server answers, then closes either way: a Modal sits above the
+  // toasts, so they'd be hidden behind it.
+  const handleDeleteAccount = async () => {
+    if (deleting) {
+      return;
+    }
+    setDeleting(true);
+    const { ok } = await deleteAccount();
+    setDeleting(false);
     setConfirm(null);
-    showToast('Account deletion isn\'t available in the app yet — contact support', 'info', 4000);
+    if (!ok) {
+      // Still signed in, nothing cleared (R3.2).
+      showToast('Couldn\u2019t delete your account. Try again.', 'error');
+      return;
+    }
+    // The same local cleanup as Sign out — session, stores, cached data,
+    // RevenueCat — which also returns to Login (R3.1). Not the server logout
+    // or the push unregister: the account and its tokens are already gone.
+    log.info('Account deleted; signing out locally');
+    signOut();
+    showToast('Your account has been deleted.', 'success');
   };
 
   const comingSoon = (what) => () => showToast(`${what} is coming soon`, 'info');
@@ -234,12 +252,28 @@ const SettingsScreen = () => {
       <ConfirmSheet
         visible={confirm === 'delete'}
         title="Delete account?"
-        message="Your rooms, comments and reading history will be removed. This can't be undone."
+        message={'Your reading history, buckets and highlights are deleted. Rooms you created pass to another member, and your comments stay as “Deleted reader”. This can’t be undone.'}
         confirmLabel="Delete account"
         destructive
+        busy={deleting}
         onConfirm={handleDeleteAccount}
         onClose={() => setConfirm(null)}
-      />
+      >
+        {/* Only Apple can cancel a subscription, so say so and send them
+            there; it doesn't stop the deletion (R2.1, R2.2). */}
+        {isPlus ? (
+          <View style={styles.plusNote}>
+            <Text style={styles.plusNoteText}>Deleting your account doesn{'’'}t cancel ReadPanda+.</Text>
+            <Pressable
+              onPress={() => Linking.openURL('https://apps.apple.com/account/subscriptions')}
+              hitSlop={10}
+              accessibilityRole="link"
+            >
+              <Text style={styles.plusNoteLink}>Manage subscription</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </ConfirmSheet>
     </SafeAreaView>
   );
 };
@@ -302,6 +336,28 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
     marginTop: 24,
+  },
+
+  // Delete account's ReadPanda+ note: a tonal panel, no border.
+  plusNote: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: DS.radius.md,
+    backgroundColor: DS.colors.surfaceContainer,
+    alignItems: 'center',
+    gap: 6,
+  },
+  plusNoteText: {
+    fontSize: 13,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurface,
+    textAlign: 'center',
+  },
+  plusNoteLink: {
+    fontSize: 13,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
   },
 });
 
