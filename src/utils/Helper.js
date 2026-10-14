@@ -22,6 +22,7 @@ const getBackendUrl = (path = '') => {
 const SignUpType = {
   Email: 'Email',
   Google: 'Google',
+  Apple: 'Apple',
   Facebook: 'Facebook',
   Other: 'Other',
 };

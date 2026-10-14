@@ -39,6 +39,11 @@ export const DS = {
     // Glassmorphism surface (surfaceContainer at 70% opacity = B3 in hex)
     surfaceContainerGlass: '#171f33B3',
 
+    // Sign in with Apple's button (17a): white with black, per Apple's
+    // guidelines — the one control outside the app's palette.
+    appleButton: '#ffffff',
+    appleButtonText: '#000000',
+
     // A missed day in Home's "Your week" (16a): a dimmed amber, so the row
     // still reads as one streak rather than a scold.
     streakMissed: '#3a2c18',

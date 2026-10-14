@@ -2061,6 +2061,8 @@ PODS:
     - ReactNativeDependencies
   - ReactNativeDependencies (0.84.1)
   - RevenueCat (5.92.0)
+  - RNAppleAuthentication (2.5.1):
+    - React-Core
   - RNFBApp (23.8.6):
     - Firebase/CoreOnly (= 12.8.0)
     - hermes-engine
@@ -2525,6 +2527,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - "RNAppleAuthentication (from `../node_modules/@invertase/react-native-apple-authentication`)"
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
@@ -2719,6 +2722,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  RNAppleAuthentication:
+    :path: "../node_modules/@invertase/react-native-apple-authentication"
   RNFBApp:
     :path: "../node_modules/@react-native-firebase/app"
   RNFBMessaging:
@@ -2839,6 +2844,7 @@ SPEC CHECKSUMS:
   ReactCommon: 07572bf9e687c8a52fbe4a3641e9e3a1a477c78e
   ReactNativeDependencies: def6899a72017b7b7835736300985c5e5573efbe
   RevenueCat: 39657b04641af73c29788b4bf2cf1acff52fd0dc
+  RNAppleAuthentication: a89c9804592b38ed4ab11f0aee68d05ba12ad432
   RNFBApp: 0301a2330161b0a66bcec40bfd15152d85030e48
   RNFBMessaging: f96ec02d65bac046b87f814a451faafc282ccd40
   RNGestureHandler: 1e791cd6c02c467d59d143a3e3fe35c5310cdb52

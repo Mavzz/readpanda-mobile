@@ -42,7 +42,7 @@ Today's Sign Up (`SignUpScreen.js`) is a four-field form in the middle of the sc
 ### R6. Layouts
 1. **iPhone and windows < 700pt (17a):** one column: brand, "Create your account", the line "Read with friends, one chapter at a time.", Apple, Google, the email form, Create account, then "Already have an account? Log in" at the bottom, then the terms line.
 2. **iPad 700–999pt (17d):** the same form, capped at 480pt on a tonal card (`surfaceContainer`, no border), centred. "Have an account? Log in" moves to the top bar.
-3. **iPad ≥ 1000pt (17c), including a 13" in portrait:** a split. The left panel has the brand and three features: "Rooms with a shared pace", "Comments on the page" and "A streak that keeps you going", with "Already have an account? Log in" at the bottom. The right column has the form, with "It takes about 30 seconds." as its line.
+3. **iPad ≥ 1000pt (17c), including a 13" in portrait:** a 5:7 split. The left panel has the brand, "Read together, a chapter at a time." and three features: "Rooms with a shared pace", "Comments on the page" and "A streak that keeps you going". The right column has "Already have an account? Log in" at its top right, then the form (max 420pt), with "It takes about 30 seconds." as its line. *(Corrected 2026-10-14 to match the drawing: Log in is at the top right of the form column, not at the bottom of the panel.)*
 4. THE 17c feature "Rooms with a shared pace" SHALL read "Rooms read the same book. Everyone keeps their own pace, and you can see where they are." *(Changed from 17c's "Each chapter has a due date…", since room schedules are on hold, turn 18.)*
 
 ### R7. Terms
@@ -54,6 +54,7 @@ Today's Sign Up (`SignUpScreen.js`) is a four-field form in the middle of the sc
 2. `GET /signup/available?username=` SHALL return `{ available, suggestion }` and SHALL NOT require auth. It SHALL be rate-limited.
 3. `/signup`'s 409 SHALL say which field is taken: `{ "error": "...", "field": "username" | "email" }`.
 4. THE server SHALL apply the R3.1 username rules and the 8-character password minimum, returning 400 with `field` when they're not met.
+5. WHEN an account that signed in with Apple is deleted THE server SHALL revoke its Apple token (App Store guideline 5.1.1(v)), using the Sign in with Apple key (`APPLE_TEAM_ID` = `6F6H5A6JCC`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` in the server's environment, never in the repo). *(Added 2026-10-14.)*
 
 ## Open questions
 - [x] Backend in this spec, or separate? In this spec.

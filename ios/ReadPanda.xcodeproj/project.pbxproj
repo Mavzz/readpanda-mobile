@@ -7,12 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9FAE6CC80457E4347C0D0596 /* WidgetSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */; };
-		567112E6988F15F08C7C6EEE /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */; };
-		C4A654855CB132C19F9C1FC8 /* WidgetFaces13.swift in Sources */ = {isa = PBXBuildFile; fileRef = D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */; };
-		49752B6790F9F9AA9EBC2BCC /* LockScreenFaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952D78843981E3FB592E7A0D /* LockScreenFaces.swift */; };
-		A21980F153DBE1DB1BCA3087 /* Widgets13.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0738B9046DF08956A9ED1D50 /* Widgets13.swift */; };
-		3ACD955F969C70EDB70A0EAF /* WidgetSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */; };
 		063E89BF1012E5BD1EE8FA5A /* WidgetCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */; };
 		0A9C25F22E5DBFFC00F1734F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0A9C25F12E5DBFFC00F1734F /* GoogleService-Info.plist */; };
 		0AC96C182E5259E800C72562 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AC96C172E5259E800C72562 /* PDFKit.framework */; };
@@ -23,8 +17,11 @@
 		2566131BA6B8FFAF30AB5E22 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4522FBB5B50621833461DD2D /* Foundation.framework */; };
 		2A1A073FC07041EC9D9E0B74 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */; };
 		2EF9CA0761864E01B027CFB1 /* ReaderTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFC26DED4224D60ADDE3051 /* ReaderTheme.swift */; };
+		3ACD955F969C70EDB70A0EAF /* WidgetSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */; };
 		3E79182E06A84E6EABB2F833 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4309E6FD86E4AE5A01B8204 /* CommentSheetView.swift */; };
 		489B2D3E565D752712765D01 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1C8124D92774C4B8369CF03F /* Assets.xcassets */; };
+		49752B6790F9F9AA9EBC2BCC /* LockScreenFaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952D78843981E3FB592E7A0D /* LockScreenFaces.swift */; };
+		567112E6988F15F08C7C6EEE /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */; };
 		5ADB9857126C454C878A00C6 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */; };
 		61C31230EE91437FBB4DDEC6 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */; };
 		738C9C1C2842C918407FE593 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E8EC0CD2E349134101080E /* WidgetTheme.swift */; };
@@ -36,7 +33,10 @@
 		8EFE650A2F66833100B8B59F /* RNPdfViewer.m in Sources */ = {isa = PBXBuildFile; fileRef = 8EFE65092F66833100B8B59F /* RNPdfViewer.m */; };
 		8F34421F8AA4DB892DA8BAA3 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */; };
 		961BE215CC2725C7C977CC5C /* WidgetBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */; };
+		9FAE6CC80457E4347C0D0596 /* WidgetSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */; };
+		A21980F153DBE1DB1BCA3087 /* Widgets13.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0738B9046DF08956A9ED1D50 /* Widgets13.swift */; };
 		B38A26F6BB39D3E282A61BF8 /* WidgetState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E4145AF4470B1C955EDC22 /* WidgetState.swift */; };
+		C4A654855CB132C19F9C1FC8 /* WidgetFaces13.swift in Sources */ = {isa = PBXBuildFile; fileRef = D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */; };
 		CF7B9CB07BBA8F913D9CCABA /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */; };
 		D50827B60D074D43919567A3 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 20B0D8FC8BFE4B05887AF789 /* Manrope-SemiBold.ttf */; };
 		D98D483F77794725A8906DED /* ReaderModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E3B16E2AAB4762AEE0A50D /* ReaderModels.swift */; };
@@ -72,21 +72,17 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSelection.swift; sourceTree = "<group>"; };
-		E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
-		D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetFaces13.swift; sourceTree = "<group>"; };
-		952D78843981E3FB592E7A0D /* LockScreenFaces.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LockScreenFaces.swift; sourceTree = "<group>"; };
-		0738B9046DF08956A9ED1D50 /* Widgets13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Widgets13.swift; sourceTree = "<group>"; };
-		0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSamples.swift; sourceTree = "<group>"; };
 		01E4145AF4470B1C955EDC22 /* WidgetState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetState.swift; sourceTree = "<group>"; };
 		0305DA42206041BAB933A98C /* Manrope-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Regular.ttf"; path = "../src/assets/fonts/Manrope-Regular.ttf"; sourceTree = "<group>"; };
 		035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Medium.ttf"; path = "../src/assets/fonts/Manrope-Medium.ttf"; sourceTree = "<group>"; };
+		0738B9046DF08956A9ED1D50 /* Widgets13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Widgets13.swift; sourceTree = "<group>"; };
 		0A4EBFD12E5E390800EAF49B /* ReadPanda.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ReadPanda.entitlements; path = ReadPanda/ReadPanda.entitlements; sourceTree = "<group>"; };
 		0A68B02E2EAFEC4900871E69 /* RNAppAuthAuthorizationFlowManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNAppAuthAuthorizationFlowManager.h; sourceTree = "<group>"; };
 		0A9C25F12E5DBFFC00F1734F /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		0AC96C172E5259E800C72562 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		0AC96C192E5259EF00C72562 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		0AC96C1D2E525AB000C72562 /* ReadPanda-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ReadPanda-Bridging-Header.h"; sourceTree = "<group>"; };
+		0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSamples.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* ReadPanda.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadPanda.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ReadPanda/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ReadPanda/Info.plist; sourceTree = "<group>"; };
@@ -106,14 +102,18 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ReadPanda/AppDelegate.swift; sourceTree = "<group>"; };
 		78E064C9EEC3737B2F249BD0 /* ReadPandaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReadPandaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ReadPanda/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		81D8B29D59C6EF6EA3DAC6FE /* WidgetSelection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSelection.swift; sourceTree = "<group>"; };
 		8EFE65042F66828300B8B59F /* RNPdfViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNPdfViewer.swift; sourceTree = "<group>"; };
 		8EFE65092F66833100B8B59F /* RNPdfViewer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RNPdfViewer.m; sourceTree = "<group>"; };
+		952D78843981E3FB592E7A0D /* LockScreenFaces.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LockScreenFaces.swift; sourceTree = "<group>"; };
 		9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = WidgetBridge.m; sourceTree = "<group>"; };
 		B4E3B16E2AAB4762AEE0A50D /* ReaderModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderModels.swift; sourceTree = "<group>"; };
 		B7E4CF0D210CDB8ED23E5EBC /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C67EBCF542FE442B8D1FE4BB /* ReaderChromeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderChromeView.swift; sourceTree = "<group>"; };
 		D755F8A3FF341D1FA6DE1A3D /* WidgetBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
+		D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetFaces13.swift; sourceTree = "<group>"; };
 		DBDF5CA969D8FD1304AB3855 /* WidgetCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetCopy.swift; sourceTree = "<group>"; };
+		E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
 		E4309E6FD86E4AE5A01B8204 /* CommentSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentSheetView.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FBBFDB875D4747C7BEC64EA1 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Bold.ttf"; path = "../src/assets/fonts/Manrope-Bold.ttf"; sourceTree = "<group>"; };
@@ -583,6 +583,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadPandaWidget/ReadPandaWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6F6H5A6JCC;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadPandaWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -816,6 +817,7 @@
 				CODE_SIGN_ENTITLEMENTS = ReadPandaWidget/ReadPandaWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6F6H5A6JCC;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ReadPandaWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
