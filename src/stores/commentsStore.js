@@ -27,12 +27,21 @@ import {
 const newClientId = () =>
   `cmt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
+// A deleted reader's comments stay, moved to this reserved account
+// (account-deletion R5.2). Shown by name rather than as its username, so it
+// reads as someone who left, not a reader called "deleted.reader" (R5.5).
+const DELETED_READER_ID = '00000000-0000-0000-0000-000000000000';
+
+const authorName = (raw) => (
+  raw.user_id === DELETED_READER_ID ? 'Deleted reader' : raw.username || ''
+);
+
 const toComment = (raw) => ({
   id: raw.id,
   clientId: raw.client_id || null,
   userId: raw.user_id,
-  username: raw.username || '',
-  initials: getInitials(raw.username),
+  username: authorName(raw),
+  initials: getInitials(authorName(raw)),
   page: raw.page || 0,
   body: raw.body || '',
   parentId: raw.parent_id || null,

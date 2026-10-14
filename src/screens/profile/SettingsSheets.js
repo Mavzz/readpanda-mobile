@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import profileStyles from './profileStyles';
@@ -44,22 +44,37 @@ export const ChoiceSheet = ({ visible, title, options = [], value, onSelect, onC
 );
 
 // Sign out / Delete account. The confirm button carries the action's own
-// colour; neither is the gradient CTA.
-export const ConfirmSheet = ({ visible, title, message, confirmLabel, destructive, onConfirm, onClose }) => (
-  <Sheet visible={visible} onClose={onClose}>
+// colour; neither is the gradient CTA. `children` goes under the message
+// (Delete account's ReadPanda+ note). While `busy` the confirm button shows a
+// spinner and nothing in the sheet takes a tap, so the action can't run twice
+// or be walked away from halfway (account-deletion R3.3).
+export const ConfirmSheet = ({
+  visible, title, message, confirmLabel, destructive, busy = false, onConfirm, onClose, children,
+}) => (
+  <Sheet visible={visible} onClose={busy ? () => {} : onClose}>
     <Text style={styles.title}>{title}</Text>
     {message ? <Text style={styles.message}>{message}</Text> : null}
+    {children}
     <PressableScale
       onPress={onConfirm}
+      disabled={busy}
       style={[styles.button, styles.confirmButton]}
       accessibilityRole="button"
+      accessibilityLabel={confirmLabel}
+      accessibilityState={{ busy, disabled: busy }}
     >
-      <Text style={[styles.buttonText, destructive && styles.destructiveText]}>{confirmLabel}</Text>
+      {busy ? (
+        <ActivityIndicator color={destructive ? DS.colors.error : DS.colors.onSurface} />
+      ) : (
+        <Text style={[styles.buttonText, destructive && styles.destructiveText]}>{confirmLabel}</Text>
+      )}
     </PressableScale>
     <PressableScale
       onPress={onClose}
-      style={styles.button}
+      disabled={busy}
+      style={[styles.button, busy && styles.buttonInactive]}
       accessibilityRole="button"
+      accessibilityState={{ disabled: busy }}
     >
       <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
     </PressableScale>
@@ -153,5 +168,8 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: DS.colors.onSurfaceVariant,
+  },
+  buttonInactive: {
+    opacity: 0.4,
   },
 });
