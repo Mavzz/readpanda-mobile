@@ -17,6 +17,7 @@
     "start:dev": "yarn env:dev && yarn react-native start --reset-cache",
     "start:prod": "yarn env:prod && yarn react-native start --reset-cache",
     "pods": "cd ios && pod install && cd ..",
+    "ipa": "sh scripts/build-ipa.sh",
     "clean:all": "yarn clean && cd ios && rm -rf Pods && rm -rf build && cd ..",
     "reset:all": "yarn clean:all && yarn install && yarn pods",
     "android": "react-native run-android",
