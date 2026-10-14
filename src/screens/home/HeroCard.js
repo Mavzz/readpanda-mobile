@@ -6,8 +6,10 @@ import GradientPill from '../../components/GradientPill';
 // The one hero slot at the top of Home — continue reading, a room waiting on
 // a book, or first run. Same card and tilted cover each time; the lines under
 // the title (`children`) and whatever sits under the CTA (`footer`) differ.
-const HeroCard = ({ coverUrl, coverTitle, eyebrow, title, ctaLabel, onCta, children, footer }) => (
-  <View style={styles.heroSection}>
+// `bare` drops the section's own padding, for the turn-16 layouts that pad
+// every section together.
+const HeroCard = ({ coverUrl, coverTitle, eyebrow, title, ctaLabel, onCta, children, footer, bare = false }) => (
+  <View style={bare ? null : styles.heroSection}>
     <View style={styles.heroCard}>
       <BookCoverGradient
         coverUrl={coverUrl}

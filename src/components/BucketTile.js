@@ -18,11 +18,17 @@ import RollingCount from './RollingCount';
 //            A `width` widens it for 10e's 2-column grid. A copy saved from a
 //            curated bucket (`saved`) keeps the warm ground plus a sparkle.
 //
+// `large` is the iPad grid (14e, 15c): a taller curated tile and a bigger fan,
+// still the same 3 covers.
+//
 // `covers` are the bucket's first books in bucket order (under a genre
 // filter the server puts the matching ones first).
 export const MINE_WIDTH = 132;
 const MINE_HEIGHT = 120;
 const CURATED_HEIGHT = 150;
+const CURATED_HEIGHT_LARGE = 196;
+const FAN = { width: 52, height: 76 };
+const FAN_LARGE = { width: 70, height: 102 };
 
 const BucketTile = ({
   variant,
@@ -37,8 +43,11 @@ const BucketTile = ({
   onLongPress,
   // Names the tile's progress bar so it grows from what was last shown.
   progressKey,
+  large = false,
 }) => {
+  const fan = large ? FAN_LARGE : FAN;
   if (variant === 'curated') {
+    const curatedHeight = large ? CURATED_HEIGHT_LARGE : CURATED_HEIGHT;
     return (
       <PressableScale
         onPress={onPress}
@@ -49,7 +58,7 @@ const BucketTile = ({
         {/* Gradients stay childless: react-native-linear-gradient runs through
             Fabric's legacy interop, which mismanages nested children (and
             ignores `bottom`), so each is a background layer sized by top/left. */}
-        <View style={[styles.curatedTile, { width }]}>
+        <View style={[styles.curatedTile, { width, height: curatedHeight }]}>
           <LinearGradient
             colors={CURATED_GROUND}
             start={{ x: 0, y: 0 }}
@@ -60,14 +69,14 @@ const BucketTile = ({
             covers={covers}
             seed={name}
             width={width}
-            height={CURATED_HEIGHT - 34}
-            coverWidth={58}
-            coverHeight={84}
+            height={curatedHeight - 34}
+            coverWidth={large ? FAN_LARGE.width : 58}
+            coverHeight={large ? FAN_LARGE.height : 84}
             offset={24}
           />
           <LinearGradient
             colors={SCRIM_COLORS}
-            style={[styles.scrim, { width }]}
+            style={[styles.scrim, { width, top: curatedHeight * 0.45, height: curatedHeight * 0.55 }]}
             pointerEvents="none"
           />
           <View style={styles.curatedLabel}>
@@ -105,8 +114,8 @@ const BucketTile = ({
           seed={name}
           width={tileWidth}
           height={tileHeight}
-          coverWidth={52}
-          coverHeight={76}
+          coverWidth={fan.width}
+          coverHeight={fan.height}
           offset={24}
         />
       </View>
@@ -132,15 +141,15 @@ const BucketTile = ({
 };
 
 // The dashed tile at the end of My Books' row (and the only tile at 0
-// buckets).
-export const NewBucketTile = ({ onPress }) => (
+// buckets). A `width` sizes it like a grid tile (14e, 15d, where it's last).
+export const NewBucketTile = ({ onPress, width }) => (
   <PressableScale
     onPress={onPress}
-    style={styles.mine}
+    style={[styles.mine, width && { width }]}
     accessibilityLabel="New bucket"
     accessibilityRole="button"
   >
-    <View style={[styles.mineTile, styles.newTile]}>
+    <View style={[styles.mineTile, styles.newTile, width && { width, height: Math.round(width * 0.78) }]}>
       <Icon name="add" size={22} color={DS.colors.primary} />
       <Text style={styles.newText}>New bucket</Text>
     </View>

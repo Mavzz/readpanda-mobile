@@ -17,6 +17,7 @@ const useHomeData = ({ user, navigation }) => {
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
   const loadActiveBook = useReadingProgressStore((s) => s.loadActiveBook);
   const refreshMemberProgress = useReadingProgressStore((s) => s.refreshMemberProgress);
+  const fetchMemberProgress = useReadingProgressStore((s) => s.fetchMemberProgress);
   const syncFromServer = useReadingProgressStore((s) => s.syncFromServer);
   const loadComments = useCommentsStore((s) => s.loadComments);
   const refreshUnreadCount = useNotificationStore((s) => s.refreshUnreadCount);
@@ -45,8 +46,18 @@ const useHomeData = ({ user, navigation }) => {
     // Read the hero back out of the store rather than the closure —
     // loadActiveBook() ran a line ago, so the rendered value is stale. Solo
     // books have no room and so no conversation to load.
+    // Every room's book, not just the hero's: Rooms tonight counts what's new
+    // per room and New in your rooms reads across all of them (turn 16).
     const hero = useReadingProgressStore.getState().activeBook;
-    if (hero?.roomId) {
+    const roomBooks = new Set();
+    useRoomStore.getState().rooms.forEach((room) => {
+      if (room.currentBookId && !String(room.id).startsWith('fixture-')) {
+        roomBooks.add(String(room.currentBookId));
+        loadComments(room.id, room.currentBookId);
+        fetchMemberProgress(room.id);
+      }
+    });
+    if (hero?.roomId && !roomBooks.has(String(hero.id))) {
       loadComments(hero.roomId, hero.id);
     }
     if (showRefresh && curatedStatus === 200 && customStatus === 200) {
@@ -62,6 +73,7 @@ const useHomeData = ({ user, navigation }) => {
     refreshUnreadCount,
     loadActiveBook,
     refreshMemberProgress,
+    fetchMemberProgress,
     loadComments,
   ]);
 

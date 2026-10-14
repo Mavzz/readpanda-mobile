@@ -8,6 +8,21 @@ import log from '../../utils/logger';
 import lobbyStyles from './lobbyStyles';
 import PressableScale from '../../components/PressableScale';
 
+// The system share sheet with the room's invite. Also used by the active
+// Room's Invite icon (2c / 14i), so both say the same thing.
+export const shareInvite = async (roomName, inviteCode) => {
+  if (!inviteCode) {
+    return;
+  }
+  try {
+    await Share.share({
+      message: `Join "${roomName}" on ReadPanda — invite code: ${inviteCode}`,
+    });
+  } catch (error) {
+    log.error('Failed to share invite:', error);
+  }
+};
+
 const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
   const [copied, setCopied] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
@@ -29,18 +44,7 @@ const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
     log.info('Invite code copied:', inviteCode);
   };
 
-  const handleShareInvite = async () => {
-    if (!inviteCode) {
-      return;
-    }
-    try {
-      await Share.share({
-        message: `Join "${roomName}" on ReadPanda — invite code: ${inviteCode}`,
-      });
-    } catch (error) {
-      log.error('Failed to share invite:', error);
-    }
-  };
+  const handleShareInvite = () => shareInvite(roomName, inviteCode);
 
   return (
     <>

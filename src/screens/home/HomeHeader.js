@@ -6,9 +6,11 @@ import getInitials from '../../utils/getInitials';
 import NotificationList from '../../components/NotificationList';
 import useNotificationStore from '../../stores/notificationStore';
 import { Bone, useSkeletonDelay } from '../../components/Skeleton';
+import useLayout from '../../hooks/useLayout';
+import { dayAndPart, firstName } from './homeCopy';
 
-// Greeting, the notification bell (and its inbox sheet), and the avatar into
-// Profile. The notification store is read only here, so a badge change
+// "Thursday evening · Hi, Maya" (16a), the notification bell (and its inbox
+// sheet), and the avatar into Profile. The notification store is read only here, so a badge change
 // doesn't re-render the rest of Home.
 const HomeHeader = ({ username, showBell, onOpenProfile }) => {
   const notifications = useNotificationStore((s) => s.notifications);
@@ -18,6 +20,7 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const [notifModalVisible, setNotifModalVisible] = useState(false);
   const showSkeleton = useSkeletonDelay(notifLoading);
+  const { isLarge, pagePad } = useLayout();
 
   const handleNotificationPress = () => {
     setNotifModalVisible(true);
@@ -26,10 +29,12 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
 
   return (
     <>
-      <View style={styles.header}>
+      <View style={[styles.header, isLarge && { paddingHorizontal: pagePad }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>Good evening</Text>
-          <Text style={styles.username} numberOfLines={1} ellipsizeMode="tail">{username}</Text>
+          <Text style={styles.greeting}>{dayAndPart()}</Text>
+          <Text style={[styles.username, isLarge && styles.usernameLarge]} numberOfLines={1} ellipsizeMode="tail">
+            Hi, {firstName(username)}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           {/* No bell on first run — nothing can notify you yet. */}
@@ -94,7 +99,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 13,
-    fontFamily: DS.font.medium,
+    fontFamily: DS.font.semibold,
     color: DS.colors.onSurfaceVariant,
   },
   username: {
@@ -102,6 +107,9 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
     letterSpacing: -0.5,
+  },
+  usernameLarge: {
+    ...DS.type.pageTitleLarge,
   },
   headerLeft: {
     flex: 1,
@@ -150,7 +158,7 @@ const styles = StyleSheet.create({
   // Notifications modal (same treatment as CommonHeader's)
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(6, 13, 32, 0.7)',
+    backgroundColor: DS.colors.scrim,
     justifyContent: 'flex-end',
   },
   modalContent: {

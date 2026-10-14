@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import BookCoverGradient from '../components/BookCoverGradient';
 import CoverFan from '../components/CoverFan';
+import useLayout from '../hooks/useLayout';
 import useBucketsStore from '../stores/bucketsStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import bucketProgress from '../utils/bucketProgress';
@@ -30,6 +31,8 @@ import PressableScale from '../components/PressableScale';
 // matching books first and dims the rest. Nothing is hidden, since the bucket
 // is a curated whole. × clears it.
 const HERO_HEIGHT = 330;
+// iPad (15f): a shorter, sideways hero and a grid of 5 or 6 columns.
+const HERO_HEIGHT_LARGE = 292;
 const GUTTER = 24;
 const COLUMN_GAP = 14;
 
@@ -38,6 +41,10 @@ const CuratedBucketScreen = () => {
   const route = useRoute();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { isLarge, pagePad, columns } = useLayout();
+  const cols = columns(2, 5, 6);
+  const gutter = isLarge ? pagePad : GUTTER;
+  const gap = isLarge ? 20 : COLUMN_GAP;
   const bucketId = route.params?.bucketId;
 
   const [page, setPage] = useState(null);
@@ -83,7 +90,7 @@ const CuratedBucketScreen = () => {
 
   const name = page?.title || route.params?.name || '';
   const saved = !!page?.saved_bucket_id;
-  const cellWidth = (width - GUTTER * 2 - COLUMN_GAP) / 2;
+  const cellWidth = (width - gutter * 2 - gap * (cols - 1)) / cols;
 
   const save = async () => {
     // Already saved: the copy is yours now, so go to it.
@@ -103,6 +110,82 @@ const CuratedBucketScreen = () => {
       setPage((p) => ({ ...p, saved_bucket_id: id }));
     }
   };
+
+  // The editorial line, the save pill and the genre chip.
+  const info = (
+    <>
+      <View style={styles.eyebrowRow}>
+        <Icon name="sparkles" size={12} color={DS.colors.primaryContainer} />
+        <Text style={styles.eyebrow}>Curated</Text>
+      </View>
+      <Text style={[styles.title, isLarge && styles.titleLarge]}>{name}</Text>
+      {page?.description ? <Text style={styles.description}>{page.description}</Text> : null}
+      <View style={styles.saveRow}>
+        <PressableScale
+          onPress={save}
+          disabled={saving || !page}
+          style={[styles.savePill, saved && styles.savePillOn]}
+          accessibilityRole="button"
+          accessibilityHint={saved ? 'Opens your copy in My Books' : 'Copies this bucket into My Books'}
+        >
+          <Icon
+            name={saved ? 'bookmark' : 'bookmark-outline'}
+            size={15}
+            color={saved ? DS.colors.onPrimary : DS.colors.primary}
+          />
+          <Text style={[styles.saveText, saved && styles.saveTextOn]}>
+            {saved ? 'Saved' : 'Save to My Books'}
+          </Text>
+        </PressableScale>
+        {page ? (
+          <Text style={styles.meta} numberOfLines={1}>
+            {bucketMeta(page.book_count, page.reading_minutes)}
+          </Text>
+        ) : null}
+      </View>
+
+      {genre ? (
+        <PressableScale
+          onPress={() => setGenre(null)}
+          style={styles.filterChip}
+          accessibilityLabel={`Showing ${genreLabel} first. Clear`}
+          accessibilityRole="button"
+        >
+          <Text style={styles.filterText}>{genreLabel} · {matching}</Text>
+          <Icon name="close" size={14} color={DS.colors.onPrimary} />
+        </PressableScale>
+      ) : null}
+    </>
+  );
+
+  // 15f: on iPad the hero turns sideways, the text on the left at a readable
+  // width and the fan of the top 3 covers on the right.
+  const largeHeader = (
+    <View style={[styles.hero, styles.heroSpaced, { height: HERO_HEIGHT_LARGE + insets.top }]}>
+      <LinearGradient
+        colors={CURATED_GROUND}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.heroGround, { width, height: HERO_HEIGHT_LARGE + insets.top }]}
+      />
+      <View style={[styles.heroLarge, { paddingTop: insets.top, paddingHorizontal: pagePad }]}>
+        <View style={styles.infoLarge}>{info}</View>
+        <CoverFan
+          layout="hero"
+          covers={(page?.books || []).slice(0, 3)}
+          seed={name}
+          width={340}
+          height={220}
+          coverWidth={120}
+          coverHeight={176}
+          centerWidth={126}
+          centerHeight={184}
+          offset={90}
+          borderRadius={12}
+        />
+      </View>
+    </View>
+  );
 
   const header = (
     <View>
@@ -141,47 +224,7 @@ const CuratedBucketScreen = () => {
 
       {/* ── Info (overlaps the hero by 24) ───────────────── */}
       <View style={styles.info}>
-        <View style={styles.eyebrowRow}>
-          <Icon name="sparkles" size={12} color={DS.colors.primaryContainer} />
-          <Text style={styles.eyebrow}>Curated</Text>
-        </View>
-        <Text style={styles.title}>{name}</Text>
-        {page?.description ? <Text style={styles.description}>{page.description}</Text> : null}
-        <View style={styles.saveRow}>
-          <PressableScale
-            onPress={save}
-            disabled={saving || !page}
-            style={[styles.savePill, saved && styles.savePillOn]}
-            accessibilityRole="button"
-            accessibilityHint={saved ? 'Opens your copy in My Books' : 'Copies this bucket into My Books'}
-          >
-            <Icon
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={15}
-              color={saved ? DS.colors.onPrimary : DS.colors.primary}
-            />
-            <Text style={[styles.saveText, saved && styles.saveTextOn]}>
-              {saved ? 'Saved' : 'Save to My Books'}
-            </Text>
-          </PressableScale>
-          {page ? (
-            <Text style={styles.meta} numberOfLines={1}>
-              {bucketMeta(page.book_count, page.reading_minutes)}
-            </Text>
-          ) : null}
-        </View>
-
-        {genre ? (
-          <PressableScale
-            onPress={() => setGenre(null)}
-            style={styles.filterChip}
-            accessibilityLabel={`Showing ${genreLabel} first. Clear`}
-            accessibilityRole="button"
-          >
-            <Text style={styles.filterText}>{genreLabel} · {matching}</Text>
-            <Icon name="close" size={14} color={DS.colors.onPrimary} />
-          </PressableScale>
-        ) : null}
+        {info}
       </View>
     </View>
   );
@@ -232,10 +275,12 @@ const CuratedBucketScreen = () => {
       <FlatList
         data={books}
         keyExtractor={(b) => b.book_id}
-        numColumns={2}
+        // numColumns can't change on a mounted list; a new layout remounts it.
+        key={`grid-${cols}`}
+        numColumns={cols}
         renderItem={renderBook}
-        ListHeaderComponent={header}
-        columnWrapperStyle={styles.columns}
+        ListHeaderComponent={isLarge ? largeHeader : header}
+        columnWrapperStyle={[styles.columns, { paddingHorizontal: gutter, gap }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       />
@@ -243,7 +288,7 @@ const CuratedBucketScreen = () => {
       {/* Floats over the hero. */}
       <PressableScale
         onPress={() => navigation.goBack()}
-        style={[styles.back, { top: insets.top + 14 }]}
+        style={[styles.back, { top: insets.top + 14, left: gutter }]}
         accessibilityLabel="Go back"
         accessibilityRole="button"
       >
@@ -290,6 +335,26 @@ const styles = StyleSheet.create({
     top: HERO_HEIGHT - 110,
     left: 0,
     height: 110,
+  },
+
+  heroSpaced: {
+    marginBottom: 24,
+  },
+  titleLarge: {
+    fontSize: 36,
+    letterSpacing: -0.9,
+  },
+  heroLarge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 40,
+  },
+  // Clears the floating back button, then the text runs at a readable width.
+  infoLarge: {
+    flex: 1,
+    maxWidth: 560,
+    paddingTop: 52,
   },
 
   // Info

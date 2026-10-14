@@ -12,7 +12,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
-import BucketTile from '../components/BucketTile';
+import BucketTile, { NewBucketTile } from '../components/BucketTile';
 import GenreChips from '../components/GenreChips';
 import SeeAllHeader from '../components/SeeAllHeader';
 import { showToast } from '../components/Toaster';
@@ -23,6 +23,7 @@ import Animated from 'react-native-reanimated';
 import useFilterEntrance from '../hooks/useFilterEntrance';
 import useDiscoverPages from '../hooks/useDiscoverPages';
 import usePlusGate from '../hooks/usePlusGate';
+import useLayout from '../hooks/useLayout';
 
 // § 10e — "See all" for buckets: a 2-column grid of BucketTiles (9c).
 //
@@ -33,8 +34,14 @@ import usePlusGate from '../hooks/usePlusGate';
 //                      keep the warm ground plus a sparkle.
 //   variant 'curated'  Discover › Curated buckets. The genre chips (keeping
 //                      8a's), ranked by relevance as the server returns them.
+//
+// On iPad (14e) the grid gains columns (3 in the portrait layout, 4 in
+// landscape) with a bigger fan, and My buckets ends with the dashed "New
+// bucket" tile; the header's + does the same thing.
 const GUTTER = 24;
 const GAP = 12;
+const GAP_LARGE = 20;
+const NEW_TILE = '__new';
 
 const SORTS = [
   { value: 'updated', label: 'Updated', icon: 'time-outline' },
@@ -61,7 +68,11 @@ const BucketGridScreen = () => {
   const route = useRoute();
   const { width } = useWindowDimensions();
   const variant = route.params?.variant || 'mine';
-  const tileWidth = (width - GUTTER * 2 - GAP) / 2;
+  const { isLarge, pagePad, columns } = useLayout();
+  const cols = columns(2, 3, 4);
+  const gutter = isLarge ? pagePad : GUTTER;
+  const gap = isLarge ? GAP_LARGE : GAP;
+  const tileWidth = (width - gutter * 2 - gap * (cols - 1)) / cols;
 
   const customBuckets = useBucketsStore((s) => s.customBuckets);
   const fetchCustomBuckets = useBucketsStore((s) => s.fetchCustomBuckets);
@@ -140,8 +151,18 @@ const BucketGridScreen = () => {
     ? (savedCount > 0 ? `${count} · ${savedCount} saved from Discover` : count)
     : (loaded ? count : null);
 
-  const renderTile = ({ item: bucket, index }) => (variant === 'mine' ? (
+  const newBucket = () => gate('buckets', () => navigation.navigate('CreateBucketScreen'));
+
+  const renderTile = ({ item: bucket, index }) => {
+    if (bucket.id === NEW_TILE) {
+      return <NewBucketTile width={tileWidth} onPress={newBucket} />;
+    }
+    return renderBucket({ item: bucket, index });
+  };
+
+  const renderBucket = ({ item: bucket, index }) => (variant === 'mine' ? (
     <BucketTile
+      large={isLarge}
       variant="mine"
       progressKey={`bucket:${bucket.id}`}
       width={tileWidth}
@@ -156,6 +177,7 @@ const BucketGridScreen = () => {
   ) : (
     <Animated.View entering={enteringFor(index)}>
       <BucketTile
+        large={isLarge}
         variant="curated"
         width={tileWidth}
         covers={bucket.booksPreview}
@@ -169,8 +191,10 @@ const BucketGridScreen = () => {
   const empty = () => {
     if (!failed && !loaded) {
       return showSkeleton ? (
-        <View style={styles.skeleton}>
-          {[0, 1, 2, 3].map((i) => <Bone key={i} width={tileWidth} height={150} radius={22} />)}
+        <View style={[styles.skeleton, { columnGap: gap }]}>
+          {Array.from({ length: cols * 2 }, (_, i) => (
+            <Bone key={i} width={tileWidth} height={isLarge ? 196 : 150} radius={22} />
+          ))}
         </View>
       ) : null;
     }
@@ -188,6 +212,10 @@ const BucketGridScreen = () => {
     );
   };
 
+  // Only once there's a grid to end: at 0 buckets the empty message says to
+  // tap +, as on the phone.
+  const showNewTile = isLarge && variant === 'mine' && buckets.length > 0;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
@@ -195,23 +223,25 @@ const BucketGridScreen = () => {
         title={variant === 'mine' ? 'My buckets' : 'Curated buckets'}
         subtitle={subtitle}
         sort={variant === 'mine' ? { options: SORTS, value: sort, onChange: setSort } : null}
-        onAdd={variant === 'mine' ? () => gate('buckets', () => navigation.navigate('CreateBucketScreen')) : null}
+        onAdd={variant === 'mine' ? newBucket : null}
         addLabel="New bucket"
       />
       <FlatList
-        data={buckets}
+        // numColumns can't change on a mounted list; a new layout remounts it.
+        key={`grid-${cols}`}
+        data={showNewTile ? [...buckets, { id: NEW_TILE }] : buckets}
         // Keyed by genre too, so a chip change remounts the tiles and they rise in.
         keyExtractor={(bucket) => `${genre || ''}:${bucket.id}`}
         renderItem={renderTile}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
+        numColumns={cols}
+        columnWrapperStyle={[styles.row, { gap }]}
         ListHeaderComponent={variant === 'curated' && genres.length > 0 ? (
-          <View style={styles.chipsBleed}>
-            <GenreChips genres={genres} value={genre} onChange={setGenre} />
+          <View style={{ marginHorizontal: -gutter }}>
+            <GenreChips genres={genres} value={genre} onChange={setGenre} gutter={gutter} />
           </View>
         ) : <View style={styles.headerGap} />}
         ListEmptyComponent={empty}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -224,24 +254,18 @@ const styles = StyleSheet.create({
     backgroundColor: DS.colors.background,
   },
   content: {
-    paddingHorizontal: GUTTER,
     paddingBottom: 32,
-  },
-  chipsBleed: {
-    marginHorizontal: -GUTTER,
   },
   // Stands in for the 2-column curated tiles (BucketTile's 150pt height).
   skeleton: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: GAP,
     rowGap: 20,
   },
   headerGap: {
     height: 20,
   },
   row: {
-    gap: GAP,
     marginBottom: 20,
   },
   message: {

@@ -18,6 +18,7 @@ const PdfViewer = ({
   bookTitle,
   initialPage,
   pageMode,
+  largeLayout,
   threads,
   highlights,
   hasRoom,
@@ -81,8 +82,11 @@ const PdfViewer = ({
     onRetryComment?.(e.nativeEvent.clientId);
   }, [onRetryComment]);
 
-  const handleRoomPickerRequested = useCallback(() => {
-    onRoomPickerRequested?.();
+  // Carries the comment button's window frame ({ x, y, width, height }) so
+  // iPad can anchor the room popover to it.
+  const handleRoomPickerRequested = useCallback((e) => {
+    const { x, y, width, height } = e.nativeEvent || {};
+    onRoomPickerRequested?.(width ? { x, y, w: width, h: height } : null);
   }, [onRoomPickerRequested]);
 
   const handleCreateHighlight = useCallback((e) => {
@@ -106,6 +110,7 @@ const PdfViewer = ({
       bookTitle={bookTitle || ''}
       initialPage={initialPage || 0}
       pageMode={pageMode || 'scroll'}
+      largeLayout={!!largeLayout}
       threads={threads || []}
       highlights={highlights || []}
       hasRoom={!!hasRoom}

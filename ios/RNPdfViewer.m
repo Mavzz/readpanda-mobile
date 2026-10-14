@@ -14,6 +14,8 @@ RCT_EXPORT_VIEW_PROPERTY(pdfDetails, NSDictionary)
 RCT_EXPORT_VIEW_PROPERTY(initialPage, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(bookTitle, NSString)
 RCT_EXPORT_VIEW_PROPERTY(pageMode, NSString)
+// The iPad layout (window ≥ 700pt): pages fit the window with even gaps.
+RCT_EXPORT_VIEW_PROPERTY(largeLayout, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(onPageChanged, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLoadComplete, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)

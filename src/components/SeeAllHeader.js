@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import PickerSheet from './PickerSheet';
 import PressableScale from './PressableScale';
+import useLayout from '../hooks/useLayout';
 
 // The top of every "See all" view (10c–10e): a back chevron, an optional sort
 // pill and "+" on the right, then the section's title and a subtitle. The
@@ -16,11 +17,15 @@ import PressableScale from './PressableScale';
 const SeeAllHeader = ({ title, subtitle, sort, onAdd, addLabel = 'New' }) => {
   const navigation = useNavigation();
   const [sorting, setSorting] = useState(false);
+  // The sort sheet opens as a popover off the pill on iPad.
+  const sortAnchor = useRef(null);
+  const { isLarge, pagePad } = useLayout();
+  const pad = { paddingHorizontal: pagePad };
   const current = sort?.options.find((o) => o.value === sort.value);
 
   return (
     <SafeAreaView edges={['top']}>
-      <View style={styles.navRow}>
+      <View style={[styles.navRow, pad]}>
         <PressableScale
           onPress={() => navigation.goBack()}
           style={styles.circle}
@@ -31,15 +36,17 @@ const SeeAllHeader = ({ title, subtitle, sort, onAdd, addLabel = 'New' }) => {
         </PressableScale>
         <View style={styles.actions}>
           {current ? (
-            <PressableScale
-              onPress={() => setSorting(true)}
-              style={styles.sortPill}
-              accessibilityLabel={`Sort: ${current.label}`}
-              accessibilityRole="button"
-            >
-              <Icon name="swap-vertical" size={14} color={DS.colors.onSurface} />
-              <Text style={styles.sortText}>{current.label}</Text>
-            </PressableScale>
+            <View ref={sortAnchor} collapsable={false}>
+              <PressableScale
+                onPress={() => setSorting(true)}
+                style={styles.sortPill}
+                accessibilityLabel={`Sort: ${current.label}`}
+                accessibilityRole="button"
+              >
+                <Icon name="swap-vertical" size={14} color={DS.colors.onSurface} />
+                <Text style={styles.sortText}>{current.label}</Text>
+              </PressableScale>
+            </View>
           ) : null}
           {onAdd ? (
             <PressableScale
@@ -54,13 +61,14 @@ const SeeAllHeader = ({ title, subtitle, sort, onAdd, addLabel = 'New' }) => {
         </View>
       </View>
 
-      <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <View style={[styles.header, pad]}>
+        <Text style={[styles.title, isLarge && styles.titleLarge]} numberOfLines={1}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
 
       {sort ? (
         <PickerSheet
+          anchorRef={sortAnchor}
           visible={sorting}
           title="Sort by"
           items={sort.options.map((o) => ({
@@ -124,6 +132,10 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
     letterSpacing: -0.6,
+  },
+  // iPad page titles (IPAD_AND_HOME_14_16.md § 1).
+  titleLarge: {
+    ...DS.type.pageTitleLarge,
   },
   subtitle: {
     fontSize: 13,
