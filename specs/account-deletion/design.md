@@ -23,8 +23,9 @@ A reserved user row that deleted people's comments are moved to:
 In `internal/handlers/users.go`, `DeleteMe`, routed in `cmd/server/main.go` as `DELETE /users/me` (`OPTIONS` too):
 1. `utils.ExtractUserID` → uid. Read `apple_refresh_token` for later.
 2. `BEGIN`
+   Then `INSERT` the Deleted reader row `ON CONFLICT (uuid) DO NOTHING`, so deletion never depends on the migration having run (and works in the test database, which is truncated before each test).
 3. Rooms the user created: for each, find the earliest-joined other member (`room_members` ORDER BY `joined_at`, then `user_id`). If one exists: `UPDATE rooms SET admin_id = that member`, and set their `room_members.role = 'admin'`. Else `DELETE FROM rooms WHERE id = …` (cascades its comments and members).
-4. `UPDATE book_comments SET user_id = DELETED_READER WHERE user_id = uid`.
+4. `UPDATE book_comments SET user_id = DELETED_READER, client_id = NULL WHERE user_id = uid`. `client_id` is unique per author and only de-duplicates the author's own retries; cleared, so comments from many deleted readers can't collide under the one Deleted reader account.
 5. `UPDATE books SET user_id = NULL WHERE user_id = uid`.
 6. `DELETE FROM reading_progress WHERE user_id = uid`.
 7. `DELETE FROM users WHERE uuid = uid` (cascades the rest).
@@ -49,4 +50,5 @@ The sign-out path (`useAuthStore.signOut` and the store resets) already clears t
 - Two members joined at the same moment: the tie breaks on `user_id`, so the result is deterministic.
 - The user is a portal admin: deletion is allowed (other admins remain). No special handling.
 - Network drops after the server committed: the app sees an error and stays signed in, but its next token refresh fails with 401, and `apiService.js` signs out. Acceptable.
+- A handed-over room whose current bucket was the creator's own: the bucket cascades away, and Room Detail already treats a missing bucket as none (`loadRoomBucket`); the room keeps its current book.
 - Deleting twice (a double tap): R3.3 prevents it. A second request with the same token finds no user and is a no-op (still 204).

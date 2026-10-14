@@ -2,6 +2,7 @@ import { Platform, NativeModules } from 'react-native';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import apiService from './apiService';
 import { postRequest } from './usePost';
+import { makeAuthenticatedDeleteRequest } from './authenticatedRequests';
 import { GoogleAuthService } from './GoogleAuthService';
 import { getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
@@ -207,5 +208,19 @@ const logout = async (username, refreshToken) => {
   log.info(`User logged out: ${username}`, status);
 };
 
+// Deletes the signed-in reader's account for good (account-deletion R4.1):
+// rooms they made pass on, their comments stay as "Deleted reader". The
+// server answers 204, also if the account was already gone, so a retry after
+// a dropped connection is safe. { ok } only; the screen says what happened.
+const deleteAccount = async () => {
+  try {
+    const { status } = await makeAuthenticatedDeleteRequest(getBackendUrl('/users/me'));
+    log.info('Account deleted', status);
+    return { ok: status === 204 };
+  } catch (error) {
+    log.error('Account deletion failed:', error);
+    return { ok: false };
+  }
+};
 
-export { googleSignUpLogin, appleSignUpLogin, emailLogin, emailSignUp, checkUsername, logout };
+export { googleSignUpLogin, appleSignUpLogin, emailLogin, emailSignUp, checkUsername, logout, deleteAccount };
