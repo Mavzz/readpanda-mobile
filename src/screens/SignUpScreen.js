@@ -68,7 +68,6 @@ const SignUp = ({ navigation }) => {
   const logIn = () => navigation.popTo('Login');
   const buttons = (
     <OneTapButtons
-      sideBySide={sizeClass !== 'compact'}
       busy={oneTapBusy}
       onApple={() => oneTap('apple')}
       onGoogle={() => oneTap('google')}

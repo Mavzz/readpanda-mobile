@@ -7,14 +7,14 @@ Design handoff: `docs/handoff/ReadPanda Design Review.dc.html` § 17 (intro and 
 Today's Sign Up (`SignUpScreen.js`) is a four-field form in the middle of the screen. It has a Confirm Password field, reports every problem in an `Alert`, and its error title says "Login failed". On a 13" iPad it fills about a fifth of the display. The redesign puts one-tap sign-up (Apple, Google) first, uses fewer fields, shows errors under the field they belong to, and gives iPad a real layout.
 
 ## Out of scope
-- The Login screen (stays as built in `specs/ipad-support/` task 7, 15a).
+- The rest of the Login screen (stays as built in `specs/ipad-support/` task 7, 15a); only its one-tap buttons change (R9).
 - Terms and Privacy pages (their links show a "coming soon" toast for now; see R7).
 - Onboarding after sign-up (the Interest screen, `specs/interests-redesign/`), which opens as today.
 
 ## Requirements
 
 ### R1. One-tap sign-up first
-1. THE screen SHALL show "Continue with Apple" and "Continue with Google" above the email form, with "or use email" between them. On iPad (≥ 700pt) the two buttons SHALL read "Apple" and "Google", side by side.
+1. THE screen SHALL show "Continue with Apple" and "Continue with Google" above the email form, with "or use email" between them. The two buttons SHALL be stacked, full width, with these full labels on every size, and Google's SHALL carry the four-colour "G". *(Changed 2026-10-14 from "Apple" / "Google" side by side on iPad: Apple's HIG and Google's branding guidelines only allow "Sign in / Sign up / Continue with …" or the logo alone, and a single-colour G isn't allowed.)*
 2. WHEN Apple sign-in succeeds THE app SHALL sign the reader in (creating their account on first use) and continue exactly as a Google sign-up does today.
 3. THE new screen SHALL NOT ship without working Sign in with Apple (App Store rule 4.8: Google requires Apple).
 
@@ -55,6 +55,12 @@ Today's Sign Up (`SignUpScreen.js`) is a four-field form in the middle of the sc
 3. `/signup`'s 409 SHALL say which field is taken: `{ "error": "...", "field": "username" | "email" }`.
 4. THE server SHALL apply the R3.1 username rules and the 8-character password minimum, returning 400 with `field` when they're not met.
 5. WHEN an account that signed in with Apple is deleted THE server SHALL revoke its Apple token (App Store guideline 5.1.1(v)), using the Sign in with Apple key (`APPLE_TEAM_ID` = `6F6H5A6JCC`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` in the server's environment, never in the repo). *(Added 2026-10-14.)*
+
+### R9. Login one-tap *(Added 2026-10-14)*
+1. THE Login screen SHALL offer Apple and Google with the same `OneTapButtons` as Sign up (same look and labels, R1.1), above the username and password fields, with "or use email" between. Login offering Google without Apple breaks App Store rule 4.8.
+2. WHEN Apple sign-in succeeds from Login THE app SHALL sign the reader in as Sign up does: a new account (201) goes on to the interests picker, a returning one (200) doesn't.
+3. WHEN the reader closes the Apple sheet THE screen SHALL show nothing. WHEN one-tap fails THE screen SHALL show a toast, as Sign up does. (A closed Google sheet can't be told apart from a failure, so it also shows the toast, as on Sign up.)
+4. WHILE a one-tap request is in flight both buttons SHALL be inactive.
 
 ## Open questions
 - [x] Backend in this spec, or separate? In this spec.

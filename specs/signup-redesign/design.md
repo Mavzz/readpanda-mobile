@@ -6,7 +6,7 @@ Backend first, then the app, so the screen never ships pointing at endpoints tha
 ```
 SignUpScreen
  ├─ useSignUpForm()          fields, per-field errors, availability check, submit, server-error mapping
- ├─ OneTapButtons            Apple + Google (stacked on phone, side by side on iPad)
+ ├─ OneTapButtons            Apple + Google, stacked with full labels on every size (R1.1)
  ├─ SignUpForm               the three labelled fields, hints, Create account
  └─ layout by sizeClass
      ├─ compact → SignUpPhone   (17a/17b) KeyboardAwareScroll column

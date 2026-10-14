@@ -44,6 +44,13 @@ export const DS = {
     appleButton: '#ffffff',
     appleButtonText: '#000000',
 
+    // Google's "G" (17a): its four brand colours, which Google's branding
+    // guidelines require on a sign-in button.
+    googleBlue: '#4285F4',
+    googleGreen: '#34A853',
+    googleYellow: '#FBBC05',
+    googleRed: '#EA4335',
+
     // A missed day in Home's "Your week" (16a): a dimmed amber, so the row
     // still reads as one streak rather than a scold.
     streakMissed: '#3a2c18',

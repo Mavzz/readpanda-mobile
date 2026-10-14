@@ -2,33 +2,35 @@ import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../../styles/global';
 import PressableScale from '../../components/PressableScale';
+import GoogleLogo from '../../components/GoogleLogo';
 
-// Apple and Google, above the email form (17a: stacked, full labels; iPad
-// 17c/17d: side by side, "Apple" / "Google"). Apple's button follows its
-// guidelines: white, with the black Apple logo — the one place this screen
-// leaves the app's palette. Then the "or use email" divider.
-const OneTapButtons = ({ sideBySide = false, busy, onApple, onGoogle }) => (
+// Apple and Google, above the email form: stacked, with the full "Continue
+// with …" labels on every size, since Apple's and Google's branding rules
+// don't allow a bare "Apple" / "Google" (R1.1). Apple's button is white with
+// the black logo and Google's carries its four-colour G — the one place these
+// screens leave the app's palette. Then the "or use email" divider.
+const OneTapButtons = ({ busy, onApple, onGoogle }) => (
   <View style={styles.wrap}>
-    <View style={[styles.buttons, sideBySide && styles.buttonsRow]}>
+    <View style={styles.buttons}>
       <PressableScale
         onPress={onApple}
         disabled={!!busy}
-        style={[styles.button, styles.apple, sideBySide && styles.buttonHalf]}
+        style={[styles.button, styles.apple]}
         accessibilityRole="button"
         accessibilityLabel="Continue with Apple"
       >
         <Icon name="logo-apple" size={19} color={DS.colors.appleButtonText} />
-        <Text style={styles.appleText}>{sideBySide ? 'Apple' : 'Continue with Apple'}</Text>
+        <Text style={styles.appleText}>Continue with Apple</Text>
       </PressableScale>
       <PressableScale
         onPress={onGoogle}
         disabled={!!busy}
-        style={[styles.button, styles.google, sideBySide && styles.buttonHalf]}
+        style={[styles.button, styles.google]}
         accessibilityRole="button"
         accessibilityLabel="Continue with Google"
       >
-        <Icon name="logo-google" size={17} color={DS.colors.onSurface} />
-        <Text style={styles.googleText}>{sideBySide ? 'Google' : 'Continue with Google'}</Text>
+        <GoogleLogo size={18} />
+        <Text style={styles.googleText}>Continue with Google</Text>
       </PressableScale>
     </View>
     <View style={styles.divider}>
@@ -46,9 +48,6 @@ const styles = StyleSheet.create({
   buttons: {
     gap: 10,
   },
-  buttonsRow: {
-    flexDirection: 'row',
-  },
   button: {
     height: 52,
     flexDirection: 'row',
@@ -56,9 +55,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderRadius: DS.radius.full,
-  },
-  buttonHalf: {
-    flex: 1,
   },
   apple: {
     backgroundColor: DS.colors.appleButton,

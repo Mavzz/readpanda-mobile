@@ -11,15 +11,17 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { primaryButton as PrimaryButton, ssoButton as SSOButton } from '../components/Button';
+import { primaryButton as PrimaryButton } from '../components/Button';
 import { SignUpType } from '../utils/Helper';
-import { googleSignUpLogin, emailLogin } from '../services/auth';
+import { googleSignUpLogin, appleSignUpLogin, emailLogin } from '../services/auth';
 import log from '../utils/logger';
 import useAuthStore from '../stores/authStore';
 import { PreferenceService } from '../services/preferencesService';
 import { DS } from '../styles/global';
 import useLayout from '../hooks/useLayout';
 import ReadableColumn from '../components/ReadableColumn';
+import { showToast } from '../components/Toaster';
+import OneTapButtons from './signUp/OneTapButtons';
 import readpandaLogo from '../assets/readpandaLogo_New.png';
 
 const Login = ({ navigation }) => {
@@ -28,52 +30,77 @@ const Login = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [oneTapBusy, setOneTapBusy] = useState(null);
   const { sizeClass } = useLayout();
   let status, response;
 
-  const handleLogin = async (signUpType = '') => {
-    log.info('Login attempt with type:', signUpType);
+  // Store the session, then load the reader's preferences. A new account
+  // (201, only possible via Apple or Google) goes on to the interests picker,
+  // as it does from Sign up (R9.2).
+  const finishSignIn = async (signInStatus, signInResponse) => {
+    const userData = {
+      token: signInResponse.accessToken,
+      refreshToken: signInResponse.refreshToken,
+      userDetails: {
+        username: signInResponse.username,
+        email: signInResponse.email,
+        profilePicture: signInResponse.picture || null,
+        isNewUser: signInStatus === 201,
+        ...(signInStatus === 201 ? { createdAt: Date.now() } : {}),
+        preferences: {},
+      },
+    };
+
+    signIn(userData);
+
+    const { response: preferences } = await PreferenceService.fetchUserPreferences(userData.userDetails.username);
+
+    userData.userDetails.preferences = preferences || {};
+    updateUser(userData.userDetails);
+    log.info('Login successful userData:', userData);
+  };
+
+  // Apple and Google (R9): the same buttons and failure toast as Sign up.
+  const oneTap = async (which) => {
+    setOneTapBusy(which);
     try {
-      setLoading(true);
-      if (signUpType === SignUpType.Email) {
-        if (!username || !password) {
-          setLoading(false);
-          Alert.alert('Login In failed', 'Please fill in all fields');
-          return;
-        } else {
-          ({ status, response } = await emailLogin(username, password));
-        }
-      } else if (signUpType === SignUpType.Google) {
-        ({ status, response } = await googleSignUpLogin());
-      }
-
-      if (response.accessToken && (status === 200 || status === 201)) {
-        const userData = {
-          token: response.accessToken,
-          refreshToken: response.refreshToken,
-          userDetails: {
-            username: response.username,
-            email: response.email,
-            profilePicture: response.picture || null,
-            isNewUser: false,
-            preferences: {},
-          },
-        };
-
-        signIn(userData);
-
-        ({ status, response } = await PreferenceService.fetchUserPreferences(userData.userDetails.username));
-
-        userData.userDetails.preferences = response || {};
-        updateUser(userData.userDetails);
-        log.info('Login successful userData:', userData);
-      } else {
-        setLoading(false);
-        Alert.alert('Login failed', 'An error occurred. Please try again.');
+      const result = which === 'apple' ? await appleSignUpLogin() : await googleSignUpLogin();
+      if (result.cancelled) {
         return;
       }
+      if (result.response?.accessToken) {
+        await finishSignIn(result.status, result.response);
+        return;
+      }
+      log.error(`${which} login failed:`, result.status);
+      showToast(result.error?.error || `Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
     } catch (error) {
-      setLoading(false);
+      log.error(`${which} login failed with error:`, error);
+      showToast(`Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+    } finally {
+      setOneTapBusy(null);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (oneTapBusy) {
+      return;
+    }
+    log.info('Login attempt with type:', SignUpType.Email);
+    if (!username || !password) {
+      Alert.alert('Login In failed', 'Please fill in all fields');
+      return;
+    }
+    try {
+      setLoading(true);
+      ({ status, response } = await emailLogin(username, password));
+
+      if (response?.accessToken && (status === 200 || status === 201)) {
+        await finishSignIn(200, response);
+      } else {
+        Alert.alert('Login failed', 'An error occurred. Please try again.');
+      }
+    } catch (error) {
       log.error('Login failed with error:', error);
       Alert.alert('Login failed', 'An error occurred. Please try again.');
     } finally {
@@ -100,6 +127,14 @@ const Login = ({ navigation }) => {
 
   const form = (
     <>
+      <View style={styles.oneTap}>
+        <OneTapButtons
+          busy={oneTapBusy || (loading && 'email')}
+          onApple={() => oneTap('apple')}
+          onGoogle={() => oneTap('google')}
+        />
+      </View>
+
       <View style={styles.fields}>
         <TextInput
           style={styles.input}
@@ -123,17 +158,7 @@ const Login = ({ navigation }) => {
       {loading ? (
         <ActivityIndicator size="large" color={DS.colors.primary} />
       ) : (
-        <>
-          <PrimaryButton title="Step inside" onPress={() => handleLogin('Email')} />
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.orText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <SSOButton onPress={() => handleLogin('Google')} title="Continue with Google" />
-        </>
+        <PrimaryButton title="Step inside" onPress={handleLogin} />
       )}
 
       <View style={styles.footer}>
@@ -250,6 +275,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  oneTap: {
+    marginBottom: 22,
+  },
   fields: {
     marginBottom: 8,
   },
@@ -262,23 +290,6 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.regular,
     marginBottom: 12,
     color: DS.colors.onSurface,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 18,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: DS.colors.outlineVariant,
-    opacity: 0.3,
-  },
-  orText: {
-    marginHorizontal: 12,
-    color: DS.colors.onSurfaceVariant,
-    fontFamily: DS.font.regular,
-    fontSize: 13,
   },
   footer: {
     flexDirection: 'row',
