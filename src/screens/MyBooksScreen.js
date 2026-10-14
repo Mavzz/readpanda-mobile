@@ -19,9 +19,10 @@ import useReadingProgressStore from '../stores/readingProgressStore';
 import useBucketsStore from '../stores/bucketsStore';
 import useCommentsStore from '../stores/commentsStore';
 import { showToast } from '../components/Toaster';
-import log from '../utils/logger';
 import usePlusGate from '../hooks/usePlusGate';
+import openShelfBook from '../utils/openShelfBook';
 import PressableScale from '../components/PressableScale';
+import useLayout from '../hooks/useLayout';
 
 // § 8b — My Books: everything that's yours. The two books you were most
 // recently in (the 4a row, smaller), your buckets, and a link to what you've
@@ -30,6 +31,10 @@ const PREVIEW_ROWS = 2;
 // My buckets shows two whole tiles across before the row scrolls; "See all"
 // (10e) appears only past that.
 const BUCKET_SLOTS = 2;
+// On iPad (15d) only the layout changes: the two shelf cards sit side by
+// side, and buckets fill one row of 5 (4 in the portrait layout) with "New
+// bucket" last instead of scrolling sideways.
+const BUCKET_GAP_LARGE = 18;
 
 const MyBooksScreen = () => {
   const navigation = useNavigation();
@@ -43,6 +48,14 @@ const MyBooksScreen = () => {
   const commentsByBook = useCommentsStore((s) => s.byBook);
   const refreshComments = useCommentsStore((s) => s.refreshComments);
   const [refreshing, setRefreshing] = useState(false);
+  const { width, isLarge, pagePad, columns } = useLayout();
+  const pad = { paddingHorizontal: isLarge ? pagePad : 24 };
+  const bucketCols = columns(0, 4, 5);
+  // The last column is the "New bucket" tile.
+  const bucketSlots = isLarge ? bucketCols - 1 : BUCKET_SLOTS;
+  const bucketWidth = isLarge
+    ? (width - pagePad * 2 - BUCKET_GAP_LARGE * (bucketCols - 1)) / bucketCols
+    : undefined;
 
   const load = useCallback(async () => {
     loadActiveBook();
@@ -71,11 +84,8 @@ const MyBooksScreen = () => {
   const finishedCount = shelf.length - inProgress.length;
   const preview = inProgress.slice(0, PREVIEW_ROWS);
 
-  // Shelf rows open the reading views: 1b for a room book, 4b for a solo one.
-  const openBook = (book) => {
-    log.info('Opening My Books row:', book.title);
-    navigation.navigate(book.roomName ? 'RoomBookScreen' : 'SoloBookScreen', { bookId: book.id });
-  };
+  // A room book opens its active Room (2c / 14i), a solo one 4b.
+  const openBook = (book) => openShelfBook(navigation, book);
 
   const readNow = (book) => {
     navigation.navigate('ManuscriptScreen', {
@@ -93,6 +103,8 @@ const MyBooksScreen = () => {
     navigation.navigate('MyBucket', { bucketId: bucket.id, name: bucket.name });
   };
 
+  const newBucket = () => gate('buckets', () => navigation.navigate('CreateBucketScreen'));
+
   const sectionHeader = (title, onSeeAll) => (
     <View style={styles.sectionHeader}>
       <Text style={styles.eyebrow}>{title}</Text>
@@ -108,7 +120,7 @@ const MyBooksScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <SafeAreaView edges={['top']}>
-        <Text style={styles.title}>My Books</Text>
+        <Text style={[styles.title, pad, isLarge && styles.titleLarge]}>My Books</Text>
       </SafeAreaView>
 
       <ScrollView
@@ -127,23 +139,26 @@ const MyBooksScreen = () => {
         {/* Held back until the stored positions have been read, so a reader
             mid-book never sees the first-run block flash. */}
         {activeBookLoaded && (preview.length > 0 ? (
-          <View style={styles.gutter}>
+          <View style={pad}>
             {sectionHeader(
               `Currently reading · ${inProgress.length}`,
               inProgress.length > PREVIEW_ROWS ? () => navigation.navigate('Shelf') : null,
             )}
-            {preview.map((book, i) => (
-              <ShelfRow
-                key={book.id}
-                book={book}
-                isMostRecent={i === 0}
-                unreadCount={commentsByBook[book.id]?.unreadCount || 0}
-                coverWidth={46}
-                coverHeight={66}
-                onPress={openBook}
-                onPlay={readNow}
-              />
-            ))}
+            <View style={isLarge && styles.shelfPair}>
+              {preview.map((book, i) => (
+                <ShelfRow
+                  key={book.id}
+                  book={book}
+                  isMostRecent={i === 0}
+                  unreadCount={commentsByBook[book.id]?.unreadCount || 0}
+                  coverWidth={46}
+                  coverHeight={66}
+                  onPress={openBook}
+                  onPlay={readNow}
+                  style={isLarge && styles.shelfPairItem}
+                />
+              ))}
+            </View>
           </View>
         ) : (
           <FirstRunShelf
@@ -154,34 +169,55 @@ const MyBooksScreen = () => {
         ))}
 
         {/* ── My buckets ─────────────────────────────────────── */}
-        <View style={[styles.gutter, styles.bucketsHeader]}>
+        <View style={[pad, styles.bucketsHeader]}>
           {sectionHeader(
             'My buckets',
-            customBuckets.length > BUCKET_SLOTS
+            customBuckets.length > bucketSlots
               ? () => navigation.navigate('BucketGrid', { variant: 'mine' })
               : null,
           )}
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.bucketRow}
-        >
-          {customBuckets.map((bucket) => (
-            <BucketTile
-              key={bucket.id}
-              variant="mine"
-              progressKey={`bucket:${bucket.id}`}
-              covers={bucket.booksPreview}
-              name={bucket.name}
-              bookCount={bucket.bookCount}
-              finishedCount={bucket.finishedCount}
-              saved={!!bucket.sourceCuratedId}
-              onPress={() => openBucket(bucket)}
-            />
-          ))}
-          <NewBucketTile onPress={() => gate('buckets', () => navigation.navigate('CreateBucketScreen'))} />
-        </ScrollView>
+        {isLarge ? (
+          <View style={[styles.bucketGrid, pad]}>
+            {customBuckets.slice(0, bucketSlots).map((bucket) => (
+              <BucketTile
+                key={bucket.id}
+                large
+                width={bucketWidth}
+                variant="mine"
+                progressKey={`bucket:${bucket.id}`}
+                covers={bucket.booksPreview}
+                name={bucket.name}
+                bookCount={bucket.bookCount}
+                finishedCount={bucket.finishedCount}
+                saved={!!bucket.sourceCuratedId}
+                onPress={() => openBucket(bucket)}
+              />
+            ))}
+            <NewBucketTile width={bucketWidth} onPress={newBucket} />
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.bucketRow}
+          >
+            {customBuckets.map((bucket) => (
+              <BucketTile
+                key={bucket.id}
+                variant="mine"
+                progressKey={`bucket:${bucket.id}`}
+                covers={bucket.booksPreview}
+                name={bucket.name}
+                bookCount={bucket.bookCount}
+                finishedCount={bucket.finishedCount}
+                saved={!!bucket.sourceCuratedId}
+                onPress={() => openBucket(bucket)}
+              />
+            ))}
+            <NewBucketTile onPress={newBucket} />
+          </ScrollView>
+        )}
 
         {/* ── Finished ───────────────────────────────────────── */}
         {finishedCount > 0 && (
@@ -211,15 +247,14 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.extraBold,
     color: DS.colors.onSurface,
     letterSpacing: -0.6,
-    paddingHorizontal: 24,
     paddingTop: 18,
     paddingBottom: 6,
   },
+  titleLarge: {
+    ...DS.type.pageTitleLarge,
+  },
   content: {
     paddingBottom: 32,
-  },
-  gutter: {
-    paddingHorizontal: 24,
   },
   firstRun: {
     paddingVertical: 28,
@@ -245,6 +280,19 @@ const styles = StyleSheet.create({
   },
   bucketsHeader: {
     marginTop: 8,
+  },
+  shelfPair: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  shelfPairItem: {
+    flex: 1,
+    minWidth: 0,
+    marginBottom: 0,
+  },
+  bucketGrid: {
+    flexDirection: 'row',
+    gap: BUCKET_GAP_LARGE,
   },
   bucketRow: {
     paddingHorizontal: 24,

@@ -12,12 +12,16 @@ import getInitials from '../../utils/getInitials';
 import relativeTime from '../../utils/relativeTime';
 import pickProfilePhoto from '../../utils/pickProfilePhoto';
 import { DS } from '../../styles/global';
+import useLayout from '../../hooks/useLayout';
+import SplitLayout from '../../components/SplitLayout';
+import ReadableColumn from '../../components/ReadableColumn';
 import profileStyles from './profileStyles';
 import useProfileData from './useProfileData';
 import MakeItYoursCard from './MakeItYoursCard';
 import PressableScale from '../../components/PressableScale';
 
 const MAX_COVERS = 4;
+const COVER_GAP_LARGE = 14;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // "Ada Lovelace" → "Ada L." — what the name falls back to when it won't fit
@@ -141,7 +145,15 @@ const ProfileScreen = () => {
   // Each section leaves its new-reader (7c) form on its own; the meta line
   // turns over with the first book opened.
   const since = hasProgress ? readingSince(createdAt) : joined(createdAt);
-  const covers = finishedThisYear.slice(0, MAX_COVERS);
+  const { width, sizeClass, isLarge, pagePad } = useLayout();
+  // 15l: a full row of 8 finished covers on iPad (7 and the "+N" tile when
+  // there are more), sized to the column they sit in.
+  const lifeWidth = sizeClass === 'wide'
+    ? width - pagePad * 2 - 320 - 48
+    : Math.min(DS.layout.textMax, width - pagePad * 2);
+  const coverWidth = isLarge ? (lifeWidth - COVER_GAP_LARGE * 7) / 8 : 62;
+  const maxCovers = isLarge ? (finishedThisYear.length > 8 ? 7 : 8) : MAX_COVERS;
+  const covers = finishedThisYear.slice(0, maxCovers);
   const overflow = finishedThisYear.length - covers.length;
 
   const addPhoto = async () => {
@@ -177,10 +189,140 @@ const ProfileScreen = () => {
   ];
   const showChecklist = !hasProgress && steps.some((step) => !step.done);
 
+  const roomRow = (room) => {
+    const memberCount = room.members?.length || 0;
+    const book = room.currentBook?.title || room.currentBookTitle;
+    return (
+      <Pressable
+        onPress={() => navigation.navigate('RoomLobbyScreen', { room })}
+        style={({ pressed }) => [styles.roomRow, pressed && styles.roomRowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.roomTile}>
+          <Icon name="people" size={17} color={DS.colors.primary} />
+        </View>
+        <View style={styles.roomText}>
+          <Text style={styles.roomName} numberOfLines={1}>{room.name}</Text>
+          <Text style={styles.roomMeta} numberOfLines={1}>
+            {memberCount} {memberCount === 1 ? 'member' : 'members'}
+            {book ? ` · ${book}` : ''}
+          </Text>
+        </View>
+        <Icon name="chevron-forward" size={15} color={DS.colors.onSurfaceVariant} />
+      </Pressable>
+    );
+  };
+
+  const identityBlock = (
+    <View>
+      <View style={styles.identity}>
+        <Avatar user={user} name={name} onAddPhoto={addPhoto} />
+        <ProfileName name={name} />
+        <Text style={styles.handle} numberOfLines={1}>
+          @{handle}{since ? ` · ${since}` : ''}
+        </Text>
+        <PressableScale
+          // The edit form is its own piece of work (out of scope for 7a).
+          onPress={() => showToast('Editing your profile is coming soon', 'info')}
+          style={styles.editPill}
+          accessibilityRole="button"
+        >
+          <Icon name="pencil" size={12} color={DS.colors.primary} />
+          <Text style={styles.editPillText}>Edit profile</Text>
+        </PressableScale>
+      </View>
+
+      {showChecklist ? <MakeItYoursCard steps={steps} /> : null}
+
+      {hasProgress ? (
+        <View style={styles.stats}>
+          <Stat value={finishedCount} label="Finished" />
+          <View style={styles.statDivider} />
+          <Stat value={readingCount} label="Reading" />
+          <View style={styles.statDivider} />
+          {/* Under a day there is no streak to speak of — a dash, not a zero. */}
+          <Stat value={streak >= 1 ? streak : '—'} label="Day streak" icon="flame" />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const lifeBlock = (
+    <View>
+      {finishedCount === 0 ? (
+        <View style={styles.section}>
+          <Text style={[profileStyles.eyebrow, styles.sectionTitle]}>Your shelf</Text>
+          <EmptyShelf />
+        </View>
+      ) : null}
+
+      {finishedThisYear.length > 0 ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={profileStyles.eyebrow}>Finished in {year}</Text>
+            <Pressable
+              onPress={() => navigation.popTo('Tabs', { screen: 'MyBooks' })}
+              hitSlop={10}
+              accessibilityRole="button"
+            >
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.covers, isLarge && styles.coversLarge]}>
+            {covers.map((book) => (
+              <BookCoverGradient
+                key={book.id}
+                coverUrl={book.coverUrl}
+                title={book.title}
+                width={coverWidth}
+                height={Math.round(coverWidth * 1.42)}
+                borderRadius={10}
+                titleFontSize={8}
+              />
+            ))}
+            {overflow > 0 ? (
+              <View style={[styles.overflowTile, isLarge && { width: coverWidth, height: Math.round(coverWidth * 1.42) }]}>
+                <Text style={styles.overflowText}>+{overflow}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      {rooms.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={[profileStyles.eyebrow, styles.sectionTitle]}>Your rooms</Text>
+          {isLarge ? (
+            // 15l: rooms as a 2-column grid of cards.
+            <View style={styles.roomGrid}>
+              {rooms.map((room) => (
+                <View key={room.id} style={[profileStyles.groupCard, styles.roomGridCell]}>
+                  {roomRow(room)}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={profileStyles.groupCard}>
+              {rooms.map((room, i) => (
+                <View key={room.id}>
+                  {i > 0 ? <View style={styles.roomDivider} /> : null}
+                  {roomRow(room)}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
     <SafeAreaView style={profileStyles.screen} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <ScrollView contentContainerStyle={profileStyles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[profileStyles.content, isLarge && { paddingHorizontal: pagePad }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.nav}>
           <PressableScale
             onPress={() => navigation.goBack()}
@@ -200,109 +342,20 @@ const ProfileScreen = () => {
           </PressableScale>
         </View>
 
-        <View style={styles.identity}>
-          <Avatar user={user} name={name} onAddPhoto={addPhoto} />
-          <ProfileName name={name} />
-          <Text style={styles.handle} numberOfLines={1}>
-            @{handle}{since ? ` · ${since}` : ''}
-          </Text>
-          <PressableScale
-            // The edit form is its own piece of work (out of scope for 7a).
-            onPress={() => showToast('Editing your profile is coming soon', 'info')}
-            style={styles.editPill}
-            accessibilityRole="button"
-          >
-            <Icon name="pencil" size={12} color={DS.colors.primary} />
-            <Text style={styles.editPillText}>Edit profile</Text>
-          </PressableScale>
-        </View>
-
-        {showChecklist ? <MakeItYoursCard steps={steps} /> : null}
-
-        {hasProgress ? (
-          <View style={styles.stats}>
-            <Stat value={finishedCount} label="Finished" />
-            <View style={styles.statDivider} />
-            <Stat value={readingCount} label="Reading" />
-            <View style={styles.statDivider} />
-            {/* Under a day there is no streak to speak of — a dash, not a zero. */}
-            <Stat value={streak >= 1 ? streak : '—'} label="Day streak" icon="flame" />
-          </View>
-        ) : null}
-
-        {finishedCount === 0 ? (
-          <View style={styles.section}>
-            <Text style={[profileStyles.eyebrow, styles.sectionTitle]}>Your shelf</Text>
-            <EmptyShelf />
-          </View>
-        ) : null}
-
-        {finishedThisYear.length > 0 ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={profileStyles.eyebrow}>Finished in {year}</Text>
-              <Pressable
-                onPress={() => navigation.popTo('Tabs', { screen: 'MyBooks' })}
-                hitSlop={10}
-                accessibilityRole="button"
-              >
-                <Text style={styles.seeAll}>See all</Text>
-              </Pressable>
-            </View>
-            <View style={styles.covers}>
-              {covers.map((book) => (
-                <BookCoverGradient
-                  key={book.id}
-                  coverUrl={book.coverUrl}
-                  title={book.title}
-                  width={62}
-                  height={88}
-                  borderRadius={10}
-                  titleFontSize={8}
-                />
-              ))}
-              {overflow > 0 ? (
-                <View style={styles.overflowTile}>
-                  <Text style={styles.overflowText}>+{overflow}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        ) : null}
-
-        {rooms.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[profileStyles.eyebrow, styles.sectionTitle]}>Your rooms</Text>
-            <View style={profileStyles.groupCard}>
-              {rooms.map((room, i) => {
-                const memberCount = room.members?.length || 0;
-                const book = room.currentBook?.title || room.currentBookTitle;
-                return (
-                  <View key={room.id}>
-                    {i > 0 ? <View style={styles.roomDivider} /> : null}
-                    <Pressable
-                      onPress={() => navigation.navigate('RoomLobbyScreen', { room })}
-                      style={({ pressed }) => [styles.roomRow, pressed && styles.roomRowPressed]}
-                      accessibilityRole="button"
-                    >
-                      <View style={styles.roomTile}>
-                        <Icon name="people" size={17} color={DS.colors.primary} />
-                      </View>
-                      <View style={styles.roomText}>
-                        <Text style={styles.roomName} numberOfLines={1}>{room.name}</Text>
-                        <Text style={styles.roomMeta} numberOfLines={1}>
-                          {memberCount} {memberCount === 1 ? 'member' : 'members'}
-                          {book ? ` · ${book}` : ''}
-                        </Text>
-                      </View>
-                      <Icon name="chevron-forward" size={15} color={DS.colors.onSurfaceVariant} />
-                    </Pressable>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
+        {isLarge && sizeClass === 'wide' ? (
+          // 15l: identity and stats on the left, the reading life on the right.
+          <SplitLayout leftWidth={320} gap={48} left={identityBlock} right={lifeBlock} />
+        ) : isLarge ? (
+          <ReadableColumn>
+            {identityBlock}
+            {lifeBlock}
+          </ReadableColumn>
+        ) : (
+          <>
+            {identityBlock}
+            {lifeBlock}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -451,6 +504,18 @@ const styles = StyleSheet.create({
   covers: {
     flexDirection: 'row',
     gap: 6,
+  },
+  coversLarge: {
+    gap: COVER_GAP_LARGE,
+  },
+  roomGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  // Two per row: half the row less half the gap.
+  roomGridCell: {
+    width: '48.9%',
   },
   emptyShelf: {
     flexDirection: 'row',

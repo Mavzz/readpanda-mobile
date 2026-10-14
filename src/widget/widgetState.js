@@ -3,6 +3,7 @@ import useRoomStore from '../stores/roomStore';
 import useCommentsStore from '../stores/commentsStore';
 import useBucketsStore from '../stores/bucketsStore';
 import enhancedStorage from '../utils/enhancedStorage';
+import scheduleOf from '../utils/roomSchedule';
 import { duotoneFor } from '../utils/covers';
 
 // What the home-screen and Lock Screen widgets show (WIDGET_5a_5b.md,
@@ -88,27 +89,6 @@ const newestSnippet = (entry) => {
   const newest = allComments(entry).reduce((a, b) => (!a || b.createdAt > a.createdAt ? b : a), null);
   const text = newest ? teaserText(newest.body, SNIPPET_WORDS) : '';
   return text ? { author: newest.username || 'Someone', text, page: num(newest.page + 1) } : null;
-};
-
-// A room's reading schedule, when it has one: read the target page and due
-// date, in either the API's or the app's casing. The API doesn't send one yet.
-const scheduleOf = (room) => {
-  const raw = room?.schedule;
-  if (!raw) {
-    return null;
-  }
-  const targetPage = num(raw.targetPage ?? raw.target_page);
-  const due = raw.dueAt ?? raw.due_at;
-  const dueAt = num(typeof due === 'string' ? Date.parse(due) : due);
-  if (!targetPage || !dueAt) {
-    return null;
-  }
-  return {
-    targetPage,
-    // Where this stretch of the schedule starts, for 13b's bar.
-    startPage: num(raw.startPage ?? raw.start_page) ?? 1,
-    dueAt,
-  };
 };
 
 const bookIdOfPreview = (b) => idOf(b?.book_id ?? b?.bookId ?? b?.id);

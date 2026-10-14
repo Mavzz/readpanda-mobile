@@ -14,6 +14,7 @@ import useHighlightsStore from '../stores/highlightsStore';
 import { putReadingProgress } from '../services/progressService';
 import enhancedStorage from '../utils/enhancedStorage';
 import { getReaderSetting } from '../utils/readerSettings';
+import useLayout from '../hooks/useLayout';
 import { showToast } from '../components/Toaster';
 import { DS } from '../styles/global';
 import WidgetOpenMorph from '../widget/WidgetOpenMorph';
@@ -68,6 +69,9 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const initialPage = savedProgress?.currentPage || 0;
   log.info(`ManuscriptScreen initial page for ${book.title}: ${initialPage}`);
   const [pageMode] = useState(() => getReaderSetting('pageMode'));
+  // iPad layouts scroll with pages fit to the window (14f). Spread was tried
+  // and dropped: two fixed PDF pages side by side made the text too small.
+  const { isLarge } = useLayout();
   // Seeded from the saved position, not 0: a save that lands before the PDF
   // reports its first page (backgrounding right after opening) must not send
   // the reader back to page one.
@@ -329,7 +333,13 @@ const ManuscriptScreen = ({ route, navigation }) => {
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
-  const handleRoomPicker = useCallback(() => setRoomPickerOpen(true), []);
+  // On iPad the picker is a popover off the reader's comment button (15n);
+  // the native view sends that button's frame with the request.
+  const [roomPickerAnchor, setRoomPickerAnchor] = useState(null);
+  const handleRoomPicker = useCallback((anchor) => {
+    setRoomPickerAnchor(anchor);
+    setRoomPickerOpen(true);
+  }, []);
 
   // The reader is native and iOS-only, so Android gets the message — and,
   // since the chrome is native too, its own way back out.
@@ -358,6 +368,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         bookTitle={book.title}
         initialPage={initialPage}
         pageMode={pageMode}
+        largeLayout={isLarge}
         threads={nativeThreads}
         highlights={nativeHighlights}
         hasRoom={!!roomId}
@@ -382,6 +393,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
 
       {/* Only asked when the book really is in more than one room. */}
       <PickerSheet
+        anchorRect={roomPickerAnchor}
         visible={roomPickerOpen}
         title="Comment in which room?"
         subtitle="This book is being read in more than one."

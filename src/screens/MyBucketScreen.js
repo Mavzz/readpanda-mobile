@@ -28,6 +28,7 @@ import { booksLabel } from '../utils/readingTime';
 import log from '../utils/logger';
 import PressableScale from '../components/PressableScale';
 import ProgressFill from '../components/ProgressFill';
+import useLayout from '../hooks/useLayout';
 
 // § 9a — one of your buckets, pushed from My Books (tab bar stays). A list,
 // not a grid: each row says where you are in that book, sorted so what you're
@@ -156,6 +157,7 @@ const MyBucketScreen = () => {
   const [books, setBooks] = useState(null);
   // 10e's long-press "Reorder books" opens straight into edit mode.
   const [editing, setEditing] = useState(!!route.params?.editing);
+  const { isLarge, pagePad } = useLayout();
   const name = bucket?.name || route.params?.name || '';
 
   useFocusEffect(
@@ -273,21 +275,23 @@ const MyBucketScreen = () => {
     ]);
   };
 
+  // 15e: on iPad this stacks into a fixed 320pt column on the left while the
+  // list scrolls beside it.
   const header = (
     <View>
-      <View style={styles.header}>
+      <View style={[styles.header, isLarge && styles.headerLarge]}>
         <CoverFan
           covers={(books || []).slice(0, 3)}
           seed={name}
-          width={112}
-          height={104}
-          coverWidth={56}
-          coverHeight={80}
-          offset={22}
+          width={isLarge ? 200 : 112}
+          height={isLarge ? 150 : 104}
+          coverWidth={isLarge ? 80 : 56}
+          coverHeight={isLarge ? 116 : 80}
+          offset={isLarge ? 34 : 22}
         />
-        <View style={styles.headerText}>
+        <View style={[styles.headerText, isLarge && styles.headerTextLarge]}>
           <Text style={styles.eyebrow}>My bucket</Text>
-          <Text style={styles.title} numberOfLines={2}>{name}</Text>
+          <Text style={[styles.title, isLarge && styles.titleLarge]} numberOfLines={2}>{name}</Text>
           <Text style={styles.meta}>
             {booksLabel(total)} · {finishedCount} finished
           </Text>
@@ -329,11 +333,36 @@ const MyBucketScreen = () => {
     <Text style={styles.empty}>Nothing in this bucket yet.</Text>
   ) : null;
 
+  // The same list either way; on the phone the header scrolls with it.
+  const renderList = (listHeader) => (editing ? (
+    <ReorderableList
+      data={books || []}
+      keyExtractor={(b) => b.book_id}
+      onReorder={onReorder}
+      renderItem={({ item }) => <ReorderRow {...rowProps(item)} />}
+      ItemSeparatorComponent={Divider}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={empty}
+      contentContainerStyle={[styles.list, isLarge && styles.listLarge]}
+    />
+  ) : (
+    <FlatList
+      data={sorted}
+      keyExtractor={(b) => b.book_id}
+      renderItem={({ item }) => <SwipeRow {...rowProps(item)} />}
+      ItemSeparatorComponent={Divider}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={empty}
+      contentContainerStyle={[styles.list, isLarge && styles.listLarge]}
+      showsVerticalScrollIndicator={false}
+    />
+  ));
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <SafeAreaView edges={['top']}>
-        <View style={styles.navRow}>
+        <View style={[styles.navRow, isLarge && { paddingHorizontal: pagePad }]}>
           <PressableScale
             onPress={() => navigation.goBack()}
             style={styles.navButton}
@@ -362,29 +391,12 @@ const MyBucketScreen = () => {
         </View>
       </SafeAreaView>
 
-      {editing ? (
-        <ReorderableList
-          data={books || []}
-          keyExtractor={(b) => b.book_id}
-          onReorder={onReorder}
-          renderItem={({ item }) => <ReorderRow {...rowProps(item)} />}
-          ItemSeparatorComponent={Divider}
-          ListHeaderComponent={header}
-          ListEmptyComponent={empty}
-          contentContainerStyle={styles.list}
-        />
-      ) : (
-        <FlatList
-          data={sorted}
-          keyExtractor={(b) => b.book_id}
-          renderItem={({ item }) => <SwipeRow {...rowProps(item)} />}
-          ItemSeparatorComponent={Divider}
-          ListHeaderComponent={header}
-          ListEmptyComponent={empty}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      {isLarge ? (
+        <View style={[styles.split, { paddingHorizontal: pagePad }]}>
+          <View style={styles.side}>{header}</View>
+          <View style={styles.listSide}>{renderList(null)}</View>
+        </View>
+      ) : renderList(header)}
     </View>
   );
 };
@@ -447,6 +459,30 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  headerLarge: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  headerTextLarge: {
+    flex: 0,
+    alignSelf: 'stretch',
+  },
+  titleLarge: {
+    fontSize: 28,
+  },
+  split: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 56,
+  },
+  side: {
+    width: 320,
+  },
+  listSide: {
+    flex: 1,
+    maxWidth: DS.layout.textMax,
+  },
   eyebrow: {
     fontSize: 11,
     fontFamily: DS.font.bold,
@@ -498,6 +534,10 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 24,
     paddingBottom: 32,
+  },
+  listLarge: {
+    paddingHorizontal: 0,
+    paddingTop: 18,
   },
   row: {
     flexDirection: 'row',

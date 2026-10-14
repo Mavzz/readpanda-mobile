@@ -9,6 +9,8 @@ import { showToast } from '../components/Toaster';
 import useSubscriptionStore from '../stores/subscriptionStore';
 import { FREE_LIMITS } from '../hooks/usePlusGate';
 import haptics from '../utils/haptics';
+import useLayout from '../hooks/useLayout';
+import FormSheetFrame from '../components/FormSheetFrame';
 import log from '../utils/logger';
 
 // ReadPanda+ paywall. Opened by usePlusGate with the reason the reader hit a
@@ -90,7 +92,10 @@ const PaywallScreen = ({ navigation, route }) => {
   // From the provider, not a SafeAreaView: inside a full-screen modal a
   // SafeAreaView reports no top inset and the × sits under the clock
   // (same as CreateBucketScreen).
-  const insets = useSafeAreaInsets();
+  const { isLarge } = useLayout();
+  // Inside the iPad sheet the window's insets don't apply.
+  const windowInsets = useSafeAreaInsets();
+  const insets = isLarge ? { top: 12, bottom: 12 } : windowInsets;
 
   const offering = useSubscriptionStore((s) => s.offering);
   const loadingOffering = useSubscriptionStore((s) => s.loadingOffering);
@@ -154,94 +159,96 @@ const PaywallScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
+    <FormSheetFrame onClose={() => navigation.goBack()}>
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
-      <View style={styles.header}>
-        <PressableScale
-          onPress={() => navigation.goBack()}
-          style={styles.closeButton}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        >
-          <Icon name="close" size={19} color={DS.colors.onSurface} />
-        </PressableScale>
-        <Pressable onPress={handleRestore} disabled={purchasing} hitSlop={10} accessibilityRole="button">
-          <Text style={styles.restore}>Restore</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>ReadPanda+</Text>
-        <Text style={styles.title}>{headline.title}</Text>
-        <Text style={styles.body}>{headline.body}</Text>
-
-        <View style={styles.benefits}>
-          {BENEFITS.map((b) => (
-            <View key={b.icon} style={styles.benefit}>
-              <View style={styles.benefitIcon}>
-                <Icon name={b.icon} size={15} color={DS.colors.primary} />
-              </View>
-              <Text style={styles.benefitLabel}>{b.label}</Text>
-            </View>
-          ))}
+        <View style={styles.header}>
+          <PressableScale
+            onPress={() => navigation.goBack()}
+            style={styles.closeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Icon name="close" size={19} color={DS.colors.onSurface} />
+          </PressableScale>
+          <Pressable onPress={handleRestore} disabled={purchasing} hitSlop={10} accessibilityRole="button">
+            <Text style={styles.restore}>Restore</Text>
+          </Pressable>
         </View>
 
-        {isPlus ? (
-          <View style={styles.already}>
-            <Icon name="checkmark-circle" size={18} color={DS.colors.primary} />
-            <Text style={styles.alreadyText}>You’re on ReadPanda+. Thanks for supporting us.</Text>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <Text style={styles.eyebrow}>ReadPanda+</Text>
+          <Text style={styles.title}>{headline.title}</Text>
+          <Text style={styles.body}>{headline.body}</Text>
+
+          <View style={styles.benefits}>
+            {BENEFITS.map((b) => (
+              <View key={b.icon} style={styles.benefit}>
+                <View style={styles.benefitIcon}>
+                  <Icon name={b.icon} size={15} color={DS.colors.primary} />
+                </View>
+                <Text style={styles.benefitLabel}>{b.label}</Text>
+              </View>
+            ))}
           </View>
-        ) : (
-          <View style={styles.plans} accessibilityRole="radiogroup">
-            <PlanCard
-              selected={plan === 'annual'}
-              title="Annual"
-              price={prices.annual.price}
-              caption={`${prices.annual.perMonth}/month, billed yearly`}
-              badge={prices.annual.save ? `Save ${prices.annual.save}%` : 'Best value'}
-              onPress={() => setPlan('annual')}
-            />
-            <PlanCard
-              selected={plan === 'monthly'}
-              title="Monthly"
-              price={prices.monthly.price}
-              caption="Cancel anytime"
-              onPress={() => setPlan('monthly')}
-            />
+
+          {isPlus ? (
+            <View style={styles.already}>
+              <Icon name="checkmark-circle" size={18} color={DS.colors.primary} />
+              <Text style={styles.alreadyText}>You’re on ReadPanda+. Thanks for supporting us.</Text>
+            </View>
+          ) : (
+            <View style={styles.plans} accessibilityRole="radiogroup">
+              <PlanCard
+                selected={plan === 'annual'}
+                title="Annual"
+                price={prices.annual.price}
+                caption={`${prices.annual.perMonth}/month, billed yearly`}
+                badge={prices.annual.save ? `Save ${prices.annual.save}%` : 'Best value'}
+                onPress={() => setPlan('annual')}
+              />
+              <PlanCard
+                selected={plan === 'monthly'}
+                title="Monthly"
+                price={prices.monthly.price}
+                caption="Cancel anytime"
+                onPress={() => setPlan('monthly')}
+              />
+            </View>
+          )}
+        </ScrollView>
+
+        {isPlus ? null : (
+          <View style={styles.footer}>
+            <GradientPill onPress={handlePurchase} disabled={purchasing || loadingOffering}>
+              {purchasing ? (
+                <ActivityIndicator color={DS.colors.onPrimary} />
+              ) : (
+                <Text style={[styles.cta, (purchasing || loadingOffering) && styles.ctaDisabled]}>
+                  {ctaLabel}
+                </Text>
+              )}
+            </GradientPill>
+            {/* App Store Review Guideline 3.1.2: price, period and renewal terms
+              next to the button, plus terms and privacy links. */}
+            <Text style={styles.fineprint}>
+              {trial ? `Free for the trial, then ${plan === 'annual' ? `${prices.annual.price}/year` : `${prices.monthly.price}/month`}. ` : ''}
+            Renews automatically until cancelled in your store account settings, at least 24 hours before the period ends.
+            </Text>
+            <View style={styles.links}>
+              <Pressable onPress={() => showToast('Terms are coming soon', 'info')} hitSlop={8}>
+                <Text style={styles.link}>Terms</Text>
+              </Pressable>
+              <Text style={styles.linkDot}>·</Text>
+              <Pressable onPress={() => showToast('Privacy policy is coming soon', 'info')} hitSlop={8}>
+                <Text style={styles.link}>Privacy</Text>
+              </Pressable>
+            </View>
           </View>
         )}
-      </ScrollView>
-
-      {isPlus ? null : (
-        <View style={styles.footer}>
-          <GradientPill onPress={handlePurchase} disabled={purchasing || loadingOffering}>
-            {purchasing ? (
-              <ActivityIndicator color={DS.colors.onPrimary} />
-            ) : (
-              <Text style={[styles.cta, (purchasing || loadingOffering) && styles.ctaDisabled]}>
-                {ctaLabel}
-              </Text>
-            )}
-          </GradientPill>
-          {/* App Store Review Guideline 3.1.2: price, period and renewal terms
-              next to the button, plus terms and privacy links. */}
-          <Text style={styles.fineprint}>
-            {trial ? `Free for the trial, then ${plan === 'annual' ? `${prices.annual.price}/year` : `${prices.monthly.price}/month`}. ` : ''}
-            Renews automatically until cancelled in your store account settings, at least 24 hours before the period ends.
-          </Text>
-          <View style={styles.links}>
-            <Pressable onPress={() => showToast('Terms are coming soon', 'info')} hitSlop={8}>
-              <Text style={styles.link}>Terms</Text>
-            </Pressable>
-            <Text style={styles.linkDot}>·</Text>
-            <Pressable onPress={() => showToast('Privacy policy is coming soon', 'info')} hitSlop={8}>
-              <Text style={styles.link}>Privacy</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-    </View>
+      </View>
+    </FormSheetFrame>
   );
 };
 

@@ -331,14 +331,21 @@ class CommentSheetView: UIView, UITextViewDelegate {
 
         containerBottom = container.bottomAnchor.constraint(equalTo: bottomAnchor)
 
+        // Full width on a phone; on iPad capped at 640pt and centered, with the
+        // passage still visible beside it (IPAD_AND_HOME_14_16.md § 1, 14j).
+        let fillWidth = container.widthAnchor.constraint(equalTo: widthAnchor)
+        fillWidth.priority = .defaultHigh
+
         NSLayoutConstraint.activate([
             backdrop.topAnchor.constraint(equalTo: topAnchor),
             backdrop.bottomAnchor.constraint(equalTo: bottomAnchor),
             backdrop.leadingAnchor.constraint(equalTo: leadingAnchor),
             backdrop.trailingAnchor.constraint(equalTo: trailingAnchor),
 
-            container.leadingAnchor.constraint(equalTo: leadingAnchor),
-            container.trailingAnchor.constraint(equalTo: trailingAnchor),
+            container.centerXAnchor.constraint(equalTo: centerXAnchor),
+            container.widthAnchor.constraint(lessThanOrEqualToConstant: 640),
+            container.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor),
+            fillWidth,
             containerBottom,
             container.heightAnchor.constraint(lessThanOrEqualTo: heightAnchor, multiplier: 0.62),
             container.topAnchor.constraint(greaterThanOrEqualTo: safeAreaLayoutGuide.topAnchor),

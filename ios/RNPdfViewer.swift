@@ -168,6 +168,29 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private var lastLoadedURL: URL?
     /// Page mode (Settings → Page turning) as last applied to the PDFView.
     private var isPaged = false
+    /// Settings → Page turning, as set; `isPaged` is what's applied.
+    private var pagedSetting = false
+    /// The iPad layout (window ≥ 700pt), from JS.
+    private var isLarge = false
+    /// iPad scrolling (14f): pages fit to the window with one even gap round
+    /// them. Page turning ("page") keeps the phone's paged reader on iPad too.
+    private var usesLargeScroll: Bool { isLarge && !pagedSetting }
+    /// How far past the page container a dot may sit: into the outer margin
+    /// on iPad, not at all on the phone (where it stays on the card's edge).
+    private var dotOverhang: CGFloat { usesLargeScroll ? RNPdfView.pageGap / 2 : -2 }
+    /// iPad scrolling: the one gap between a page and anything next to it —
+    /// the window edge, the header, the scrubber or the next page — in both
+    /// orientations, kept as tight as the phone's 12pt card inset. Half is the
+    /// container's inset, half PDFKit's page margin.
+    private static let pageGap: CGFloat = 12
+    /// Set when the layout switches, which needs a refit at an unchanged size.
+    private var needsFit = false
+    /// Whether the iPad scroll layout is what's on screen.
+    private var appliedLargeScroll = false
+
+    /// PDFKit's own page gaps, for going back to the phone layout.
+    private var defaultPageBreakMargins = UIEdgeInsets.zero
+    private var defaultScaleRange: (min: CGFloat, max: CGFloat) = (0, 0)
     /// True while the reader moves itself — a document going in, the jump to
     /// the saved page, a switch of page mode. PDFKit announces every page it
     /// passes through on the way (page 0 first, then the target), and passing
@@ -227,12 +250,16 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         pdfView.backgroundColor = .white
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
+        defaultPageBreakMargins = pdfView.pageBreakMargins
+        defaultScaleRange = (pdfView.minScaleFactor, pdfView.maxScaleFactor)
         pdfView.onCommentAction = { [weak self] in self?.commentOnSelection() }
         pdfView.onHighlightAction = { [weak self] in self?.highlightSelection() }
         pageContainer.addSubview(pdfView)
 
         gutterLayer.backgroundColor = .clear
-        pageContainer.addSubview(gutterLayer)
+        // Over the page container rather than inside it, so on iPad a dot can
+        // sit in the margin beside the page without being clipped.
+        addSubview(gutterLayer)
 
         status.onRetry = { [weak self] in self?.reload() }
         pageContainer.addSubview(status)
@@ -333,27 +360,72 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             height: scrubberHeight
         )
 
+        // Rotation, Split View and Stage Manager resize the page while a book
+        // is open. PDFKit re-lays the document out on resize and would drift
+        // off the page being read, so note the spot first and return to it.
+        let previousContainerSize = pageContainer.bounds.size
+        let anchor: PDFDestination? = (previousContainerSize != .zero && pdfView.document != nil && !needsInitialJump)
+            ? pdfView.currentDestination
+            : nil
+
         let top = header.frame.maxY
         let bottom = scrubber.isHidden ? bounds.height : scrubber.frame.minY
+        // The phone keeps its 12pt card inset. iPad scrolling insets by half
+        // the page gap; PDFKit's page margin adds the other half.
+        let inset = usesLargeScroll ? RNPdfView.pageGap / 2 : 12
+        let insetTop = usesLargeScroll ? top + inset : top
+        let insetBottom = usesLargeScroll ? bottom - inset : bottom
         pageContainer.frame = CGRect(
-            x: 12,
-            y: top,
-            width: max(0, bounds.width - 24),
-            height: max(0, bottom - top)
+            x: inset,
+            y: insetTop,
+            width: max(0, bounds.width - inset * 2),
+            height: max(0, insetBottom - insetTop)
         )
+        let resized = pageContainer.bounds.size != previousContainerSize
         pdfView.frame = pageContainer.bounds
         if isPaged {
             // The page view controller doesn't refit on resize the way the
             // continuous view does.
             pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
         }
+        if usesLargeScroll, needsFit || resized {
+            needsFit = false
+            // Pinch from fit (1×) up to 3×; a resize goes back to fit.
+            let fit = fitWithFixedGap()
+            if fit > 0 {
+                pdfView.minScaleFactor = fit
+                pdfView.maxScaleFactor = fit * 3
+                pdfView.scaleFactor = fit
+            }
+        }
         hideScrollIndicators(in: pdfView)
-        gutterLayer.frame = pageContainer.bounds
+        gutterLayer.frame = pageContainer.frame
         status.frame = pageContainer.bounds
         sheet.frame = bounds
 
+        if let anchor = anchor, resized {
+            restore(anchor)
+        }
+
         scheduleOverlayRefresh()
         applyInitialJumpIfReady()
+    }
+
+    /// Returns to a spot noted before a resize, one turn of the run loop later
+    /// so PDFKit has finished laying the resized document out (the same
+    /// reason the initial jump waits). Page reports are held until then.
+    private func restore(_ anchor: PDFDestination) {
+        isRepositioning = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                return
+            }
+            self.pdfView.go(to: anchor)
+            self.isRepositioning = false
+            self.reportPage(force: true)
+            // The dots were placed for the old layout.
+            self.scheduleOverlayRefresh()
+        }
     }
 
     // MARK: - Props
@@ -442,28 +514,99 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// left to right, like a book; the reader stays on the page it was on.
     @objc var pageMode: NSString? {
         didSet {
-            let paged = (pageMode as String?) == "page"
-            guard paged != isPaged else {
-                return
-            }
-            guard let document = pdfView.document else {
-                // Not loaded yet: set up now, so the document goes straight
-                // into the right mode instead of being re-laid out after.
-                applyPageMode(paged)
-                return
-            }
-            let pageIndex = currentPageIndex
-            reposition {
-                applyPageMode(paged)
-                if let page = document.page(at: pageIndex) {
-                    pdfView.go(to: page)
-                }
-            }
+            pagedSetting = (pageMode as String?) == "page"
+            applyLayoutKeepingPlace()
         }
+    }
+
+    /// The iPad layout (window ≥ 700pt, from JS's useLayout). Switches as the
+    /// window crosses it — rotation, Split View — keeping the spot being read.
+    @objc var largeLayout: NSNumber? {
+        didSet {
+            isLarge = largeLayout?.boolValue ?? false
+            applyLayoutKeepingPlace()
+        }
+    }
+
+    /// Applies whichever reader the settings now call for, staying on the
+    /// passage being read.
+    private func applyLayoutKeepingPlace() {
+        let wantsLargeScroll = usesLargeScroll
+        guard wantsLargeScroll != appliedLargeScroll || pagedSetting != isPaged else {
+            return
+        }
+        guard pdfView.document != nil, !needsInitialJump else {
+            // Not loaded yet: set up now, so the document goes straight into
+            // the right mode instead of being re-laid out after.
+            applyLayout()
+            return
+        }
+        let anchor = pdfView.currentDestination
+        isRepositioning = true
+        applyLayout()
+        layoutIfNeeded()
+        if let anchor = anchor {
+            restore(anchor)
+        } else {
+            isRepositioning = false
+            reportPage(force: true)
+        }
+    }
+
+    private func applyLayout() {
+        appliedLargeScroll = usesLargeScroll
+        // A new display mode gives PDFKit a new scroll view; the dots must
+        // follow that one, not the old.
+        resetScrollObserver()
+        guard usesLargeScroll else {
+            pdfView.backgroundColor = .white
+            pdfView.pageBreakMargins = defaultPageBreakMargins
+            pdfView.minScaleFactor = defaultScaleRange.min
+            pdfView.maxScaleFactor = defaultScaleRange.max
+            applyPageMode(pagedSetting)
+            return
+        }
+        isPaged = false
+        pdfView.usePageViewController(false, withViewOptions: nil)
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.displayDirection = .vertical
+        // The pages sit on the app's own ground, not on PDFKit's white.
+        pdfView.backgroundColor = DS.Colors.background
+        pdfView.displaysPageBreaks = true
+        pdfView.pageShadowsEnabled = false
+        pdfView.autoScales = true
+        // Fit and gaps are worked out on the next layout, even at an
+        // unchanged size.
+        needsFit = true
+        setNeedsLayout()
+    }
+
+    /// PDFKit's page margins are in page points, so they grow and shrink with
+    /// the page: a 6pt margin was 13.5pt on screen at landscape's 2.25×, and
+    /// 10pt in portrait. Sizing the margin as half the gap ÷ the scale keeps it
+    /// 6pt on screen; the fit depends on the margin, so the two are solved
+    /// together (it settles in a couple of rounds). Returns the fit scale.
+    private func fitWithFixedGap() -> CGFloat {
+        let half = RNPdfView.pageGap / 2
+        var fit = pdfView.scaleFactorForSizeToFit
+        for _ in 0..<4 where fit > 0 {
+            let margin = half / fit
+            pdfView.pageBreakMargins = UIEdgeInsets(top: margin, left: margin, bottom: margin, right: margin)
+            pdfView.layoutDocumentView()
+            fit = pdfView.scaleFactorForSizeToFit
+        }
+        return fit
+    }
+
+    /// A rect on a page in the gutter layer's space, which sits over the page
+    /// container rather than inside it.
+    private func gutterRect(_ rect: CGRect, on page: PDFPage) -> CGRect {
+        gutterLayer.convert(pdfView.convert(rect, from: page), from: pdfView)
     }
 
     private func applyPageMode(_ paged: Bool) {
         isPaged = paged
+        resetScrollObserver()
         pdfView.usePageViewController(paged, withViewOptions: nil)
         pdfView.displayMode = paged ? .singlePage : .singlePageContinuous
         pdfView.displayDirection = paged ? .horizontal : .vertical
@@ -565,7 +708,15 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         guard canPickRoom?.boolValue == true else {
             return
         }
-        onRoomPickerRequested?([:])
+        // The button's frame in window points, so iPad can open the picker as
+        // a popover anchored to it (15n). The phone ignores it.
+        let anchor = header.convert(header.commentButtonFrame, to: nil)
+        onRoomPickerRequested?([
+            "x": anchor.minX,
+            "y": anchor.minY,
+            "width": anchor.width,
+            "height": anchor.height,
+        ])
     }
 
     func readerHeaderDidTapSearch(_ header: ReaderHeaderView) {
@@ -746,6 +897,11 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
     }
 
+    private func resetScrollObserver() {
+        scrollObserver?.invalidate()
+        scrollObserver = nil
+    }
+
     /// The page scrolls continuously, so the dots have to follow it. PDFKit
     /// posts no notification for that, and rebuilding the overlay on every
     /// frame would be wasteful — so scrolling only moves the frames that are
@@ -789,18 +945,21 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private func repositionGutter() {
         let field = pageContainer.bounds
         for dot in gutterDots {
-            let lineInView = pdfView.convert(dot.rect, from: dot.page)
-            let pageInView = pdfView.convert(dot.page.bounds(for: .cropBox), from: dot.page)
+            let lineInView = gutterRect(dot.rect, on: dot.page)
+            let pageInView = gutterRect(dot.page.bounds(for: .cropBox), on: dot.page)
             let size = dot.button.frame.width
             dot.button.frame = CGRect(
-                x: min(field.width - size - 6, pageInView.maxX + 6),
+                x: min(field.width + dotOverhang - size - 4, pageInView.maxX + 6),
                 y: lineInView.midY - size / 2,
                 width: size,
                 height: size
             )
             // A dot for a passage that has scrolled away is hidden rather than
-            // removed, so it comes back without a rebuild.
+            // removed, so it comes back without a rebuild. A page that isn't
+            // showing (page turning) converts to a meaningless spot, so it's
+            // hidden by page, not by position.
             dot.button.isHidden = lineInView.maxY < 0 || lineInView.minY > field.height
+                || !pdfView.visiblePages.contains(dot.page)
         }
     }
 
@@ -937,13 +1096,13 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private func drawGutterDot(for thread: ReaderThread, firstLine: CGRect, on page: PDFPage) {
         let unread = thread.unreadCount
         let field = pageContainer.bounds
-        let lineInView = pdfView.convert(firstLine, from: page)
-        let pageInView = pdfView.convert(page.bounds(for: .cropBox), from: page)
+        let lineInView = gutterRect(firstLine, on: page)
+        let pageInView = gutterRect(page.bounds(for: .cropBox), on: page)
 
         let size: CGFloat = unread > 0 ? 22 : 12
         let dot = UIButton(type: .custom)
         dot.frame = CGRect(
-            x: min(field.width - size - 6, pageInView.maxX + 6),
+            x: min(field.width + dotOverhang - size - 4, pageInView.maxX + 6),
             y: lineInView.midY - size / 2,
             width: size,
             height: size
@@ -964,6 +1123,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
         dot.addTarget(self, action: #selector(handleGutterTap(_:)), for: .touchUpInside)
         dot.isHidden = lineInView.maxY < 0 || lineInView.minY > field.height
+            || !pdfView.visiblePages.contains(page)
         gutterLayer.addSubview(dot)
         gutterDots.append((button: dot, page: page, rect: firstLine))
     }

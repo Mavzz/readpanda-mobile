@@ -22,6 +22,7 @@ import ProgressFill from '../components/ProgressFill';
 import Animated from 'react-native-reanimated';
 import useFilterEntrance from '../hooks/useFilterEntrance';
 import useDiscoverPages from '../hooks/useDiscoverPages';
+import useLayout from '../hooks/useLayout';
 
 // § 10c — "See all" for books you're browsing: a 3-column grid of 2:3 covers.
 //
@@ -34,9 +35,12 @@ import useDiscoverPages from '../hooks/useDiscoverPages';
 // Rank badges appear only on a ranked list in its ranked order. Each cover
 // reads the reader's own state for the book: a progress bar and the page if
 // started, a check and 70% opacity if finished. Tapping a cover opens 8c.
+//
+// On iPad (14d) the grid gains columns rather than scaling covers up: 5 in
+// the portrait layout, 6 in landscape, covers staying around 140–165pt.
 const GUTTER = 24;
 const GAP = 12;
-const COLUMNS = 3;
+const GAP_LARGE = 20;
 
 const SORTS = [
   { value: 'mostRead', label: 'Most read', icon: 'trending-up' },
@@ -60,6 +64,10 @@ const BookGridScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { width } = useWindowDimensions();
+  const { isLarge, pagePad, columns } = useLayout();
+  const cols = columns(3, 5, 6);
+  const gutter = isLarge ? pagePad : GUTTER;
+  const gap = isLarge ? GAP_LARGE : GAP;
   const source = route.params?.source || 'popular';
   const ranked = source === 'popular';
 
@@ -117,7 +125,7 @@ const BookGridScreen = () => {
   const books = useMemo(() => sortBooks(loadedBooks || [], sort), [loadedBooks, sort]);
   const showRank = ranked && sort === 'mostRead';
 
-  const cellWidth = (width - GUTTER * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+  const cellWidth = (width - gutter * 2 - gap * (cols - 1)) / cols;
   const coverHeight = cellWidth * 1.5;
 
   const title = source === 'popular'
@@ -170,7 +178,7 @@ const BookGridScreen = () => {
               <Icon name="checkmark" size={13} color={DS.colors.onPrimary} />
             </View>
           ) : null}
-          <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
+          <Text style={[styles.bookTitle, isLarge && styles.bookTitleLarge]} numberOfLines={1}>{book.title}</Text>
           {reading ? (
             <Text style={styles.page} numberOfLines={1}>p. {entry.chapter}</Text>
           ) : book.author_name ? (
@@ -201,7 +209,7 @@ const BookGridScreen = () => {
       );
     }
     return showSkeleton
-      ? <CoverGridSkeleton columns={COLUMNS} cellWidth={cellWidth} count={COLUMNS * 3} gap={GAP} />
+      ? <CoverGridSkeleton columns={cols} cellWidth={cellWidth} count={cols * 3} gap={gap} />
       : null;
   };
 
@@ -214,19 +222,22 @@ const BookGridScreen = () => {
         sort={ranked ? { options: SORTS, value: sort, onChange: setSort } : null}
       />
       <FlatList
+        // numColumns can't change on a mounted list; rotating or resizing
+        // across a layout remounts it.
+        key={`grid-${cols}`}
         data={books}
         // Keyed by genre too, so a chip change remounts the cells and they rise in.
         keyExtractor={(book) => `${genre || ''}:${book.book_id}`}
         renderItem={renderBook}
-        numColumns={COLUMNS}
-        columnWrapperStyle={styles.row}
+        numColumns={cols}
+        columnWrapperStyle={[styles.row, isLarge && styles.rowLarge, { gap }]}
         ListHeaderComponent={ranked && genres.length > 0 ? (
-          <View style={styles.chipsBleed}>
-            <GenreChips genres={genres} value={genre} onChange={setGenre} allLabel="All" />
+          <View style={{ marginHorizontal: -gutter }}>
+            <GenreChips genres={genres} value={genre} onChange={setGenre} allLabel="All" gutter={gutter} />
           </View>
         ) : <View style={styles.headerGap} />}
         ListEmptyComponent={empty}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -238,20 +249,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS.colors.background,
   },
+  // The chip row (marginHorizontal: -gutter) scrolls edge to edge, past the
+  // grid's gutter.
   content: {
-    paddingHorizontal: GUTTER,
     paddingBottom: 32,
-  },
-  // The chip row scrolls edge to edge, past the grid's gutter.
-  chipsBleed: {
-    marginHorizontal: -GUTTER,
   },
   headerGap: {
     height: 16,
   },
   row: {
-    gap: GAP,
     marginBottom: 18,
+  },
+  rowLarge: {
+    marginBottom: 22,
   },
   finishedCover: {
     opacity: 0.7,
@@ -304,6 +314,9 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.bold,
     color: DS.colors.onSurface,
     marginTop: 8,
+  },
+  bookTitleLarge: {
+    fontSize: 13,
   },
   author: {
     fontSize: 11,

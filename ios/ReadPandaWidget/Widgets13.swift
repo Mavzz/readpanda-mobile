@@ -25,6 +25,7 @@ struct ReadPandaWidgets: WidgetBundle {
         RoomDeadlineWidget()
         ShelfWidget()
         TonightWidget()
+        ExtraLargeWidget()
         LockScreenWidget()
     }
 }
@@ -255,6 +256,29 @@ struct TonightWidget: Widget {
         .configurationDisplayName("Tonight")
         .description("Your chapter, your room, and what's up next.")
         .supportedFamilies([.systemLarge])
+        .contentMarginsDisabled()
+    }
+}
+
+// MARK: - 14k · Extra large (iPad)
+
+struct ExtraLargeWidget: Widget {
+    let kind = "ReadPandaExtraLarge"
+
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: kind, intent: BookWidgetIntent.self, provider: BookProvider()) { entry in
+            Group {
+                if let book = entry.book {
+                    ExtraLargeFace(entry: entry, book: book)
+                } else {
+                    StartLargeFace(curated: entry.state.curated)
+                }
+            }
+            .containerBackground(for: .widget) { WTheme.background }
+        }
+        .configurationDisplayName("Tonight and shelf")
+        .description("Tonight's chapter, everything else you're reading, and what's up next.")
+        .supportedFamilies([.systemExtraLarge])
         .contentMarginsDisabled()
     }
 }

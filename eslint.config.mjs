@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactNativePlugin from 'eslint-plugin-react-native';
+import globals from 'globals';
 
 export default [
   js.configs.recommended,
@@ -87,6 +88,13 @@ export default [
     files: ['src/services/**/*.js'],
     rules: {
       'no-console': 'off', // Allow console in service files for debugging
+    },
+  },
+  {
+    // Jest tests and their setup
+    files: ['src/**/__tests__/**/*.js', 'src/**/*.test.js', 'jest.setup.js'],
+    languageOptions: {
+      globals: { ...globals.jest, ...globals.node },
     },
   },
 ];

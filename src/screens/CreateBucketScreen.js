@@ -41,6 +41,7 @@ import haptics from '../utils/haptics';
 import { bookIdOf, sameId } from '../utils/bookId';
 import { CoverGridSkeleton, useSkeletonDelay } from '../components/Skeleton';
 import RollingCount from '../components/RollingCount';
+import useLayout from '../hooks/useLayout';
 
 // § 11a–11c — New bucket: name it and pick its books in one place.
 //
@@ -55,9 +56,11 @@ import RollingCount from '../components/RollingCount';
 // than queue, and tapping a cover mid-flight deselects it and cancels its
 // flight. With the stack scrolled away there's no flight: the Selected chip
 // pulses instead. Reduce Motion drops the flight and the scaling for fades.
+// On iPad (15h) the grid takes 5 or 6 columns and search sits beside the
+// source chips; every control and the 11c fly-in are unchanged.
 const GUTTER = 24;
 const GAP = 12;
-const COLUMNS = 3;
+const GAP_LARGE = 20;
 const GOLD = DS.colors.primaryContainer; // #ffb95f
 const DIM_ACTION = DS.colors.disabled;
 const DARKEN = '#000000';
@@ -245,7 +248,12 @@ const CreateBucketScreen = ({ navigation }) => {
   // From the provider, not a SafeAreaView: inside this full-screen modal a
   // SafeAreaView reported no top inset and the header sat under the clock.
   const insets = useSafeAreaInsets();
-  const cellWidth = (width - GUTTER * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+  const { isLarge, pagePad, columns } = useLayout();
+  const cols = columns(3, 5, 6);
+  const gutter = isLarge ? pagePad : GUTTER;
+  const gap = isLarge ? GAP_LARGE : GAP;
+  const pad = { paddingHorizontal: gutter };
+  const cellWidth = (width - gutter * 2 - gap * (cols - 1)) / cols;
 
   const [name, setName] = useState('');
   const [query, setQuery] = useState('');
@@ -486,7 +494,7 @@ const CreateBucketScreen = ({ navigation }) => {
     <View ref={rootRef} collapsable={false} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <View style={{ paddingTop: insets.top }}>
-        <View ref={headerRef} collapsable={false} style={styles.header}>
+        <View ref={headerRef} collapsable={false} style={[styles.header, pad]}>
           <PressableScale
             onPress={() => navigation.goBack()}
             style={styles.close}
@@ -517,11 +525,11 @@ const CreateBucketScreen = ({ navigation }) => {
         contentContainerStyle={styles.content}
       >
         {/* Identity row */}
-        <View style={styles.identity}>
+        <View style={[styles.identity, pad]}>
           <PickStack books={stackBooks} name={name} reduceMotion={reduceMotion} stackRef={stackRef} />
           <View style={styles.identityText}>
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, isLarge && styles.nameInputLarge]}
               value={name}
               onChangeText={setName}
               placeholder="Name your bucket"
@@ -542,8 +550,8 @@ const CreateBucketScreen = ({ navigation }) => {
         </View>
 
         {/* Search and sources, pinned while the grid scrolls */}
-        <View style={styles.pinned}>
-          <View style={styles.search}>
+        <View style={[styles.pinned, pad, isLarge && styles.pinnedLarge]}>
+          <View style={[styles.search, isLarge && styles.searchLarge]}>
             <Icon name="search" size={16} color={DS.colors.onSurfaceVariant} />
             <TextInput
               style={styles.searchInput}
@@ -560,7 +568,7 @@ const CreateBucketScreen = ({ navigation }) => {
               </Pressable>
             ) : null}
           </View>
-          <View style={styles.chips}>
+          <View style={[styles.chips, isLarge && styles.chipsLarge]}>
             {sourceChip('My library', 'library')}
             {sourceChip('Discover', 'discover')}
             <View style={styles.chipSpacer} />
@@ -593,11 +601,11 @@ const CreateBucketScreen = ({ navigation }) => {
 
         {/* Grid */}
         {showSkeleton ? (
-          <View style={styles.grid}>
-            <CoverGridSkeleton columns={COLUMNS} cellWidth={cellWidth} count={COLUMNS * 3} gap={GAP} rowGap={20} />
+          <View style={[styles.grid, pad, { columnGap: gap }]}>
+            <CoverGridSkeleton columns={cols} cellWidth={cellWidth} count={cols * 3} gap={gap} rowGap={20} />
           </View>
         ) : grid.length > 0 ? (
-          <View style={styles.grid}>
+          <View style={[styles.grid, pad, { columnGap: gap }]}>
             {grid.map((book) => (
               <PickCell
                 key={book.book_id}
@@ -610,7 +618,7 @@ const CreateBucketScreen = ({ navigation }) => {
             ))}
           </View>
         ) : (
-          <View style={styles.empty}>
+          <View style={[styles.empty, pad]}>
             {emptyText() ? <Text style={styles.emptyText}>{emptyText()}</Text> : null}
           </View>
         )}
@@ -684,6 +692,10 @@ const styles = StyleSheet.create({
     color: DS.colors.onSurface,
     paddingVertical: 4,
   },
+  nameInputLarge: {
+    fontSize: 28,
+    letterSpacing: -0.5,
+  },
   countRow: {
     flexDirection: 'row',
     marginTop: 2,
@@ -710,6 +722,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: DS.radius.full,
     backgroundColor: DS.colors.surfaceContainer,
+  },
+  pinnedLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchLarge: {
+    width: 360,
+  },
+  chipsLarge: {
+    flex: 1,
+    marginTop: 0,
   },
   searchInput: {
     flex: 1,
@@ -762,9 +786,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: GAP,
     rowGap: 20,
-    paddingHorizontal: GUTTER,
     paddingTop: 6,
   },
   // A 2px gold band 2.5px off the cover; the gap shows the page through.

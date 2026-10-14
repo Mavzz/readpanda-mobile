@@ -40,7 +40,9 @@ const usePlusGate = () => {
   const customBuckets = useBucketsStore((s) => s.customBuckets);
 
   return useCallback((reason, action) => {
-    if (isPlus || withinFreeTier(reason, { rooms, customBuckets })) {
+    // Development builds skip the free limits, so testing more than one room
+    // (or bucket) doesn't need a sandbox purchase. Release builds keep them.
+    if (__DEV__ || isPlus || withinFreeTier(reason, { rooms, customBuckets })) {
       action();
       return;
     }

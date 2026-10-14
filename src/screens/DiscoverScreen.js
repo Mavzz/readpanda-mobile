@@ -23,6 +23,7 @@ import { Bone, CoverBone, EyebrowBone, useSkeletonDelay } from '../components/Sk
 import Animated from 'react-native-reanimated';
 import useFilterEntrance from '../hooks/useFilterEntrance';
 import useDiscoverPages from '../hooks/useDiscoverPages';
+import useLayout from '../hooks/useLayout';
 
 // § 8a — Discover: finding books, and only that. Search first (people who
 // arrive with a title in mind are the fastest path), then genre chips, then
@@ -36,6 +37,10 @@ const GUTTER = 24;
 const GRID_GAP = 12;
 // "See all" shows only when a section holds more than it can show: one row
 // of two curated tiles, and the ~3 Popular covers that fit across the screen.
+//
+// On iPad (15c landscape / 15o portrait) search moves up beside the title,
+// curated buckets fill one row of 4 (3), and Popular becomes a grid of 8
+// across (5 across, two rows) instead of a sideways row.
 const CURATED_SLOTS = 2;
 const POPULAR_SLOTS = 3;
 
@@ -43,7 +48,16 @@ const POPULAR_SLOTS = 3;
 const DiscoverScreen = () => {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const tileWidth = (width - GUTTER * 2 - GRID_GAP) / 2;
+  const { isLarge, sizeClass, pagePad, columns } = useLayout();
+  const gutter = isLarge ? pagePad : GUTTER;
+  const pad = { paddingHorizontal: gutter };
+  const gridGap = isLarge ? 20 : GRID_GAP;
+  const curatedSlots = columns(CURATED_SLOTS, 3, 4);
+  const tileWidth = (width - gutter * 2 - gridGap * (curatedSlots - 1)) / curatedSlots;
+  const popularCols = columns(POPULAR_SLOTS, 5, 8);
+  const popularGap = sizeClass === 'wide' ? 16 : 18;
+  const popularSlots = isLarge ? popularCols * (sizeClass === 'wide' ? 1 : 2) : POPULAR_SLOTS;
+  const popularWidth = (width - gutter * 2 - popularGap * (popularCols - 1)) / popularCols;
 
   const [genre, setGenre] = useState(null);
   const { page, genres, genreLabel, failed, reload } = useDiscoverPages(genre);
@@ -70,6 +84,52 @@ const DiscoverScreen = () => {
   const seeAllPopular = () => navigation.navigate('BookGrid', { source: 'popular', genre });
   const seeAllCurated = () => navigation.navigate('BucketGrid', { variant: 'curated', genre });
 
+  const renderPopular = (book, i) => {
+    const coverWidth = isLarge ? popularWidth : 96;
+    return (
+      // The stagger runs on from the curated tiles above.
+      <Animated.View
+        key={`${genre || ''}:${book.book_id}`}
+        entering={enteringFor(Math.min(page?.curated.length || 0, curatedSlots) + i)}
+      >
+        <PressableScale
+          cover
+          onPress={() => openBook(book)}
+          style={{ width: coverWidth }}
+          accessibilityRole="button"
+        >
+          <BookCoverGradient
+            coverUrl={book.cover_image_url}
+            title={book.title}
+            width={coverWidth}
+            height={isLarge ? Math.round(coverWidth * 1.5) : 138}
+            borderRadius={12}
+            titleFontSize={11}
+            elevated
+          />
+          <Text style={[styles.popularTitle, isLarge && styles.popularTitleLarge]} numberOfLines={1}>
+            {book.title}
+          </Text>
+          {book.author_name ? (
+            <Text style={styles.popularAuthor} numberOfLines={1}>{book.author_name}</Text>
+          ) : null}
+        </PressableScale>
+      </Animated.View>
+    );
+  };
+
+  const search = (
+    // The search results screen isn't built yet.
+    <PressableScale
+      onPress={() => showToast('Search is coming soon', 'info')}
+      style={[styles.search, isLarge ? styles.searchLarge : { marginHorizontal: gutter }]}
+      accessibilityRole="search"
+    >
+      <Icon name="search" size={17} color={DS.colors.onSurfaceVariant} />
+      <Text style={styles.searchPlaceholder}>Title, author, or topic</Text>
+    </PressableScale>
+  );
+
   const renderBody = () => {
     if (!page) {
       return failed ? (
@@ -80,18 +140,21 @@ const DiscoverScreen = () => {
       ) : showSkeleton ? (
         // Same shapes as a loaded page: two curated tiles, then a cover row.
         <>
-          <View style={[styles.sectionHeader, styles.firstSection, styles.gutter]}>
+          <View style={[styles.sectionHeader, styles.firstSection, pad]}>
             <EyebrowBone style={styles.skeletonEyebrow} />
           </View>
-          <View style={styles.grid}>
-            <Bone width={tileWidth} height={150} radius={22} />
-            <Bone width={tileWidth} height={150} radius={22} />
+          <View style={[styles.grid, pad, { columnGap: gridGap }]}>
+            {Array.from({ length: curatedSlots }, (_, i) => (
+              <Bone key={i} width={tileWidth} height={isLarge ? 196 : 150} radius={22} />
+            ))}
           </View>
-          <View style={[styles.sectionHeader, styles.gutter]}>
+          <View style={[styles.sectionHeader, pad]}>
             <EyebrowBone width={130} style={styles.skeletonEyebrow} />
           </View>
-          <View style={[styles.popularRow, styles.skeletonRow]}>
-            {[0, 1, 2, 3].map((i) => <CoverBone key={i} width={96} />)}
+          <View style={[styles.popularRow, styles.skeletonRow, pad, isLarge && { gap: popularGap }]}>
+            {Array.from({ length: isLarge ? popularCols : 4 }, (_, i) => (
+              <CoverBone key={i} width={isLarge ? popularWidth : 96} />
+            ))}
           </View>
         </>
       ) : null;
@@ -113,18 +176,19 @@ const DiscoverScreen = () => {
       <>
         {curated.length > 0 && (
           <>
-            <View style={[styles.sectionHeader, styles.firstSection, styles.gutter]}>
+            <View style={[styles.sectionHeader, styles.firstSection, pad]}>
               <Text style={styles.eyebrow}>Curated buckets</Text>
-              {curated.length > CURATED_SLOTS && (
+              {curated.length > curatedSlots && (
                 <Pressable onPress={seeAllCurated} hitSlop={10} accessibilityRole="button">
                   <Text style={styles.seeAll}>See all</Text>
                 </Pressable>
               )}
             </View>
-            <View style={styles.grid}>
-              {curated.slice(0, CURATED_SLOTS).map((bucket, i) => (
+            <View style={[styles.grid, pad, { columnGap: gridGap }]}>
+              {curated.slice(0, curatedSlots).map((bucket, i) => (
                 <Animated.View key={`${genre || ''}:${bucket.id}`} entering={enteringFor(i)}>
                   <BucketTile
+                    large={isLarge}
                     variant="curated"
                     covers={bucket.booksPreview}
                     name={bucket.name}
@@ -140,48 +204,27 @@ const DiscoverScreen = () => {
 
         {popular.length > 0 && (
           <>
-            <View style={[styles.sectionHeader, styles.gutter]}>
+            <View style={[styles.sectionHeader, pad]}>
               <Text style={styles.eyebrow}>{genre ? `Popular in ${genreLabel}` : 'Popular this week'}</Text>
-              {popular.length > POPULAR_SLOTS && (
+              {popular.length > popularSlots && (
                 <Pressable onPress={seeAllPopular} hitSlop={10} accessibilityRole="button">
                   <Text style={styles.seeAll}>See all</Text>
                 </Pressable>
               )}
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.popularRow}
-            >
-              {popular.map((book, i) => (
-                // The stagger runs on from the curated tiles above.
-                <Animated.View
-                  key={`${genre || ''}:${book.book_id}`}
-                  entering={enteringFor(Math.min(curated.length, CURATED_SLOTS) + i)}
-                >
-                  <PressableScale
-                    cover
-                    onPress={() => openBook(book)}
-                    style={styles.popularItem}
-                    accessibilityRole="button"
-                  >
-                    <BookCoverGradient
-                      coverUrl={book.cover_image_url}
-                      title={book.title}
-                      width={96}
-                      height={138}
-                      borderRadius={12}
-                      titleFontSize={11}
-                      elevated
-                    />
-                    <Text style={styles.popularTitle} numberOfLines={1}>{book.title}</Text>
-                    {book.author_name ? (
-                      <Text style={styles.popularAuthor} numberOfLines={1}>{book.author_name}</Text>
-                    ) : null}
-                  </PressableScale>
-                </Animated.View>
-              ))}
-            </ScrollView>
+            {isLarge ? (
+              <View style={[styles.popularGrid, pad, { columnGap: popularGap }]}>
+                {popular.slice(0, popularSlots).map(renderPopular)}
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.popularRow, pad]}
+              >
+                {popular.map(renderPopular)}
+              </ScrollView>
+            )}
           </>
         )}
       </>
@@ -192,7 +235,14 @@ const DiscoverScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
       <SafeAreaView edges={['top']}>
-        <Text style={[styles.title, styles.gutter]}>Discover</Text>
+        {isLarge ? (
+          <View style={[styles.titleRow, pad]}>
+            <Text style={[styles.title, styles.titleLarge]}>Discover</Text>
+            <View style={sizeClass === 'wide' ? styles.searchSlotWide : styles.searchSlotRegular}>{search}</View>
+          </View>
+        ) : (
+          <Text style={[styles.title, pad]}>Discover</Text>
+        )}
       </SafeAreaView>
 
       <ScrollView
@@ -207,17 +257,9 @@ const DiscoverScreen = () => {
           />
         )}
       >
-        {/* The search results screen isn't built yet. */}
-        <PressableScale
-          onPress={() => showToast('Search is coming soon', 'info')}
-          style={styles.search}
-          accessibilityRole="search"
-        >
-          <Icon name="search" size={17} color={DS.colors.onSurfaceVariant} />
-          <Text style={styles.searchPlaceholder}>Title, author, or topic</Text>
-        </PressableScale>
+        {isLarge ? null : search}
 
-        <GenreChips genres={genres} value={genre} onChange={setGenre} gutter={GUTTER} />
+        <GenreChips genres={genres} value={genre} onChange={setGenre} gutter={gutter} />
 
         {renderBody()}
       </ScrollView>
@@ -230,9 +272,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DS.colors.background,
   },
-  gutter: {
-    paddingHorizontal: GUTTER,
-  },
   title: {
     fontSize: 26,
     fontFamily: DS.font.extraBold,
@@ -240,6 +279,21 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     paddingTop: 18,
     paddingBottom: 14,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 20,
+  },
+  titleLarge: {
+    ...DS.type.pageTitleLarge,
+  },
+  searchSlotWide: {
+    width: 420,
+  },
+  searchSlotRegular: {
+    width: 340,
   },
   content: {
     paddingBottom: 32,
@@ -250,11 +304,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginHorizontal: GUTTER,
     paddingVertical: 13,
     paddingHorizontal: 18,
     borderRadius: DS.radius.full,
     backgroundColor: DS.colors.surfaceContainer,
+  },
+  searchLarge: {
+    paddingVertical: 11,
+    paddingHorizontal: 16,
   },
   searchPlaceholder: {
     fontSize: 13,
@@ -291,18 +348,17 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: GRID_GAP,
     rowGap: 18,
-    paddingHorizontal: GUTTER,
   },
 
   // Popular
   popularRow: {
-    paddingHorizontal: GUTTER,
     gap: 12,
   },
-  popularItem: {
-    width: 96,
+  popularGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 22,
   },
   // Eyebrow text is 11pt; a 10pt bone plus the eyebrow's 12 below, nudged
   // to sit where the cap height does.
@@ -320,6 +376,9 @@ const styles = StyleSheet.create({
     fontFamily: DS.font.bold,
     color: DS.colors.onSurface,
     marginTop: 8,
+  },
+  popularTitleLarge: {
+    fontSize: 13,
   },
   popularAuthor: {
     fontSize: 11,

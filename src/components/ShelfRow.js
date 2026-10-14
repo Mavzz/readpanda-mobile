@@ -71,6 +71,7 @@ const ShelfRow = ({
   coverHeight = 74,
   onPress,
   onPlay,
+  style,
 }) => (
   <PressableScale
     onPress={() => onPress(book)}
@@ -78,6 +79,7 @@ const ShelfRow = ({
       styles.row,
       isMostRecent && styles.rowElevated,
       isPaused(book) && styles.rowPaused,
+      style,
     ]}
     accessibilityLabel={`${book.title}, ${metaFor(book)}`}
     accessibilityRole="button"

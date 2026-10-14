@@ -32,7 +32,7 @@ const roomBookOf = (room) => {
 // one is me, so match on username the way Room Detail does. my-rooms doesn't
 // return members at all yet — rather than claim the room is empty, fall back
 // to the one member we can always name: the person holding the phone.
-const roomMembersOf = (room) => {
+export const roomMembersOf = (room) => {
   const me = enhancedStorage.getUserProfile()?.username || null;
   const members = (room?.members || []).map((m, i) => {
     const name = m.name || m.username || '';
@@ -72,7 +72,7 @@ const toStoredBook = (book, { roomId = null, roomName = null, roomMembers = null
 // have failed offline). Everyone else comes from `remote`, the percentages
 // GET /room/{id}/progress last returned, keyed by user id. A member the server
 // hasn't heard from sits at 0 — they genuinely haven't opened the book.
-const roomMemberProgress = (members, myProgressPct, remote) => (members || []).map((m) => ({
+export const roomMemberProgress = (members, myProgressPct, remote) => (members || []).map((m) => ({
   userId: m.userId,
   initials: m.initials,
   progressPct: m.isMe ? myProgressPct : (remote?.[m.userId] ?? 0),

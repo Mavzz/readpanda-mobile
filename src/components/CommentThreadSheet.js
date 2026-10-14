@@ -28,7 +28,7 @@ const VISIBLE_REPLIES = 2;
 
 const Avatar = ({ initials, size }) => (
   <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-    <Text style={[styles.avatarText, { fontSize: size === 30 ? 11 : 10 }]}>{initials}</Text>
+    <Text style={[styles.avatarText, size === 30 && styles.avatarTextLarge]}>{initials}</Text>
   </View>
 );
 
@@ -370,8 +370,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
+    fontSize: 10,
     fontFamily: DS.font.bold,
     color: DS.colors.onSurface,
+  },
+  avatarTextLarge: {
+    fontSize: 11,
   },
   commentBody: {
     flex: 1,
