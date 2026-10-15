@@ -89,6 +89,28 @@ yarn ios                    # terminal 2: builds, installs and opens the simulat
 
 Android: `yarn android`, with an emulator already running.
 
+## On your own iPhone
+
+The phone has to be registered to the Apple Developer team (`6F6H5A6JCC`):
+plug it in, trust the Mac, turn on Developer Mode, and let Xcode's automatic
+signing register it the first time.
+
+**With hot reload** (debug build, JS from Metro over Wi-Fi): open
+`ios/ReadPanda.xcworkspace`, pick the phone, and Run, with `yarn start:prod`
+(or `start:dev` and your Mac's LAN IP) running.
+
+**Standalone** (Release, JS bundled in, no Metro needed):
+
+```bash
+yarn ipa              # ios/build/ipa/ReadPanda.ipa, against production
+yarn ipa --install    # and install it on the connected iPhone
+yarn ipa --adhoc      # Ad Hoc signing, e.g. for Firebase App Distribution
+```
+
+`yarn ipa` switches `.env` to production first; run `yarn env:dev` to go back.
+The `.ipa` only installs on devices registered to the team. Anyone else
+needs TestFlight.
+
 ## Before you push
 
 ```bash
