@@ -1,0 +1,70 @@
+#!/bin/sh
+# Builds a Release .ipa against production, with the JavaScript bundled in,
+# so it runs on a phone without Metro or this Mac.
+#
+#   yarn ipa                  development-signed (devices registered to the team)
+#   yarn ipa --adhoc          Ad Hoc, e.g. for Firebase App Distribution
+#   yarn ipa --install        also install it on the connected iPhone
+#
+# Either way it only installs on devices in the team's provisioning profile;
+# anyone else needs TestFlight. Output: ios/build/ipa/ReadPanda.ipa.
+set -e
+
+method=debugging
+install=
+for arg in "$@"; do
+  case "$arg" in
+    --adhoc) method=release-testing ;;
+    --install) install=1 ;;
+    *) echo "usage: yarn ipa [--adhoc] [--install]" >&2; exit 1 ;;
+  esac
+done
+
+# The backend URL is compiled in, so pin production before bundling.
+sh scripts/use-env.sh prod
+
+cd ios
+mkdir -p build
+archive=build/ReadPanda.xcarchive
+rm -rf "$archive" build/ipa
+
+cat > build/ExportOptions.plist <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key><string>$method</string>
+  <key>teamID</key><string>6F6H5A6JCC</string>
+  <key>signingStyle</key><string>automatic</string>
+</dict>
+</plist>
+EOF
+
+# --reset-cache: Metro's cache could still hold the other environment's values.
+echo "Archiving ($method)..."
+xcodebuild -workspace ReadPanda.xcworkspace -scheme ReadPanda \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -archivePath "$archive" -allowProvisioningUpdates \
+  EXTRA_PACKAGER_ARGS=--reset-cache \
+  archive -quiet
+
+echo "Exporting..."
+xcodebuild -exportArchive -archivePath "$archive" \
+  -exportOptionsPlist build/ExportOptions.plist -exportPath build/ipa \
+  -allowProvisioningUpdates -quiet
+
+ipa=build/ipa/ReadPanda.ipa
+echo "Built ios/$ipa"
+
+if [ -n "$install" ]; then
+  # The first connected iOS device that isn't this Mac.
+  udid=$(xcrun xctrace list devices 2>/dev/null |
+    sed -n '/== Devices ==/,/== /p' | grep -v -e '==' -e 'Mac' |
+    sed -n 's/.*(\([0-9A-F-]\{20,\}\))$/\1/p' | head -1)
+  if [ -z "$udid" ]; then
+    echo "No iPhone connected; plug one in, or install ios/$ipa from Xcode's Devices window." >&2
+    exit 1
+  fi
+  echo "Installing on $udid..."
+  xcrun devicectl device install app --device "$udid" "$ipa"
+fi
