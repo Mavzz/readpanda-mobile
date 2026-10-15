@@ -4,15 +4,9 @@ ReadPanda is a bare React Native app (no Expo) with native iOS code: the PDF
 reader, the comment sheet and the home screen widget are Swift. iOS is the
 primary platform.
 
-There are two ways to get the app into a simulator:
-
-- **Build it yourself** (most development): Metro and Xcode on your Mac, with
-  hot reload.
-- **Download a CI build**: a ready-made simulator `.app` from GitHub Actions,
-  for trying a branch without a local build.
-
-Either way, the app needs a backend: your own local one, or production on
-Cloud Run.
+You build it yourself, with Metro and Xcode on your Mac, and run it in the
+simulator or on your iPhone. The app needs a backend: your own local one, or
+production on Cloud Run.
 
 ## Build it yourself
 
@@ -95,45 +89,6 @@ yarn ios                    # terminal 2: builds, installs and opens the simulat
 
 Android: `yarn android`, with an emulator already running.
 
-## Download a CI build
-
-The **Build Simulator & Emulator Apps** workflow
-(`.github/workflows/build-dev-artifacts.yml`) builds a standalone iOS
-Simulator app with the JavaScript bundled in, so no Metro is needed. It runs on
-every push to `master`, and on demand for any branch:
-
-```bash
-gh workflow run build-dev-artifacts.yml --ref <branch>
-gh run watch
-```
-
-You can also start it from GitHub: **Actions**, then **Build Simulator &
-Emulator Apps**, then **Run workflow**, and pick the branch. Only what's
-pushed gets built.
-
-When it finishes, download the `ReadPanda-iOS-Simulator` artifact from the
-run's page (kept for 14 days), then:
-
-```bash
-unzip ReadPanda-Simulator.zip
-xcrun simctl install booted ReadPanda.app
-```
-
-The workflow writes `.env` from repository secrets, so your local `.env` has
-no effect on CI builds:
-
-| Secret | Purpose |
-|---|---|
-| `BACKEND_URL` | The backend the build talks to. Currently production. Empty means `127.0.0.1:3000`. |
-| `GOOGLE_SERVICE_INFO` | Contents of `GoogleService-Info.plist`. Required. |
-| `LOCAL_IP`, `API_VERSION` | Optional; default to `127.0.0.1` and `/api/v1` |
-
-Changing `BACKEND_URL` only affects builds made after the change. An `.app`
-you already downloaded keeps the URL it was built with.
-
-A second workflow, **Xcode - Build and Analyze**, runs Xcode's static analyzer
-on pushes to `master`.
-
 ## Before you push
 
 ```bash
@@ -148,8 +103,10 @@ don't exist under Jest: `jest.setup.js` stubs the ones most components use
 `src/stores/__tests__/readingProgressStore.test.js`). CI runs them on every
 pull request (`.github/workflows/test.yml`).
 
-For Swift changes, CI compiles with the Xcode on GitHub's `macos-latest`
-image, which can be older than yours. Code that builds locally can fail there.
+For Swift changes, run the **Xcode - Build and Analyze** workflow before
+merging (`gh workflow run xcode-build-analyze.yml --ref <branch>`). It's manual
+only, and compiles with the Xcode on GitHub's `macos-latest` image, which can
+be older than yours. Code that builds locally can fail there.
 Type inference is the usual difference: a key path like `\.$face` may need its
 root type spelled out (`\ReadPandaWidgetIntent.$face`).
 

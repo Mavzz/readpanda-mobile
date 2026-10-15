@@ -10,7 +10,7 @@ The backend (Go API, writer portal) is in the
 ## Getting started
 
 **[docs/RUN.md](docs/RUN.md)** covers setup, pointing the app at a local or
-production backend, CI simulator builds and troubleshooting.
+production backend, and troubleshooting.
 
 The short version, once you have `ios/GoogleService-Info.plist` from a
 maintainer:

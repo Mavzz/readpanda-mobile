@@ -1,9 +1,9 @@
 name: Xcode - Build and Analyze
 
+# Manual only: builds are tested on a device locally, and macOS runner minutes
+# are scarce if this repo goes private. Run it before merging native changes.
 on:
-  push:
-    branches: ["master"]
-  workflow_dispatch:  # (Optional: lets you click a button on GitHub to run it manually)
+  workflow_dispatch:
 
 jobs:
   build-and-analyze:
