@@ -10,8 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { DS } from '../styles/global';
-import { showToast } from './Toaster';
-import findReaderBook from '../utils/readerBook';
+import openNotification from '../utils/openNotification';
 
 const NotificationItem = ({ notification, onPress }) => {
   const formattedDate = new Date(notification.timestamp).toLocaleDateString('en-US', {
@@ -55,24 +54,14 @@ const EmptyNotifications = () => (
   </View>
 );
 
-const NotificationList = ({ notifications, onNotificationRead, onClose }) => {
+const NotificationList = ({ notifications, onClose }) => {
   const navigation = useNavigation();
 
-  const handleNotificationPress = async (notification) => {
-    if (!notification.read) {
-      await onNotificationRead(notification.id);
-    }
-
-    if (notification.type === 'NEW_BOOK' && notification.bookId) {
-      const book = await findReaderBook(notification.bookId);
-      onClose?.();
-      if (!book) {
-        showToast('That book isn\'t available right now', 'error');
-        return;
-      }
-      navigation.navigate('ManuscriptScreen', { book });
-    }
-  };
+  // Marking it read happens in openNotification, the same as for a push.
+  const handleNotificationPress = (notification) => openNotification(notification, {
+    navigate: (screen, params) => navigation.navigate(screen, params),
+    close: () => onClose?.(),
+  });
 
   return (
     <View style={styles.container}>

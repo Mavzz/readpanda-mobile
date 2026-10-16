@@ -6,41 +6,35 @@ import useNotificationStore from '../stores/notificationStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
 import { NotificationService } from '../services/notificationService';
-import findReaderBook from '../utils/readerBook';
+import openNotification, { notificationFromPush } from '../utils/openNotification';
 import log from '../utils/logger';
 
 const isEnabled = (status) =>
   status === messaging.AuthorizationStatus.AUTHORIZED ||
   status === messaging.AuthorizationStatus.PROVISIONAL;
 
-// The server fills data with { type, notification_id, book_id? } — see
-// api-go internal/notify. A tapped NEW_BOOK push opens that book; anything
-// else opens nothing and just brings the inbox up to date.
+// The server fills data with { type, notification_id, book_id?, room_id?,
+// room_name? } — see api-go internal/notify. Where each type goes is
+// openNotification's call, shared with the inbox.
 const handleOpened = async (remoteMessage, navigationRef) => {
-  const { fetchNotifications, markAsRead } = useNotificationStore.getState();
-  const data = remoteMessage?.data || {};
-  const notificationId = Number(data.notification_id);
+  // The inbox may not have this row yet; fetch first so marking it read lands.
+  await useNotificationStore.getState().fetchNotifications();
 
-  await fetchNotifications();
-  if (notificationId) {
-    markAsRead(notificationId);
-  }
-
-  if (data.type === 'NEW_BOOK' && data.book_id) {
-    const book = await findReaderBook(data.book_id);
-    if (!book) {
-      return;
-    }
-    // ManuscriptScreen lives in the authenticated "Main" navigator, so the
-    // root ref has to address it through that. A tap that cold-started the
-    // app can get here before the navigator has mounted — give it a moment.
-    const open = () => navigationRef.current?.navigate('Main', { screen: 'ManuscriptScreen', params: { book } });
+  // Every destination lives in the authenticated "Main" navigator, so the
+  // root ref has to address it through that. A tap that cold-started the app
+  // can get here before the navigator has mounted.
+  const whenReady = (fn, attempts = 20) => {
     if (navigationRef.isReady?.()) {
-      open();
-    } else {
-      setTimeout(open, 500);
+      fn();
+    } else if (attempts > 0) {
+      setTimeout(() => whenReady(fn, attempts - 1), 250);
     }
-  }
+  };
+  const navigate = (screen, params) => whenReady(
+    () => navigationRef.current?.navigate('Main', { screen, params }),
+  );
+
+  await openNotification(notificationFromPush(remoteMessage?.data), { navigate });
 };
 
 // Push is a nudge to look at the inbox, not a second copy of it: the server

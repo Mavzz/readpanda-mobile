@@ -27,7 +27,6 @@ const CommonHeader = ({ showSearch, navigation }) => {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const loading = useNotificationStore((s) => s.loading);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
-  const markAsRead = useNotificationStore((s) => s.markAsRead);
   const [isModalVisible, setIsModalVisible] = React.useState(false);
 
   const notificationScale = useSharedValue(1);
@@ -83,10 +82,6 @@ const CommonHeader = ({ showSearch, navigation }) => {
     });
   };
 
-  const handleNotificationRead = async (notificationId) => {
-    await markAsRead(notificationId);
-  };
-
   return (
     <>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -136,7 +131,6 @@ const CommonHeader = ({ showSearch, navigation }) => {
             ) : (
               <NotificationList
                 notifications={notifications}
-                onNotificationRead={handleNotificationRead}
                 onClose={() => setIsModalVisible(false)}
               />
             )}

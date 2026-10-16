@@ -17,7 +17,6 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const notifLoading = useNotificationStore((s) => s.loading);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
-  const markAsRead = useNotificationStore((s) => s.markAsRead);
   const [notifModalVisible, setNotifModalVisible] = useState(false);
   const showSkeleton = useSkeletonDelay(notifLoading);
   const { isLarge, pagePad } = useLayout();
@@ -74,7 +73,6 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
             ) : (
               <NotificationList
                 notifications={notifications}
-                onNotificationRead={markAsRead}
                 onClose={() => setNotifModalVisible(false)}
               />
             )}
