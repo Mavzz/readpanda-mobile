@@ -12,6 +12,17 @@ import { useNavigation } from '@react-navigation/native';
 import { DS } from '../styles/global';
 import openNotification from '../utils/openNotification';
 
+// One icon per kind, so the inbox can be scanned without reading every line.
+const TYPE_ICONS = {
+  REPLY: 'arrow-undo-outline',
+  ROOM_COMMENTS: 'chatbubbles-outline',
+  ROOM_JOIN: 'person-add-outline',
+  ROOM_BOOK: 'library-outline',
+  NEW_BOOK: 'book-outline',
+};
+
+export const iconForType = (type) => TYPE_ICONS[type] || 'notifications-outline';
+
 const NotificationItem = ({ notification, onPress }) => {
   const formattedDate = new Date(notification.timestamp).toLocaleDateString('en-US', {
     hour: '2-digit',
@@ -31,7 +42,7 @@ const NotificationItem = ({ notification, onPress }) => {
       <View style={styles.notificationContent}>
         <View style={styles.iconContainer}>
           <Icon
-            name={notification.type === 'NEW_BOOK' ? 'book-outline' : 'notifications-outline'}
+            name={iconForType(notification.type)}
             size={24}
             color={DS.colors.primary}
           />
