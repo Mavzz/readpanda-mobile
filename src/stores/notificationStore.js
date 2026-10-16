@@ -5,6 +5,22 @@ import { NotificationService } from '../services/notificationService';
 // The Notifications screen's switches, in the order it shows them.
 export const NOTIFICATION_SETTINGS = ['replies', 'roomComments', 'roomJoins', 'roomBook', 'newBooks'];
 
+// The Settings row's value (R7.6). `permitted` is iOS's answer (null while
+// unknown); with notifications off there, the switches don't matter.
+export const summarizeSettings = (settings, permitted) => {
+  if (permitted === false) {
+    return 'Off in iOS Settings';
+  }
+  if (!settings) {
+    return null;
+  }
+  const on = NOTIFICATION_SETTINGS.filter((key) => settings[key]).length;
+  if (on === NOTIFICATION_SETTINGS.length) {
+    return 'All on';
+  }
+  return on === 0 ? 'All off' : `${on} of ${NOTIFICATION_SETTINGS.length} on`;
+};
+
 const useNotificationStore = create((set, get) => ({
   notifications: [],
   unreadCount: 0,
