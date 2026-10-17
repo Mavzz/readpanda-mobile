@@ -10,8 +10,18 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { DS } from '../styles/global';
-import { showToast } from './Toaster';
-import findReaderBook from '../utils/readerBook';
+import openNotification from '../utils/openNotification';
+
+// One icon per kind, so the inbox can be scanned without reading every line.
+const TYPE_ICONS = {
+  REPLY: 'arrow-undo-outline',
+  ROOM_COMMENTS: 'chatbubbles-outline',
+  ROOM_JOIN: 'person-add-outline',
+  ROOM_BOOK: 'library-outline',
+  NEW_BOOK: 'book-outline',
+};
+
+export const iconForType = (type) => TYPE_ICONS[type] || 'notifications-outline';
 
 const NotificationItem = ({ notification, onPress }) => {
   const formattedDate = new Date(notification.timestamp).toLocaleDateString('en-US', {
@@ -32,7 +42,7 @@ const NotificationItem = ({ notification, onPress }) => {
       <View style={styles.notificationContent}>
         <View style={styles.iconContainer}>
           <Icon
-            name={notification.type === 'NEW_BOOK' ? 'book-outline' : 'notifications-outline'}
+            name={iconForType(notification.type)}
             size={24}
             color={DS.colors.primary}
           />
@@ -55,24 +65,14 @@ const EmptyNotifications = () => (
   </View>
 );
 
-const NotificationList = ({ notifications, onNotificationRead, onClose }) => {
+const NotificationList = ({ notifications, onClose }) => {
   const navigation = useNavigation();
 
-  const handleNotificationPress = async (notification) => {
-    if (!notification.read) {
-      await onNotificationRead(notification.id);
-    }
-
-    if (notification.type === 'NEW_BOOK' && notification.bookId) {
-      const book = await findReaderBook(notification.bookId);
-      onClose?.();
-      if (!book) {
-        showToast('That book isn\'t available right now', 'error');
-        return;
-      }
-      navigation.navigate('ManuscriptScreen', { book });
-    }
-  };
+  // Marking it read happens in openNotification, the same as for a push.
+  const handleNotificationPress = (notification) => openNotification(notification, {
+    navigate: (screen, params) => navigation.navigate(screen, params),
+    close: () => onClose?.(),
+  });
 
   return (
     <View style={styles.container}>

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { showToast } from '../../components/Toaster';
 import useAuthStore from '../../stores/authStore';
@@ -13,6 +13,8 @@ import { useScreenTracking } from '../../utils/screenTracking';
 import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/readerSettings';
 import { DS } from '../../styles/global';
 import useSubscriptionStore from '../../stores/subscriptionStore';
+import useNotificationStore, { summarizeSettings } from '../../stores/notificationStore';
+import useNotificationPermission from '../../hooks/useNotificationPermission';
 import packageJson from '../../../package.json';
 import useLayout from '../../hooks/useLayout';
 import profileStyles from './profileStyles';
@@ -37,6 +39,15 @@ const SettingsScreen = () => {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const isPlus = useSubscriptionStore((s) => s.isPlus);
+  const notificationSettings = useNotificationStore((s) => s.settings);
+  const fetchNotificationSettings = useNotificationStore((s) => s.fetchSettings);
+  const notificationsPermitted = useNotificationPermission();
+
+  // On focus, so the row's value is current after coming back from the
+  // Notifications screen.
+  useFocusEffect(useCallback(() => {
+    fetchNotificationSettings();
+  }, [fetchNotificationSettings]));
 
   const [pageMode, setPageMode] = useReaderSetting('pageMode');
   const [pageTheme, setPageTheme] = useReaderSetting('pageTheme');
@@ -133,10 +144,8 @@ const SettingsScreen = () => {
       <SettingsRow
         icon="notifications-outline"
         label="Notifications"
-        value="Comments, nudges"
-        // The detail screen is out of scope; the system settings are
-        // where they're switched today.
-        onPress={() => Linking.openSettings()}
+        value={summarizeSettings(notificationSettings, notificationsPermitted)}
+        onPress={() => navigation.navigate('NotificationSettings')}
       />
       <SettingsRow
         icon="eye-outline"
