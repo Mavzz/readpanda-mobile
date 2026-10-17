@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import { showToast } from '../components/Toaster';
 import useNotificationStore from '../stores/notificationStore';
@@ -44,6 +44,22 @@ const handleOpened = async (remoteMessage, navigationRef) => {
 // Runs once signed in — asking for permission on the login screen is asking
 // before the reader knows what they'd be notified about.
 const usePushNotifications = ({ isAuthenticated, navigationRef }) => {
+  // Pushes that arrive while the app is in the background don't reach
+  // onMessage, so the bell's badge would stay stale until it's opened.
+  // Coming back to the app re-reads it. Independent of push permission: the
+  // inbox fills either way.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        useNotificationStore.getState().refreshUnreadCount();
+      }
+    });
+    return () => subscription.remove();
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       return undefined;
