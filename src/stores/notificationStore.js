@@ -2,10 +2,31 @@ import { create } from 'zustand';
 import log from '../utils/logger';
 import { NotificationService } from '../services/notificationService';
 
+// The Notifications screen's switches, in the order it shows them.
+export const NOTIFICATION_SETTINGS = ['replies', 'roomComments', 'roomJoins', 'roomBook', 'newBooks'];
+
+// The Settings row's value (R7.6). `permitted` is iOS's answer (null while
+// unknown); with notifications off there, the switches don't matter.
+export const summarizeSettings = (settings, permitted) => {
+  if (permitted === false) {
+    return 'Off in iOS Settings';
+  }
+  if (!settings) {
+    return null;
+  }
+  const on = NOTIFICATION_SETTINGS.filter((key) => settings[key]).length;
+  if (on === NOTIFICATION_SETTINGS.length) {
+    return 'All on';
+  }
+  return on === 0 ? 'All off' : `${on} of ${NOTIFICATION_SETTINGS.length} on`;
+};
+
 const useNotificationStore = create((set, get) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,
+  // { replies, roomComments, roomJoins, roomBook, newBooks }, null until fetched.
+  settings: null,
 
   fetchNotifications: async () => {
     set({ loading: true });
@@ -50,8 +71,31 @@ const useNotificationStore = create((set, get) => ({
     }
   },
 
+  fetchSettings: async () => {
+    const settings = await NotificationService.getSettings();
+    if (settings) {
+      set({ settings });
+    }
+  },
+
+  // Optimistic, like markAsRead: the switch moves at once and goes back if
+  // the server didn't take it. Only that switch goes back, so a second one
+  // flipped in the meantime keeps its new value. Resolves to whether it
+  // saved, so the screen can say when it didn't.
+  setSetting: async (key, on) => {
+    const before = get().settings?.[key] ?? true;
+    set((state) => ({ settings: { ...state.settings, [key]: on } }));
+    const saved = await NotificationService.updateSettings({ [key]: on });
+    if (saved) {
+      set((state) => ({ settings: { ...state.settings, [key]: saved[key] } }));
+      return true;
+    }
+    set((state) => ({ settings: { ...state.settings, [key]: before } }));
+    return false;
+  },
+
   clearNotifications: () => {
-    set({ notifications: [], unreadCount: 0 });
+    set({ notifications: [], unreadCount: 0, settings: null });
   },
 }));
 
