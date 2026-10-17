@@ -59,7 +59,7 @@ Push works end to end, but the only thing that sends one is a writer publishing 
 3. WHEN the recipient has switched a type off (R7) THE server SHALL neither push it nor write or update an inbox row for it. This includes the NEW_BOOK broadcast. Rows written before the switch was turned off stay.
 4. Every push, including NEW_BOOK, SHALL play the default iOS notification sound.
 5. THE push data SHALL carry `type`, `notification_id`, and as relevant `room_id`, `room_name` and `book_id`, so the app can open the right place (R6).
-6. Event pushes SHALL finish sending before the request that triggered them responds, bounded by a timeout. A slow or failed push SHALL NOT fail or noticeably delay that request beyond the timeout.
+6. Event pushes SHALL finish sending before the request that triggered them responds, bounded by a timeout. A slow or failed push SHALL NOT fail or noticeably delay that request beyond the timeout. A reader with many registered devices SHALL still be reached within it: one slow or failing device SHALL NOT keep the others from being tried. *(Added 2026-10-17 after device QA: with 25 devices sent one after another, the 5s budget ran out after 8.)*
 7. WHEN a room is deleted THE inbox rows about it SHALL be deleted with it.
 
 ### R6. Opening a notification
@@ -73,6 +73,7 @@ Push works end to end, but the only thing that sends one is a writer publishing 
 5. IF the book or room no longer exists, or the reader is no longer a member THEN THE app SHALL stay where it is and show "That's no longer available".
 6. WHEN a tap cold-starts the app THE app SHALL get to the same place once navigation is ready (the existing NEW_BOOK behavior, now for every type).
 7. THE inbox SHALL show an icon per type: reply, room comments, join, room book, new book, and other.
+8. WHEN the app returns to the foreground THE bell's unread count SHALL refresh from the server. *(Added 2026-10-17 after device QA: pushes that arrived in the background left the badge stale until the bell was opened.)*
 
 ### R7. Notification settings
 **User story:** As a reader, I want to choose which notifications I get so that the app only interrupts me for what I care about.

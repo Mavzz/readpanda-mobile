@@ -26,6 +26,10 @@ for backend tasks). Backend tasks are in `readpanda/packages/api-go`.
 ### QA
 - [ ] 16. On two phones (or a phone plus a second account): reply → immediate push with text and sound; room comment ahead of the other reader → "commented on p. N" with no text; five quick comments → one push, inbox row says 5; read it, comment again → new push; join with the code → creator only; change the room's book → members; switch each type off → no push and no inbox row; iOS permission off → banner; tap each type from the lock screen with the app closed and from the background, and from the inbox; delete a room with an unread row (R1–R8)
 
+### Found in QA
+- [ ] 17. `notify.pushToDevices` sends in parallel (at most 10 at once) under the one timeout, so a reader with many devices is reached and a slow or rejected token can't use up the budget; test with many slow fake devices (R5.6)
+- [ ] 18. Refresh the bell's unread count when the app returns to the foreground (`AppState` → `refreshUnreadCount` in `usePushNotifications`, signed in only); Jest test (R6.8)
+
 ## Notes
 <!-- One line per change from design.md: "Task 3: used X instead of Y because …" -->
 - Before task 16, the APNs key has to be uploaded to Firebase (Cloud Messaging → Apple app configuration). The key is sandbox-only, so it works for Xcode and `yarn ipa` builds but not TestFlight.
