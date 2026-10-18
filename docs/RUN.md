@@ -126,7 +126,8 @@ release, or one after a build uploaded by hand, uses the last 20 commits.
 It only runs on `master` with a clean working tree that matches
 `origin/master`, so every build testers get is a pushed commit on the main
 line. It pulls the device IDs of testers who registered through their Firebase
-invite, registers any new ones with Apple, builds with `yarn ipa --adhoc`,
+invite, registers any new ones with Apple, makes fresh Ad Hoc profiles that
+include them, builds with `yarn ipa --adhoc` signed with those profiles,
 checks that every tester device made it into the profiles, and uploads to the
 groups in `FIREBASE_GROUPS`. A tester who registers afterwards gets the next
 release, not this one.
