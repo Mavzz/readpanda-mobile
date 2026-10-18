@@ -5,6 +5,7 @@
 #   yarn ipa                  development-signed (devices registered to the team)
 #   yarn ipa --adhoc          Ad Hoc, e.g. for Firebase App Distribution
 #   yarn ipa --install        also install it on the connected iPhone
+#   yarn release              Ad Hoc, uploaded to Firebase (fastlane/Fastfile)
 #
 # Either way it only installs on devices in the team's provisioning profile;
 # anyone else needs TestFlight. Output: ios/build/ipa/ReadPanda.ipa.
@@ -40,18 +41,26 @@ cat > build/ExportOptions.plist <<EOF
 </plist>
 EOF
 
+# With an App Store Connect API key (yarn release sets these), xcodebuild
+# updates profiles with it instead of the Apple ID signed in to Xcode.
+set --
+if [ -n "$ASC_KEY_PATH" ]; then
+  set -- -authenticationKeyPath "$ASC_KEY_PATH" \
+    -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+fi
+
 # --reset-cache: Metro's cache could still hold the other environment's values.
 echo "Archiving ($method)..."
 xcodebuild -workspace ReadPanda.xcworkspace -scheme ReadPanda \
   -configuration Release -destination 'generic/platform=iOS' \
-  -archivePath "$archive" -allowProvisioningUpdates \
+  -archivePath "$archive" -allowProvisioningUpdates "$@" \
   EXTRA_PACKAGER_ARGS=--reset-cache \
   archive -quiet
 
 echo "Exporting..."
 xcodebuild -exportArchive -archivePath "$archive" \
   -exportOptionsPlist build/ExportOptions.plist -exportPath build/ipa \
-  -allowProvisioningUpdates -quiet
+  -allowProvisioningUpdates "$@" -quiet
 
 ipa=build/ipa/ReadPanda.ipa
 echo "Built ios/$ipa"
