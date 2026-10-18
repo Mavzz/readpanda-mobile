@@ -62,6 +62,16 @@ platform :ios do
     # The next release reads this line back to know where to start.
     notes += "\n\nBuild #{head}"
 
+    # Left to automatic signing, the export on CI falls back to Apple's cloud
+    # signing, which our App Manager key isn't allowed to use. So make the
+    # Ad Hoc profiles here, fresh so they hold every registered device, and
+    # have the export sign with them. This also stops early if the keychain
+    # has no Apple Distribution certificate, instead of after the archive.
+    ENV["ADHOC_PROFILES"] = %w[com.readpanda.app com.readpanda.app.widget].map do |bundle_id|
+      get_provisioning_profile(app_identifier: bundle_id, adhoc: true, force: true, api_key: api_key)
+      "#{bundle_id}=#{lane_context[SharedValues::SIGH_NAME]}"
+    end.join("\n")
+
     # Same build as `yarn ipa --adhoc`, so there's one place that knows how to sign.
     sh("cd #{ROOT.shellescape} && yarn ipa --adhoc")
     check_profiles(udids)

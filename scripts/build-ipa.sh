@@ -29,6 +29,20 @@ mkdir -p build
 archive=build/ReadPanda.xcarchive
 rm -rf "$archive" build/ipa
 
+# yarn release passes the Ad Hoc profiles it just made ("bundle id=profile
+# name", one per line), so the export signs with exactly those. Otherwise
+# Xcode picks the certificate and profiles itself.
+if [ -n "$ADHOC_PROFILES" ]; then
+  signing="<key>signingStyle</key><string>manual</string>
+  <key>signingCertificate</key><string>Apple Distribution</string>
+  <key>provisioningProfiles</key>
+  <dict>
+$(printf '%s\n' "$ADHOC_PROFILES" | sed 's|^\([^=]*\)=\(.*\)$|    <key>\1</key><string>\2</string>|')
+  </dict>"
+else
+  signing="<key>signingStyle</key><string>automatic</string>"
+fi
+
 cat > build/ExportOptions.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -36,7 +50,7 @@ cat > build/ExportOptions.plist <<EOF
 <dict>
   <key>method</key><string>$method</string>
   <key>teamID</key><string>6F6H5A6JCC</string>
-  <key>signingStyle</key><string>automatic</string>
+  $signing
 </dict>
 </plist>
 EOF
