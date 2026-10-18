@@ -1,0 +1,131 @@
+# Ad Hoc builds for Firebase App Distribution. Run it with `yarn release`;
+# setup is in docs/RUN.md and the credentials go in fastlane/.env.
+require "plist"
+require "tmpdir"
+
+default_platform(:ios)
+skip_docs
+
+ROOT = File.expand_path("..", __dir__)
+IPA = File.join(ROOT, "ios/build/ipa/ReadPanda.ipa")
+UDIDS_FILE = File.join(ROOT, "ios/build/tester_udids.tsv")
+
+platform :ios do
+  desc "Register Firebase testers' devices, build Ad Hoc, upload to Firebase"
+  desc "Options: notes:\"what changed\" (defaults to feat/fix commits since the last release)"
+  lane :release do |options|
+    # Testers get the main line, exactly as it is on GitHub, so every build
+    # maps to a pushed commit.
+    ensure_git_branch(branch: "^master$")
+    # CI checks out the pushed commit, and pod install there can rewrite the
+    # Xcode project cosmetically, so only a local run needs a clean tree.
+    ensure_git_status_clean unless is_ci
+    git_out("fetch", "--quiet", "origin", "master")
+    unless git_out("rev-parse", "HEAD") == git_out("rev-parse", "origin/master")
+      UI.user_error!("master isn't in sync with origin/master. Pull or push, then run yarn release again.")
+    end
+
+    # A CI runner starts with an empty keychain, so the signing certificates
+    # go in a temporary one. Locally Xcode signs from the login keychain.
+    if is_ci
+      setup_ci
+      import_certificate(
+        certificate_path: env_path("CERT_P12_PATH"),
+        certificate_password: ENV.fetch("CERT_P12_PASSWORD"),
+        keychain_name: "fastlane_tmp_keychain",
+        keychain_password: ""
+      )
+    end
+
+    # The Firebase app ID is 1:<project number>:ios:<hash>.
+    app_id = Plist.parse_xml(File.join(ROOT, "ios/GoogleService-Info.plist"))["GOOGLE_APP_ID"]
+    firebase_auth = { service_credentials_file: env_path("FIREBASE_SERVICE_ACCOUNT") }
+    # build-ipa.sh hands the key to xcodebuild too, which needs an absolute path.
+    ENV["ASC_KEY_PATH"] = env_path("ASC_KEY_PATH")
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV["ASC_KEY_PATH"]
+    )
+
+    FileUtils.mkdir_p(File.dirname(UDIDS_FILE))
+    firebase_app_distribution_get_udids(
+      project_number: app_id.split(":")[1].to_i,
+      output_file: UDIDS_FILE,
+      **firebase_auth
+    )
+    udids = File.exist?(UDIDS_FILE) ? File.readlines(UDIDS_FILE).drop(1).map { |l| l.split("\t").first } : []
+    register_devices(devices_file: UDIDS_FILE, api_key: api_key) unless udids.empty?
+
+    head = git_out("rev-parse", "--short", "HEAD")
+    notes = options[:notes] || notes_since(last_release_commit(app_id, firebase_auth))
+    # The next release reads this line back to know where to start.
+    notes += "\n\nBuild #{head}"
+
+    # Same build as `yarn ipa --adhoc`, so there's one place that knows how to sign.
+    sh("cd #{ROOT.shellescape} && yarn ipa --adhoc")
+    check_profiles(udids)
+
+    firebase_app_distribution(
+      app: app_id,
+      ipa_path: IPA,
+      groups: ENV["FIREBASE_GROUPS"],
+      release_notes: notes,
+      **firebase_auth
+    )
+  end
+end
+
+# Relative paths in fastlane/.env are relative to the repo root.
+def env_path(name)
+  File.expand_path(ENV.fetch(name), ROOT)
+end
+
+def git_out(*args)
+  sh("git", "-C", ROOT, *args, log: false).strip
+end
+
+# The commit the latest Firebase release was built from, read from its
+# "Build <sha>" line. nil for the first release, one uploaded by hand, or a
+# commit this checkout doesn't have.
+def last_release_commit(app_id, firebase_auth)
+  release = firebase_app_distribution_get_latest_release(app: app_id, **firebase_auth)
+  sha = release&.dig(:releaseNotes, :text).to_s[/^Build ([0-9a-f]{7,40})$/, 1]
+  return nil unless sha
+
+  git_out("merge-base", "--is-ancestor", sha, "HEAD")
+  sha
+rescue FastlaneCore::Interface::FastlaneShellError
+  nil
+end
+
+# Testers only care about what changed in the app, so only feat and fix
+# commits make it in, without their prefix: "feat(rooms): Leave a room" →
+# "Leave a room".
+def notes_since(sha)
+  range = sha ? "#{sha}..HEAD" : "-20"
+  lines = git_out("log", range, "--no-merges", "--format=%s").lines.map(&:strip)
+  changes = %w[feat fix].flat_map do |type|
+    lines.grep(/^#{type}(\(.*?\))?!?: /).map { |l| "- #{l.sub(/^[^:]+: /, '').sub(/^./, &:upcase)}" }
+  end
+  changes.empty? ? "Small fixes and improvements." : changes.join("\n")
+end
+
+# Xcode keeps reusing a cached profile until it notices the device list
+# changed, and a profile missing a tester's device only shows up as a failed
+# install on their phone. Check the app and the widget before uploading.
+def check_profiles(udids)
+  normalize = ->(udid) { udid.delete("-").upcase }
+  Dir.mktmpdir do |dir|
+    sh("unzip", "-q", IPA, "-d", dir, log: false)
+    Dir.glob("#{dir}/Payload/**/embedded.mobileprovision").each do |path|
+      profile = Plist.parse_xml(sh("security", "cms", "-D", "-i", path, log: false))
+      missing = udids.map(&normalize) - profile["ProvisionedDevices"].to_a.map(&normalize)
+      next if missing.empty?
+
+      UI.user_error!("#{profile['Name']} is missing #{missing.join(', ')}. " \
+                     "Delete the ReadPanda profiles in ~/Library/Developer/Xcode/UserData/Provisioning Profiles " \
+                     "so Xcode fetches fresh ones, then run yarn release again.")
+    end
+  end
+end

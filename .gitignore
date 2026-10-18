@@ -65,3 +65,10 @@ yarn-error.*
 /.env
 /.env.*
 !/.env.example
+
+# fastlane (yarn release): credentials and local gems
+/fastlane/.env
+!/fastlane/.env.example
+/fastlane/report.xml
+/vendor/bundle/
+/.bundle/
