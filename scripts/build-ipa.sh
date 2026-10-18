@@ -63,12 +63,19 @@ if [ -n "$ASC_KEY_PATH" ]; then
     -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 fi
 
+# yarn release passes the next build number. Overriding it here sets the app
+# and the widget together (they must match) without touching the project file.
+build_number=
+if [ -n "$BUILD_NUMBER" ]; then
+  build_number="CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
+fi
+
 # --reset-cache: Metro's cache could still hold the other environment's values.
 echo "Archiving ($method)..."
 xcodebuild -workspace ReadPanda.xcworkspace -scheme ReadPanda \
   -configuration Release -destination 'generic/platform=iOS' \
   -archivePath "$archive" -allowProvisioningUpdates "$@" \
-  EXTRA_PACKAGER_ARGS=--reset-cache \
+  EXTRA_PACKAGER_ARGS=--reset-cache $build_number \
   archive -quiet
 
 echo "Exporting..."
