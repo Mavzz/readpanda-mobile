@@ -111,6 +111,67 @@ yarn ipa --adhoc      # Ad Hoc signing, e.g. for Firebase App Distribution
 The `.ipa` only installs on devices registered to the team. Anyone else
 needs TestFlight.
 
+### Firebase App Distribution
+
+```bash
+yarn release                                 # build Ad Hoc and send it to testers
+yarn release notes:"Fixes the comment sheet"  # write the release notes yourself
+```
+
+By default the release notes are the `feat` and `fix` commit subjects since the
+last release, without their prefix. Each release's notes end with
+`Build <sha>`, which is how the next run knows where to start. The first
+release, or one after a build uploaded by hand, uses the last 20 commits.
+
+It only runs on `master` with a clean working tree that matches
+`origin/master`, so every build testers get is a pushed commit on the main
+line. It pulls the device IDs of testers who registered through their Firebase
+invite, registers any new ones with Apple, builds with `yarn ipa --adhoc`,
+checks that every tester device made it into the profiles, and uploads to the
+groups in `FIREBASE_GROUPS`. A tester who registers afterwards gets the next
+release, not this one.
+
+Setup, once:
+
+1. `brew install ruby` (macOS's Ruby 2.6 is too old for fastlane). The first
+   run installs the gems into `vendor/bundle`.
+2. In App Store Connect → Users and Access → Integrations, create a Team Key
+   with the App Manager role and download the `.p8` (you only get one chance).
+3. In Firebase → Project settings → Service accounts, generate a private key
+   and give that service account the Firebase App Distribution Admin role in
+   Google Cloud IAM.
+4. Copy `fastlane/.env.example` to `fastlane/.env` and fill it in. Keep the
+   `.p8` and the JSON outside the repo.
+
+#### From GitHub Actions
+
+**Actions → Firebase - Release → Run workflow** on `master` runs the same lane
+on a macOS runner, with optional release notes. It needs these repository
+secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `ASC_KEY_ID`, `ASC_ISSUER_ID` | as in `fastlane/.env` |
+| `ASC_KEY_P8` | the contents of the `.p8` |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | the contents of the service account JSON |
+| `FIREBASE_GROUPS` | as in `fastlane/.env` |
+| `ENV_PROD` | the contents of `.env.prod` |
+| `GOOGLE_SERVICE_INFO` | the contents of `ios/GoogleService-Info.plist` (the Analyze workflow uses it too) |
+| `CERT_P12_BASE64`, `CERT_P12_PASSWORD` | the signing certificates, below |
+
+The runner has no certificates of its own. You need an **Apple Distribution**
+certificate as well as Apple Development; if Keychain Access doesn't list one,
+create it in Xcode → Settings → Accounts → the team → Manage Certificates →
++ → Apple Distribution. Then in Keychain Access → My Certificates, select both,
+right-click → Export 2 items as a `.p12` with a password, and copy it base64'd:
+
+```bash
+base64 -i Certificates.p12 | pbcopy    # paste into CERT_P12_BASE64
+```
+
+Delete the `.p12` afterwards. Certificates expire after a year; when you renew
+them, update the secret.
+
 ## Before you push
 
 ```bash
