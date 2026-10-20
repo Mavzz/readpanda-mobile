@@ -33,13 +33,58 @@ const syncUser = ({ user, token }) => {
   Sentry.setUser(uuid ? { id: uuid } : null);
 };
 
+export const isSentryEnabled = Boolean(SENTRY_DSN);
+
+// A bug report sent soon after an error is most likely about that error, so
+// it gets linked to it. Memory only: after a relaunch nothing is linked.
+const LINK_WINDOW_MS = 5 * 60 * 1000;
+let lastError = null;
+
+const trackLastError = (event) => {
+  // Error events have no type; transactions and feedback do.
+  if (!event.type) {
+    lastError = { id: event.event_id, at: Date.now() };
+  }
+  return event;
+};
+
+export const recentEventId = () =>
+  lastError && Date.now() - lastError.at < LINK_WINDOW_MS ? lastError.id : undefined;
+
+const base64ToBytes = (base64) => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
+
+// image is the picker's asset ({ base64, type }), or null. The email goes only
+// into the report's contact email, never onto the Sentry user, so it stays
+// off the reader's other events. Offline, the SDK keeps the report and sends
+// it later, so returning means it was handed over, not delivered.
+export const sendBugReport = ({ message, email, image }) => {
+  const feedback = { message, email: email || undefined, associatedEventId: recentEventId() };
+  if (!image) {
+    return Sentry.captureFeedback(feedback);
+  }
+  const contentType = image.type || 'image/jpeg';
+  const attachment = {
+    filename: `screenshot.${contentType === 'image/png' ? 'png' : 'jpg'}`,
+    data: base64ToBytes(image.base64),
+    contentType,
+  };
+  return Sentry.captureFeedback(feedback, { attachments: [attachment] });
+};
+
 // Call once, before the app registers, so errors thrown while the first
 // screen renders are caught. An empty SENTRY_DSN (a fresh clone, CI) leaves
 // Sentry off.
 export const initSentry = () => {
   Sentry.init({
     dsn: SENTRY_DSN || undefined,
-    enabled: Boolean(SENTRY_DSN),
+    enabled: isSentryEnabled,
     environment: __DEV__ ? 'development' : 'production',
     // release and dist are left to the SDK: it reads them from the native
     // build, the same values sentry-xcode.sh uploads source maps under.
@@ -48,6 +93,7 @@ export const initSentry = () => {
     tracePropagationTargets: [backendHost],
     integrations: [navigationIntegration],
     enableNativeFramesTracking: true,
+    beforeSend: trackLastError,
   });
 
   // One subscription covers loadUser, signIn, updateUser and signOut.

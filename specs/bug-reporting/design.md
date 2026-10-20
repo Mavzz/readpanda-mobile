@@ -10,7 +10,9 @@ Settings sheets already use.
 
 **Sheet.** `SettingsSheets.js` already has a private `Sheet` (a bottom modal
 with a grabber, dismissed by tapping the backdrop) and a `ConfirmSheet`. We
-export `Sheet` and add `BugReportSheet` next to them. Inside it:
+add `BugReportSheet` next to them in the same file, so `Sheet` stays private.
+`BugReportSheet` calls `sendBugReport` itself, and on success calls
+`onSent`. Inside it:
 - A `TextInput` (multiline, `maxLength={2000}`) on a
   `DS.colors.surfaceContainerLowest` background, a sunken field per DESIGN.md
   §2, with no border.
@@ -28,9 +30,23 @@ export `Sheet` and add `BugReportSheet` next to them. Inside it:
   once an image is picked.
 - "Send" and "Cancel" buttons styled like `ConfirmSheet`'s.
 
-`KeyboardAvoidingView` (`behavior="padding"`) wraps the sheet's content so it
-rises above the keyboard (R2.4). Closing with text in either field asks first,
-using the existing `ConfirmSheet` ("Discard this report?") (R2.6).
+`Sheet` gets an `avoidKeyboard` prop that wraps it in a `KeyboardAvoidingView`
+(`behavior="padding"`), so the sheet rises above the keyboard (R2.4). The
+other sheets don't pass it. Its content is capped at `DS.layout.sheetMax` and
+centred, so on iPad it's no wider than the other sheets (R5.3).
+
+Closing with text in either field asks first (R2.6). `ConfirmSheet`'s title,
+message and buttons move into a `ConfirmBody`, which `ConfirmSheet` keeps
+using. `BugReportSheet` shows a `ConfirmBody` ("Discard this report?" /
+Discard / Keep editing) in place of the form, inside the same Modal. A second
+Modal on top of the first is fragile on iOS, and swapping the content keeps
+the typed text safe. While the question is showing, tapping the backdrop
+means "Keep editing".
+
+When `sendBugReport` throws, the sheet shows "Couldn't send your report. Try
+again." in `DS.colors.error` above the buttons. It doesn't use a toast, since
+toasts render under Modals (R4.6). Every time `visible` turns true, the
+sheet resets its state, so the fields start empty (R6.2).
 
 **Screenshot.** `launchImageLibrary` from `react-native-image-picker`, the
 same library `src/utils/pickProfilePhoto.js` uses, with
@@ -74,7 +90,7 @@ it's true.
 | File | Change |
 |------|--------|
 | `src/utils/sentry.js` | modified: `isSentryEnabled`, `beforeSend` that tracks the recent event, `recentEventId()`, `sendBugReport()` |
-| `src/screens/profile/SettingsSheets.js` | modified: export `Sheet`; new `BugReportSheet` with the description and optional email fields |
+| `src/screens/profile/SettingsSheets.js` | modified: `Sheet` gains `avoidKeyboard`; `ConfirmBody` split out of `ConfirmSheet`; new `BugReportSheet` with the description and optional email fields |
 | `src/screens/profile/SettingsScreen.js` | modified: "Report a bug" row (icon `bug-outline`) after "Help & support"; sheet visibility state |
 | `src/screens/profile/__tests__/BugReportSheet.test.js` | new: Send disabled when empty, max length, invalid email disables Send, empty email sends none, attach/remove, send calls `captureFeedback`, the discard confirmation |
 | `jest.setup.js` | modified: add `captureFeedback` and `lastEventId` to the Sentry mock; mock `react-native-image-picker` |
@@ -83,7 +99,8 @@ it's true.
 ## Data and state
 - No new stores, API endpoints or persisted keys.
 - Local state in `SettingsScreen`: `bugReportOpen`. In `BugReportSheet`:
-  `message`, `email`, `image`, `sending`. None of it is persisted.
+  `message`, `email`, `image`, `sending`, `sendError`, `confirmingDiscard`.
+  None of it is persisted.
 - In-memory module state in `sentry.js`: the last error event's ID and time.
 - Sentry: reports appear under User Feedback for `readpanda-mobile`. The
   IP and location scrubbing from specs/sentry applies to them too. A contact
@@ -108,7 +125,8 @@ No route changes. The sheet is a `Modal` opened from Settings.
 - **Invalid email**: Send stays disabled until it's fixed or cleared. The
   description is never lost.
 - **Double tap on Send**: `sending` disables the button until the call returns.
-- **iPad**: the sheet keeps the width cap the Settings sheets already have.
+- **iPad**: the Settings sheets have no width cap of their own, so the bug
+  sheet's content is capped at `DS.layout.sheetMax`.
 - **Larger text**: the field grows up to a max height and then scrolls inside
   itself, so the buttons stay on screen.
 

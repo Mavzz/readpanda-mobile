@@ -10,7 +10,14 @@ jest.mock('@sentry/react-native', () => ({
   wrap: (component) => component,
   setUser: jest.fn(),
   captureException: jest.fn(),
+  captureFeedback: jest.fn(),
   reactNavigationIntegration: () => ({ registerNavigationContainer: jest.fn() }),
+}));
+
+// Opens the native photo picker; tests call the callback themselves.
+jest.mock('react-native-image-picker', () => ({
+  launchImageLibrary: jest.fn(),
+  launchCamera: jest.fn(),
 }));
 
 // Native views most components use; rendered as plain Views in tests.

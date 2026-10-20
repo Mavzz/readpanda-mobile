@@ -57,7 +57,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>ReadPanda uses the camera so you can take a new profile photo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ReadPanda uses your photo library so you can choose a profile photo.</string>
+	<string>ReadPanda uses your photo library so you can choose a profile photo or attach a screenshot to a bug report.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

@@ -85,7 +85,8 @@ lose it if my connection drops.
    once the device is back online, and THE app SHALL still show the toast
    from R4.4.
 6. IF sending throws THEN THE sheet SHALL stay open with the description
-   intact and SHALL show an error toast.
+   intact and SHALL show an error message inside the sheet. (A toast would
+   be hidden behind the sheet's Modal.)
 
 ### R5. Look and accessibility
 **User story:** As a tester, I want the form to feel like part of ReadPanda,
@@ -115,8 +116,10 @@ about my report, without having to share it when I don't.
 4. IF the email field has text that isn't a valid email address THEN THE
    "Send" button SHALL be disabled and THE field SHALL say why.
 5. WHEN the reader fills in the email field THE report SHALL carry it as the
-   feedback's contact email only. It SHALL NOT be set as the Sentry user's
-   email, so it doesn't appear on their other events.
+   feedback's contact email. THE app SHALL NOT set it on the Sentry user, so
+   it doesn't appear on the reader's other events. (Sentry's server copies
+   the contact email onto the report's own user when it stores the report.
+   That stays on the report.)
 
 ## Open questions
 - [x] Photo library permission text: it will also mention bug-report

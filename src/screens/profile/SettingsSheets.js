@@ -1,19 +1,36 @@
-import { View, Text, StyleSheet, Modal, Pressable, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import {
+  View, Text, TextInput, Image, StyleSheet, Modal, Pressable, ActivityIndicator, KeyboardAvoidingView,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { DS } from '../../styles/global';
 import profileStyles from './profileStyles';
 import PressableScale from '../../components/PressableScale';
+import { sendBugReport } from '../../utils/sentry';
+import log from '../../utils/logger';
 
-const Sheet = ({ visible, onClose, children }) => (
-  <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+// avoidKeyboard is for sheets with a text field, so they rise above the
+// keyboard instead of being covered by it.
+const Sheet = ({ visible, onClose, avoidKeyboard = false, children }) => {
+  const body = (
     <Pressable style={styles.backdrop} onPress={onClose}>
       <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
         <View style={styles.grabber} />
         {children}
       </Pressable>
     </Pressable>
-  </Modal>
-);
+  );
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      {avoidKeyboard ? (
+        <KeyboardAvoidingView style={styles.keyboardAvoider} behavior="padding">
+          {body}
+        </KeyboardAvoidingView>
+      ) : body}
+    </Modal>
+  );
+};
 
 // Pick one of a setting's options. Choosing closes the sheet.
 export const ChoiceSheet = ({ visible, title, options = [], value, onSelect, onClose }) => (
@@ -43,15 +60,17 @@ export const ChoiceSheet = ({ visible, title, options = [], value, onSelect, onC
   </Sheet>
 );
 
-// Sign out / Delete account. The confirm button carries the action's own
-// colour; neither is the gradient CTA. `children` goes under the message
-// (Delete account's ReadPanda+ note). While `busy` the confirm button shows a
-// spinner and nothing in the sheet takes a tap, so the action can't run twice
-// or be walked away from halfway (account-deletion R3.3).
-export const ConfirmSheet = ({
-  visible, title, message, confirmLabel, destructive, busy = false, onConfirm, onClose, children,
+// A question with a confirm button that carries the action's own colour
+// (neither is the gradient CTA) and a way back. `children` goes under the
+// message (Delete account's ReadPanda+ note). While `busy` the confirm button
+// shows a spinner and nothing takes a tap, so the action can't run twice or be
+// walked away from halfway (account-deletion R3.3). Split out of ConfirmSheet
+// so the bug report can ask inside its own Modal.
+const ConfirmBody = ({
+  title, message, confirmLabel, cancelLabel = 'Cancel', destructive, busy = false, onConfirm, onCancel,
+  children,
 }) => (
-  <Sheet visible={visible} onClose={busy ? () => {} : onClose}>
+  <>
     <Text style={styles.title}>{title}</Text>
     {message ? <Text style={styles.message}>{message}</Text> : null}
     {children}
@@ -70,18 +89,226 @@ export const ConfirmSheet = ({
       )}
     </PressableScale>
     <PressableScale
-      onPress={onClose}
+      onPress={onCancel}
       disabled={busy}
       style={[styles.button, busy && styles.buttonInactive]}
       accessibilityRole="button"
       accessibilityState={{ disabled: busy }}
     >
-      <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
+      <Text style={[styles.buttonText, styles.cancelText]}>{cancelLabel}</Text>
     </PressableScale>
+  </>
+);
+
+// Sign out / Delete account.
+export const ConfirmSheet = ({ visible, busy = false, onClose, ...body }) => (
+  <Sheet visible={visible} onClose={busy ? () => {} : onClose}>
+    <ConfirmBody {...body} busy={busy} onCancel={onClose} />
   </Sheet>
 );
 
+const MAX_REPORT_LENGTH = 2000;
+// Loose on purpose: it catches typos like a missing @ or domain, and the
+// address is only ever used by a person replying.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// The picker scales the image down before handing over base64, so a phone
+// screenshot stays a small attachment (R3.4).
+const SCREENSHOT_OPTIONS = {
+  mediaType: 'photo',
+  selectionLimit: 1,
+  maxWidth: 1600,
+  maxHeight: 1600,
+  quality: 0.8,
+  includeBase64: true,
+};
+
+// "Report a bug" (bug-reporting spec). Sends to Sentry User Feedback itself
+// and calls onSent once the SDK has it; the parent closes and toasts. A send
+// error is shown in the sheet, since toasts render under the Modal (R4.6).
+export const BugReportSheet = ({ visible, onSent, onClose }) => {
+  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
+  const [image, setImage] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+
+  // Start empty every time the sheet opens, never prefilled from the account
+  // (R6.2). Done during render, not in an effect, so the old text never
+  // flashes up.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setMessage('');
+      setEmail('');
+      setImage(null);
+      setSending(false);
+      setSendError(false);
+      setConfirmingDiscard(false);
+    }
+  }
+
+  const trimmedEmail = email.trim();
+  const emailInvalid = trimmedEmail !== '' && !EMAIL_PATTERN.test(trimmedEmail);
+  const canSend = message.trim() !== '' && !emailInvalid && !sending;
+
+  const handleSend = () => {
+    if (!canSend) {
+      return;
+    }
+    setSending(true);
+    setSendError(false);
+    try {
+      sendBugReport({ message: message.trim(), email: trimmedEmail, image });
+    } catch (error) {
+      log.warn('Bug report failed to send:', error);
+      setSending(false);
+      setSendError(true);
+      return;
+    }
+    onSent();
+  };
+
+  // Cancelling or a failed pick leaves the sheet as it was (R3.3).
+  const handleAttach = () => {
+    launchImageLibrary(SCREENSHOT_OPTIONS, (response) => {
+      if (response.didCancel) {
+        return;
+      }
+      const asset = response.assets?.[0];
+      if (response.errorMessage || !asset?.base64) {
+        log.warn('Screenshot pick failed:', response.errorMessage);
+        return;
+      }
+      setImage(asset);
+    });
+  };
+
+  // Cancel, a tap on the backdrop and the back gesture all come here. With
+  // something typed they ask first (R2.6); while asking they mean "keep
+  // editing", so a stray tap never throws the report away.
+  const handleClose = () => {
+    if (confirmingDiscard) {
+      setConfirmingDiscard(false);
+    } else if (message.trim() !== '' || trimmedEmail !== '' || image) {
+      setConfirmingDiscard(true);
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <Sheet visible={visible} onClose={handleClose} avoidKeyboard>
+      {confirmingDiscard ? (
+        <View style={styles.form}>
+          <ConfirmBody
+            title="Discard this report?"
+            message={'What you\u2019ve written won\u2019t be sent.'}
+            confirmLabel="Discard"
+            cancelLabel="Keep editing"
+            destructive
+            onConfirm={onClose}
+            onCancel={() => setConfirmingDiscard(false)}
+          />
+        </View>
+      ) : (
+        <View style={styles.form}>
+          <Text style={styles.title}>Report a bug</Text>
+          <Text style={styles.message}>
+            What happened, and what did you expect? Your device, app version and recent screens
+            are included for you.
+          </Text>
+
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Describe the bug"
+            placeholderTextColor={DS.colors.placeholder}
+            multiline
+            maxLength={MAX_REPORT_LENGTH}
+            textAlignVertical="top"
+            style={[styles.field, styles.reportField]}
+            accessibilityLabel="Describe the bug"
+          />
+
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email (optional)"
+            placeholderTextColor={DS.colors.placeholder}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="emailAddress"
+            style={[styles.field, styles.emailField]}
+            accessibilityLabel="Email, optional"
+            accessibilityHint="Only if you'd like a reply about this report"
+          />
+          <Text style={[styles.hint, emailInvalid && styles.hintError]}>
+            {emailInvalid
+              ? 'Enter a full email address, or leave this empty.'
+              : 'Only if you\u2019d like a reply about this report.'}
+          </Text>
+
+          {image ? (
+            <View style={styles.screenshotRow}>
+              <Image
+                source={{ uri: image.uri }}
+                style={styles.thumbnail}
+                accessibilityIgnoresInvertColors
+              />
+              <Text style={styles.screenshotLabel}>Screenshot attached</Text>
+              <Pressable
+                onPress={() => setImage(null)}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Remove screenshot"
+              >
+                <Icon name="close-circle" size={22} color={DS.colors.onSurfaceVariant} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleAttach}
+              style={({ pressed }) => [styles.screenshotRow, pressed && styles.optionPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Attach a screenshot"
+            >
+              <Icon name="image-outline" size={20} color={DS.colors.primary} />
+              <Text style={styles.attachLabel}>Attach a screenshot</Text>
+            </Pressable>
+          )}
+
+          {sendError ? (
+            <Text style={styles.sendError} accessibilityLiveRegion="polite">
+            Couldn{'\u2019'}t send your report. Try again.
+            </Text>
+          ) : null}
+
+          <PressableScale
+            onPress={handleSend}
+            disabled={!canSend}
+            style={[styles.button, styles.confirmButton]}
+            accessibilityRole="button"
+            accessibilityLabel="Send"
+            accessibilityState={{ disabled: !canSend, busy: sending }}
+          >
+            <Text style={[styles.buttonText, !canSend && styles.buttonTextDisabled]}>Send</Text>
+          </PressableScale>
+          <PressableScale onPress={handleClose} style={styles.button} accessibilityRole="button">
+            <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
+          </PressableScale>
+        </View>
+      )}
+    </Sheet>
+  );
+};
+
 const styles = StyleSheet.create({
+  keyboardAvoider: {
+    flex: 1,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: DS.colors.surfaceContainerLowest + 'B3', // ~70%
@@ -171,5 +398,78 @@ const styles = StyleSheet.create({
   },
   buttonInactive: {
     opacity: 0.4,
+  },
+  buttonTextDisabled: {
+    color: DS.colors.disabled,
+  },
+
+  // Bug report: capped so it doesn't stretch across an iPad (R5.3).
+  form: {
+    width: '100%',
+    maxWidth: DS.layout.sheetMax,
+    alignSelf: 'center',
+  },
+  // Sunken fields, no border (DESIGN.md §5 Input Fields).
+  field: {
+    ...DS.type.body,
+    color: DS.colors.onSurface,
+    backgroundColor: DS.colors.surfaceContainerLowest,
+    borderRadius: DS.radius.md,
+    paddingHorizontal: DS.spacing[16],
+  },
+  // Grows with the text up to a cap, then scrolls inside itself so the
+  // buttons stay on screen with larger text.
+  reportField: {
+    minHeight: 120,
+    maxHeight: 200,
+    paddingTop: DS.spacing[12],
+    paddingBottom: DS.spacing[12],
+    marginTop: DS.spacing[16],
+  },
+  emailField: {
+    minHeight: DS.size.minHit + 4,
+    marginTop: DS.spacing[12],
+  },
+  hint: {
+    ...DS.type.meta,
+    color: DS.colors.onSurfaceVariant,
+    marginTop: DS.spacing[8],
+    marginHorizontal: DS.spacing[16],
+  },
+  hintError: {
+    color: DS.colors.error,
+  },
+  // A tonal panel, like the ReadPanda+ note on Delete account.
+  screenshotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing[12],
+    minHeight: 56,
+    marginTop: DS.spacing[16],
+    paddingHorizontal: DS.spacing[16],
+    paddingVertical: DS.spacing[8],
+    borderRadius: DS.radius.md,
+    backgroundColor: DS.colors.surfaceContainer,
+  },
+  thumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: DS.radius.coverSmall,
+    backgroundColor: DS.colors.surfaceContainerLowest,
+  },
+  screenshotLabel: {
+    ...DS.type.rowTitle,
+    flex: 1,
+    color: DS.colors.onSurface,
+  },
+  attachLabel: {
+    ...DS.type.rowTitle,
+    color: DS.colors.primary,
+  },
+  sendError: {
+    ...DS.type.body,
+    color: DS.colors.error,
+    textAlign: 'center',
+    marginTop: DS.spacing[16],
   },
 });
