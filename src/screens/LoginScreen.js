@@ -22,6 +22,7 @@ import useLayout from '../hooks/useLayout';
 import ReadableColumn from '../components/ReadableColumn';
 import { showToast } from '../components/Toaster';
 import OneTapButtons from './signUp/OneTapButtons';
+import TermsLine from './signUp/TermsLine';
 import readpandaLogo from '../assets/readpandaLogo_New.png';
 
 const Login = ({ navigation }) => {
@@ -167,6 +168,9 @@ const Login = ({ navigation }) => {
           <Text style={styles.footerLink}> Create an account</Text>
         </Pressable>
       </View>
+      {/* Continue with Apple or Google here can create an account without
+        ever passing Sign up, so the agreement shows here too. */}
+      <TermsLine style={styles.terms} />
     </>
   );
 
@@ -305,6 +309,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: DS.font.bold,
     color: DS.colors.primary,
+  },
+  terms: {
+    marginTop: 16,
   },
 });
 

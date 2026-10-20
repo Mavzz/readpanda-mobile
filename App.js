@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import useAuthStore from './src/stores/authStore';
 import { initSecureStorage } from './src/services/secureStorage';
 import log from './src/utils/logger';
+import * as Sentry from '@sentry/react-native';
 
 const App = () => {
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -23,6 +24,9 @@ const App = () => {
       .then(() => setStorage('ready'))
       .catch((error) => {
         log.error('Could not open secure storage:', error);
+        // Handled, so Sentry wouldn't see it otherwise, but the reader is
+        // stuck on the retry screen until it opens.
+        Sentry.captureException(error);
         setStorage('failed');
       });
   }, []);
@@ -145,4 +149,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
+// Sentry.wrap reports render errors anywhere below the root.
+export default Sentry.wrap(App);

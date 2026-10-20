@@ -10,16 +10,19 @@ import { unregisterPushDevice } from '../../hooks/usePushNotifications';
 import enhancedStorage from '../../utils/enhancedStorage';
 import log from '../../utils/logger';
 import { useScreenTracking } from '../../utils/screenTracking';
+import { isSentryEnabled } from '../../utils/sentry';
+import { openLegalPage } from '../../utils/legalLinks';
 import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/readerSettings';
 import { DS } from '../../styles/global';
 import useSubscriptionStore from '../../stores/subscriptionStore';
+import { isPlusEnabled } from '../../services/purchasesService';
 import useNotificationStore, { summarizeSettings } from '../../stores/notificationStore';
 import useNotificationPermission from '../../hooks/useNotificationPermission';
 import packageJson from '../../../package.json';
 import useLayout from '../../hooks/useLayout';
 import profileStyles from './profileStyles';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
-import { ChoiceSheet, ConfirmSheet } from './SettingsSheets';
+import { BugReportSheet, ChoiceSheet, ConfirmSheet } from './SettingsSheets';
 import PressableScale from '../../components/PressableScale';
 
 const CHOICE_TITLES = {
@@ -58,6 +61,7 @@ const SettingsScreen = () => {
   const [choice, setChoice] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [bugReportOpen, setBugReportOpen] = useState(false);
 
   useScreenTracking('SettingsScreen');
 
@@ -103,9 +107,9 @@ const SettingsScreen = () => {
     showToast('Your account has been deleted.', 'success');
   };
 
-  const comingSoon = (what) => () => showToast(`${what} is coming soon`, 'info');
-
-  const plusGroup = (
+  // Hidden while ReadPanda+ is off: it's the only way to the paywall
+  // outside the free limits.
+  const plusGroup = isPlusEnabled ? (
     <SettingsGroup title="ReadPanda+">
       <SettingsRow
         icon="sparkles-outline"
@@ -114,7 +118,7 @@ const SettingsScreen = () => {
         onPress={() => navigation.navigate('Paywall', { reason: 'settings' })}
       />
     </SettingsGroup>
-  );
+  ) : null;
 
   const readingGroup = (
     <SettingsGroup title="Reading">
@@ -164,12 +168,13 @@ const SettingsScreen = () => {
 
   const aboutGroup = (
     <SettingsGroup title="About">
-      <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={comingSoon('Help & support')} />
-      <SettingsRow
-        icon="document-text-outline"
-        label="Terms & privacy policy"
-        onPress={comingSoon('Terms & privacy policy')}
-      />
+      <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={() => navigation.navigate('Help')} />
+      {/* Reports go to Sentry, so with no DSN there's nowhere to send one. */}
+      {isSentryEnabled ? (
+        <SettingsRow icon="bug-outline" label="Report a bug" onPress={() => setBugReportOpen(true)} />
+      ) : null}
+      <SettingsRow icon="document-text-outline" label="Terms of use" onPress={() => openLegalPage('terms')} />
+      <SettingsRow icon="lock-closed-outline" label="Privacy policy" onPress={() => openLegalPage('privacy')} />
     </SettingsGroup>
   );
   // Sign out and Delete account stay last, both behind a confirmation.
@@ -250,6 +255,15 @@ const SettingsScreen = () => {
         onClose={() => setChoice(null)}
       />
 
+      <BugReportSheet
+        visible={bugReportOpen}
+        onSent={() => {
+          setBugReportOpen(false);
+          showToast('Thanks \u2014 your report was sent', 'success');
+        }}
+        onClose={() => setBugReportOpen(false)}
+      />
+
       <ConfirmSheet
         visible={confirm === 'signOut'}
         title="Sign out?"
@@ -270,7 +284,7 @@ const SettingsScreen = () => {
       >
         {/* Only Apple can cancel a subscription, so say so and send them
             there; it doesn't stop the deletion (R2.1, R2.2). */}
-        {isPlus ? (
+        {isPlusEnabled && isPlus ? (
           <View style={styles.plusNote}>
             <Text style={styles.plusNoteText}>Deleting your account doesn{'’'}t cancel ReadPanda+.</Text>
             <Pressable

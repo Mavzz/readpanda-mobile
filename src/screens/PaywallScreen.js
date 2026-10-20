@@ -12,6 +12,7 @@ import haptics from '../utils/haptics';
 import useLayout from '../hooks/useLayout';
 import FormSheetFrame from '../components/FormSheetFrame';
 import log from '../utils/logger';
+import { openLegalPage } from '../utils/legalLinks';
 
 // ReadPanda+ paywall. Opened by usePlusGate with the reason the reader hit a
 // limit, so the headline speaks to what they were doing (MONETIZATION doc §
@@ -237,11 +238,11 @@ const PaywallScreen = ({ navigation, route }) => {
             Renews automatically until cancelled in your store account settings, at least 24 hours before the period ends.
             </Text>
             <View style={styles.links}>
-              <Pressable onPress={() => showToast('Terms are coming soon', 'info')} hitSlop={8}>
+              <Pressable onPress={() => openLegalPage('terms')} hitSlop={8} accessibilityRole="link" accessibilityLabel="Terms">
                 <Text style={styles.link}>Terms</Text>
               </Pressable>
               <Text style={styles.linkDot}>·</Text>
-              <Pressable onPress={() => showToast('Privacy policy is coming soon', 'info')} hitSlop={8}>
+              <Pressable onPress={() => openLegalPage('privacy')} hitSlop={8} accessibilityRole="link" accessibilityLabel="Privacy Policy">
                 <Text style={styles.link}>Privacy</Text>
               </Pressable>
             </View>

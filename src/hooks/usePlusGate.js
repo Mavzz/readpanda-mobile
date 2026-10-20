@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import useSubscriptionStore from '../stores/subscriptionStore';
+import { isPlusEnabled } from '../services/purchasesService';
 import useRoomStore from '../stores/roomStore';
 import useBucketsStore from '../stores/bucketsStore';
 
@@ -30,7 +31,8 @@ const withinFreeTier = (reason, { rooms, customBuckets }) => {
 
 // gate(reason, action): runs the action when the reader is within the free
 // limits (or has ReadPanda+), otherwise opens the paywall with the reason,
-// which picks its headline. Usage:
+// which picks its headline. While ReadPanda+ is off there's nothing to buy,
+// so there are no limits either. Usage:
 //   const gate = usePlusGate();
 //   const createRoom = () => gate('rooms', () => navigation.navigate('CreateRoomScreen'));
 const usePlusGate = () => {
@@ -42,7 +44,7 @@ const usePlusGate = () => {
   return useCallback((reason, action) => {
     // Development builds skip the free limits, so testing more than one room
     // (or bucket) doesn't need a sandbox purchase. Release builds keep them.
-    if (__DEV__ || isPlus || withinFreeTier(reason, { rooms, customBuckets })) {
+    if (!isPlusEnabled || __DEV__ || isPlus || withinFreeTier(reason, { rooms, customBuckets })) {
       action();
       return;
     }

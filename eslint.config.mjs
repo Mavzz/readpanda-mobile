@@ -28,6 +28,7 @@ export default [
         clearInterval: 'readonly',
         require: 'readonly',
         crypto: 'readonly', // polyfilled by react-native-get-random-values
+        atob: 'readonly', // built into Hermes
       },
     },
     plugins: {
