@@ -4,6 +4,7 @@ import ManuscriptScreen from '../screens/ManuscriptScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
+import HelpScreen from '../screens/profile/HelpScreen';
 import InterestScreen from '../screens/InterestScreen';
 import CreateBucketScreen from '../screens/CreateBucketScreen';
 import CreateRoomScreen from '../screens/CreateRoomScreen';
@@ -73,11 +74,12 @@ const MainStackNavigator = () => {
           navigate('ManuscriptScreen'), since the name resolves upward from
           anywhere in the tree. */}
       <Stack.Screen name="ManuscriptScreen" component={ManuscriptScreen} />
-      {/* Profile (7a), Settings (7b) and Notifications draw their own 38pt
-          back button. */}
+      {/* Profile (7a), Settings (7b), Notifications and Help draw their own
+          38pt back button. */}
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen
         name="Interest"
         component={InterestScreen}

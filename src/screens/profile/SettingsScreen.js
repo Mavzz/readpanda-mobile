@@ -107,8 +107,6 @@ const SettingsScreen = () => {
     showToast('Your account has been deleted.', 'success');
   };
 
-  const comingSoon = (what) => () => showToast(`${what} is coming soon`, 'info');
-
   // Hidden while ReadPanda+ is off: it's the only way to the paywall
   // outside the free limits.
   const plusGroup = isPlusEnabled ? (
@@ -170,7 +168,7 @@ const SettingsScreen = () => {
 
   const aboutGroup = (
     <SettingsGroup title="About">
-      <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={comingSoon('Help & support')} />
+      <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={() => navigation.navigate('Help')} />
       {/* Reports go to Sentry, so with no DSN there's nowhere to send one. */}
       {isSentryEnabled ? (
         <SettingsRow icon="bug-outline" label="Report a bug" onPress={() => setBugReportOpen(true)} />
