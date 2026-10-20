@@ -15,6 +15,7 @@ import { openLegalPage } from '../../utils/legalLinks';
 import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/readerSettings';
 import { DS } from '../../styles/global';
 import useSubscriptionStore from '../../stores/subscriptionStore';
+import { isPlusEnabled } from '../../services/purchasesService';
 import useNotificationStore, { summarizeSettings } from '../../stores/notificationStore';
 import useNotificationPermission from '../../hooks/useNotificationPermission';
 import packageJson from '../../../package.json';
@@ -108,7 +109,9 @@ const SettingsScreen = () => {
 
   const comingSoon = (what) => () => showToast(`${what} is coming soon`, 'info');
 
-  const plusGroup = (
+  // Hidden while ReadPanda+ is off: it's the only way to the paywall
+  // outside the free limits.
+  const plusGroup = isPlusEnabled ? (
     <SettingsGroup title="ReadPanda+">
       <SettingsRow
         icon="sparkles-outline"
@@ -117,7 +120,7 @@ const SettingsScreen = () => {
         onPress={() => navigation.navigate('Paywall', { reason: 'settings' })}
       />
     </SettingsGroup>
-  );
+  ) : null;
 
   const readingGroup = (
     <SettingsGroup title="Reading">
@@ -283,7 +286,7 @@ const SettingsScreen = () => {
       >
         {/* Only Apple can cancel a subscription, so say so and send them
             there; it doesn't stop the deletion (R2.1, R2.2). */}
-        {isPlus ? (
+        {isPlusEnabled && isPlus ? (
           <View style={styles.plusNote}>
             <Text style={styles.plusNoteText}>Deleting your account doesn{'’'}t cancel ReadPanda+.</Text>
             <Pressable
