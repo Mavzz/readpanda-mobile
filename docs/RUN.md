@@ -36,6 +36,11 @@ These hold keys, so they're gitignored and never in the repo:
 | `ios/GoogleService-Info.plist` | iOS build: Firebase, push, Google sign-in. The build fails without it. |
 | `android/app/google-services.json` | Android build only |
 
+`SENTRY_DSN` in `.env.dev` / `.env.prod` sends crashes and errors to Sentry
+(`readpanda-z9/readpanda-mobile`). The DSN is in Project settings → Client
+Keys, and it's public by design. Leave it empty and the app runs with Sentry
+off. Debug builds report as `environment: development`.
+
 ### 4. Point the app at a backend
 
 There are two environments, each in its own gitignored file:
@@ -143,6 +148,12 @@ Setup, once:
    Google Cloud IAM.
 4. Copy `fastlane/.env.example` to `fastlane/.env` and fill it in. Keep the
    `.p8` and the JSON outside the repo.
+5. For readable stack traces in Sentry, create an organization auth token in
+   Sentry (Settings → Developer Settings → Organization Tokens) and set it as
+   `SENTRY_AUTH_TOKEN` in `fastlane/.env`. The archive then uploads the
+   source maps and dSYMs. Without it the build still succeeds but warns, and
+   testers' crashes show unreadable frames. A token that's set but fails to
+   upload fails the build.
 
 #### From GitHub Actions
 
@@ -159,6 +170,7 @@ secrets (Settings → Secrets and variables → Actions):
 | `ENV_PROD` | the contents of `.env.prod` |
 | `GOOGLE_SERVICE_INFO` | the contents of `ios/GoogleService-Info.plist` (the Analyze workflow uses it too) |
 | `CERT_P12_BASE64`, `CERT_P12_PASSWORD` | the signing certificates, below |
+| `SENTRY_AUTH_TOKEN` | as in `fastlane/.env` |
 
 The runner has no certificates of its own. You need an **Apple Distribution**
 certificate as well as Apple Development; if Keychain Access doesn't list one,

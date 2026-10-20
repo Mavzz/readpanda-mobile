@@ -11,6 +11,7 @@ import useInviteDeepLink from '../hooks/useInviteDeepLink';
 import usePushNotifications from '../hooks/usePushNotifications';
 import useWidgetDeepLink from '../hooks/useWidgetDeepLink';
 import useWidgetSync from '../widget/useWidgetSync';
+import { navigationIntegration } from '../utils/sentry';
 
 const Stack = createNativeStackNavigator();
 
@@ -64,6 +65,7 @@ const AppContent = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
+      onReady={() => navigationIntegration.registerNavigationContainer(navigationRef)}
       theme={MyTheme}
       linking={linking}
       fallback={<Text>Loading...</Text>}

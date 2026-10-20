@@ -4,6 +4,15 @@ jest.mock('./src/utils/logger', () => ({
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+// Sentry needs its native module; tests only need the calls to be no-ops.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  wrap: (component) => component,
+  setUser: jest.fn(),
+  captureException: jest.fn(),
+  reactNavigationIntegration: () => ({ registerNavigationContainer: jest.fn() }),
+}));
+
 // Native views most components use; rendered as plain Views in tests.
 jest.mock('react-native-vector-icons/Ionicons', () => {
   const { View } = require('react-native');

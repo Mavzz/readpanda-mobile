@@ -1,5 +1,6 @@
 const path = require('path');
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const {withSentryConfig} = require('@sentry/react-native/metro');
 
 /**
  * Metro configuration
@@ -16,4 +17,6 @@ const config = {
   },
 };
 
-module.exports = mergeConfig(getDefaultConfig(projectRoot), config);
+// withSentryConfig stamps a Debug ID into the bundle and its source map, so
+// Sentry can match a release build's stack traces to the right map.
+module.exports = withSentryConfig(mergeConfig(getDefaultConfig(projectRoot), config));
