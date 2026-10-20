@@ -119,9 +119,13 @@ yarn release notes:"Fixes the comment sheet"  # write the release notes yourself
 ```
 
 By default the release notes are the `feat` and `fix` commit subjects since the
-last release, without their prefix. Each release's notes end with
-`Build <sha>`, which is how the next run knows where to start. The first
-release, or one after a build uploaded by hand, uses the last 20 commits.
+last release, without their prefix. Commits scoped `release` or `ci` (changes
+to this tooling) are left out. Each release's notes end with `Build <sha>`,
+which is how the next run knows where to start. The first release, or one
+after a build uploaded by hand, uses the last 20 commits.
+
+Each release's build number is one past the latest release's in Firebase, so
+the project file keeps `1` and doesn't need bumping.
 
 It only runs on `master` with a clean working tree that matches
 `origin/master`, so every build testers get is a pushed commit on the main

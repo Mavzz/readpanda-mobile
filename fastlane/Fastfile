@@ -58,7 +58,11 @@ platform :ios do
     register_devices(devices_file: UDIDS_FILE, api_key: api_key) unless udids.empty?
 
     head = git_out("rev-parse", "--short", "HEAD")
-    notes = options[:notes] || notes_since(last_release_commit(app_id, firebase_auth))
+    latest = firebase_app_distribution_get_latest_release(app: app_id, **firebase_auth)
+    notes = options[:notes] || notes_since(last_release_commit(latest))
+    # Each release gets a build number one past the latest, so testers can
+    # tell builds apart and iOS treats the new one as an update.
+    ENV["BUILD_NUMBER"] = (latest&.dig(:buildVersion).to_i + 1).to_s
     # The next release reads this line back to know where to start.
     notes += "\n\nBuild #{head}"
 
@@ -98,8 +102,7 @@ end
 # The commit the latest Firebase release was built from, read from its
 # "Build <sha>" line. nil for the first release, one uploaded by hand, or a
 # commit this checkout doesn't have.
-def last_release_commit(app_id, firebase_auth)
-  release = firebase_app_distribution_get_latest_release(app: app_id, **firebase_auth)
+def last_release_commit(release)
   sha = release&.dig(:releaseNotes, :text).to_s[/^Build ([0-9a-f]{7,40})$/, 1]
   return nil unless sha
 
@@ -111,10 +114,12 @@ end
 
 # Testers only care about what changed in the app, so only feat and fix
 # commits make it in, without their prefix: "feat(rooms): Leave a room" →
-# "Leave a room".
+# "Leave a room". Fixes to the release tooling itself (the release and ci
+# scopes) don't change the app, so they stay out.
 def notes_since(sha)
   range = sha ? "#{sha}..HEAD" : "-20"
   lines = git_out("log", range, "--no-merges", "--format=%s").lines.map(&:strip)
+  lines = lines.grep_v(/^\w+\((release|ci)\)!?: /)
   changes = %w[feat fix].flat_map do |type|
     lines.grep(/^#{type}(\(.*?\))?!?: /).map { |l| "- #{l.sub(/^[^:]+: /, '').sub(/^./, &:upcase)}" }
   end
