@@ -272,6 +272,7 @@
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				D0BD5AAF402C32E9B987BC7D /* Embed Foundation Extensions */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
+				3106D227F27E9881555B2AD9 /* Upload Debug Symbols to Sentry */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
 				E282291A46AC3450BE20368E /* [CP-User] [RNFB] Core Configuration */,
@@ -380,7 +381,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+			shellScript = "set -e\n\nif [ -z \"$SENTRY_AUTH_TOKEN\" ]; then\n  case \"$CONFIGURATION\" in\n    *Debug*) ;;\n    *) echo \"warning: SENTRY_AUTH_TOKEN isn't set, so this build's stack traces won't be readable in Sentry. yarn release sets it from fastlane/.env.\" ;;\n  esac\n  export SENTRY_DISABLE_AUTO_UPLOAD=true\nfi\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nSENTRY_XCODE=\"../node_modules/@sentry/react-native/scripts/sentry-xcode.sh\"\n\n# sentry-xcode.sh runs react-native-xcode.sh, then uploads the source maps.\n/bin/sh -c \"$WITH_ENVIRONMENT $SENTRY_XCODE\"\n";
 		};
 		00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -398,6 +399,24 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ReadPanda/Pods-ReadPanda-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		3106D227F27E9881555B2AD9 /* Upload Debug Symbols to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Upload Debug Symbols to Sentry";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -z \"$SENTRY_AUTH_TOKEN\" ]; then\n  case \"$CONFIGURATION\" in\n    *Debug*) ;;\n    *) echo \"warning: SENTRY_AUTH_TOKEN isn't set, so this build's stack traces won't be readable in Sentry. yarn release sets it from fastlane/.env.\" ;;\n  esac\n  export SENTRY_DISABLE_AUTO_UPLOAD=true\nfi\n\n/bin/sh ../node_modules/@sentry/react-native/scripts/sentry-xcode-debug-files.sh\n";
 		};
 		C38B50BA6285516D6DCD4F65 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

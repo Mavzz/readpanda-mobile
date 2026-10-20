@@ -77,6 +77,7 @@ jobs:
           FIREBASE_GROUPS: ${{ secrets.FIREBASE_GROUPS }}
           CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
           CERT_P12_PASSWORD: ${{ secrets.CERT_P12_PASSWORD }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           printf '%s\n' "$ENV_PROD" > .env.prod
           printf '%s\n' "$GOOGLE_SERVICE_INFO" > ios/GoogleService-Info.plist
@@ -91,6 +92,7 @@ jobs:
           FIREBASE_GROUPS=$FIREBASE_GROUPS
           CERT_P12_PATH=$RUNNER_TEMP/certs.p12
           CERT_P12_PASSWORD=$CERT_P12_PASSWORD
+          SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
           EOF
 
       - name: Build and distribute
