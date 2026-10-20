@@ -19,6 +19,7 @@
 		2EF9CA0761864E01B027CFB1 /* ReaderTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFC26DED4224D60ADDE3051 /* ReaderTheme.swift */; };
 		3ACD955F969C70EDB70A0EAF /* WidgetSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD2C797D33641EF22B401E6 /* WidgetSamples.swift */; };
 		3E79182E06A84E6EABB2F833 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4309E6FD86E4AE5A01B8204 /* CommentSheetView.swift */; };
+		3EE0E25E307E9BD539292513 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCAC0836EDA8B6ACA796B44E /* SafariView.swift */; };
 		489B2D3E565D752712765D01 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1C8124D92774C4B8369CF03F /* Assets.xcassets */; };
 		49752B6790F9F9AA9EBC2BCC /* LockScreenFaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952D78843981E3FB592E7A0D /* LockScreenFaces.swift */; };
 		567112E6988F15F08C7C6EEE /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36CE6C61D323F0D18286A77 /* WidgetIntents.swift */; };
@@ -44,6 +45,7 @@
 		DBD52B6A69A0389ADA74D7EF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		ED9194F04CA0586F7A36E82D /* libPods-ReadPanda.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DE3D45B6C97600EBD3763EF /* libPods-ReadPanda.a */; };
 		EFF5DD6364C1315E7E01BC98 /* ReadPandaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 78E064C9EEC3737B2F249BD0 /* ReadPandaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FB050AE27CDEC88EDCC7FF60 /* SafariView.m in Sources */ = {isa = PBXBuildFile; fileRef = 04E5CB09E5D53B3AEA5386E5 /* SafariView.m */; };
 		FDABA6D3DE26BCEEF2E106D4 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 57B15D82AAD0471A955ECE79 /* Manrope-ExtraBold.ttf */; };
 /* End PBXBuildFile section */
 
@@ -75,6 +77,7 @@
 		01E4145AF4470B1C955EDC22 /* WidgetState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetState.swift; sourceTree = "<group>"; };
 		0305DA42206041BAB933A98C /* Manrope-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Regular.ttf"; path = "../src/assets/fonts/Manrope-Regular.ttf"; sourceTree = "<group>"; };
 		035025091D6D406A9D0011F9 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 536680683833; includeInIndex = 0; lastKnownFileType = unknown; name = "Manrope-Medium.ttf"; path = "../src/assets/fonts/Manrope-Medium.ttf"; sourceTree = "<group>"; };
+		04E5CB09E5D53B3AEA5386E5 /* SafariView.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = SafariView.m; sourceTree = "<group>"; };
 		0738B9046DF08956A9ED1D50 /* Widgets13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Widgets13.swift; sourceTree = "<group>"; };
 		0A4EBFD12E5E390800EAF49B /* ReadPanda.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ReadPanda.entitlements; path = ReadPanda/ReadPanda.entitlements; sourceTree = "<group>"; };
 		0A68B02E2EAFEC4900871E69 /* RNAppAuthAuthorizationFlowManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNAppAuthAuthorizationFlowManager.h; sourceTree = "<group>"; };
@@ -109,6 +112,7 @@
 		9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = WidgetBridge.m; sourceTree = "<group>"; };
 		B4E3B16E2AAB4762AEE0A50D /* ReaderModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderModels.swift; sourceTree = "<group>"; };
 		B7E4CF0D210CDB8ED23E5EBC /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BCAC0836EDA8B6ACA796B44E /* SafariView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		C67EBCF542FE442B8D1FE4BB /* ReaderChromeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderChromeView.swift; sourceTree = "<group>"; };
 		D755F8A3FF341D1FA6DE1A3D /* WidgetBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
 		D938A53DFA6EC0C68BA4CE81 /* WidgetFaces13.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetFaces13.swift; sourceTree = "<group>"; };
@@ -161,6 +165,8 @@
 				8EFE65092F66833100B8B59F /* RNPdfViewer.m */,
 				D755F8A3FF341D1FA6DE1A3D /* WidgetBridge.swift */,
 				9CDCB4701D14FC23A32F2C4A /* WidgetBridge.m */,
+				BCAC0836EDA8B6ACA796B44E /* SafariView.swift */,
+				04E5CB09E5D53B3AEA5386E5 /* SafariView.m */,
 			);
 			name = ReadPanda;
 			sourceTree = "<group>";
@@ -504,6 +510,8 @@
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				86A2425F9F68A786E2AE9008 /* WidgetBridge.swift in Sources */,
 				961BE215CC2725C7C977CC5C /* WidgetBridge.m in Sources */,
+				3EE0E25E307E9BD539292513 /* SafariView.swift in Sources */,
+				FB050AE27CDEC88EDCC7FF60 /* SafariView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,6 +11,7 @@ import enhancedStorage from '../../utils/enhancedStorage';
 import log from '../../utils/logger';
 import { useScreenTracking } from '../../utils/screenTracking';
 import { isSentryEnabled } from '../../utils/sentry';
+import { openLegalPage } from '../../utils/legalLinks';
 import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/readerSettings';
 import { DS } from '../../styles/global';
 import useSubscriptionStore from '../../stores/subscriptionStore';
@@ -171,11 +172,8 @@ const SettingsScreen = () => {
       {isSentryEnabled ? (
         <SettingsRow icon="bug-outline" label="Report a bug" onPress={() => setBugReportOpen(true)} />
       ) : null}
-      <SettingsRow
-        icon="document-text-outline"
-        label="Terms & privacy policy"
-        onPress={comingSoon('Terms & privacy policy')}
-      />
+      <SettingsRow icon="document-text-outline" label="Terms of use" onPress={() => openLegalPage('terms')} />
+      <SettingsRow icon="lock-closed-outline" label="Privacy policy" onPress={() => openLegalPage('privacy')} />
     </SettingsGroup>
   );
   // Sign out and Delete account stay last, both behind a confirmation.

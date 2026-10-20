@@ -1,18 +1,18 @@
 import { Text, StyleSheet } from 'react-native';
 import { DS } from '../../styles/global';
-import { showToast } from '../../components/Toaster';
+import { openLegalPage } from '../../utils/legalLinks';
 
-// "By continuing you agree to the Terms and Privacy Policy." (17a, R7). The
-// pages don't exist yet, so the links say so, as the Paywall's do; they need
-// real pages before App Store submission.
+// The 18+ confirmation and agreement shown before an account is created
+// (17a R7, legal-links R2). Continuing counts as confirming; there's no
+// checkbox, so Apple and Google sign-in stay one tap.
 const TermsLine = ({ style }) => (
   <Text style={[styles.text, style]}>
-    By continuing you agree to the{' '}
-    <Text style={styles.link} onPress={() => showToast('Terms are coming soon', 'info')} accessibilityRole="link">
+    By continuing you confirm you're 18 or older and agree to the{' '}
+    <Text style={styles.link} onPress={() => openLegalPage('terms')} accessibilityRole="link">
       Terms
     </Text>
     {' '}and{' '}
-    <Text style={styles.link} onPress={() => showToast('Privacy policy is coming soon', 'info')} accessibilityRole="link">
+    <Text style={styles.link} onPress={() => openLegalPage('privacy')} accessibilityRole="link">
       Privacy Policy
     </Text>
     .
