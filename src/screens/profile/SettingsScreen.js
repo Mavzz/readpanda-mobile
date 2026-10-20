@@ -10,6 +10,7 @@ import { unregisterPushDevice } from '../../hooks/usePushNotifications';
 import enhancedStorage from '../../utils/enhancedStorage';
 import log from '../../utils/logger';
 import { useScreenTracking } from '../../utils/screenTracking';
+import { isSentryEnabled } from '../../utils/sentry';
 import { READER_SETTINGS, labelForSetting, useReaderSetting } from '../../utils/readerSettings';
 import { DS } from '../../styles/global';
 import useSubscriptionStore from '../../stores/subscriptionStore';
@@ -19,7 +20,7 @@ import packageJson from '../../../package.json';
 import useLayout from '../../hooks/useLayout';
 import profileStyles from './profileStyles';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
-import { ChoiceSheet, ConfirmSheet } from './SettingsSheets';
+import { BugReportSheet, ChoiceSheet, ConfirmSheet } from './SettingsSheets';
 import PressableScale from '../../components/PressableScale';
 
 const CHOICE_TITLES = {
@@ -58,6 +59,7 @@ const SettingsScreen = () => {
   const [choice, setChoice] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [bugReportOpen, setBugReportOpen] = useState(false);
 
   useScreenTracking('SettingsScreen');
 
@@ -165,6 +167,10 @@ const SettingsScreen = () => {
   const aboutGroup = (
     <SettingsGroup title="About">
       <SettingsRow icon="help-buoy-outline" label="Help & support" onPress={comingSoon('Help & support')} />
+      {/* Reports go to Sentry, so with no DSN there's nowhere to send one. */}
+      {isSentryEnabled ? (
+        <SettingsRow icon="bug-outline" label="Report a bug" onPress={() => setBugReportOpen(true)} />
+      ) : null}
       <SettingsRow
         icon="document-text-outline"
         label="Terms & privacy policy"
@@ -248,6 +254,15 @@ const SettingsScreen = () => {
           setChoice(null);
         }}
         onClose={() => setChoice(null)}
+      />
+
+      <BugReportSheet
+        visible={bugReportOpen}
+        onSent={() => {
+          setBugReportOpen(false);
+          showToast('Thanks \u2014 your report was sent', 'success');
+        }}
+        onClose={() => setBugReportOpen(false)}
       />
 
       <ConfirmSheet
