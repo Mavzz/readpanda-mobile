@@ -30,6 +30,13 @@ const normalizeMembers = (members) => {
     .sort((a, b) => Number(b.isMe) - Number(a.isMe));
 };
 
+// apiService throws "Client error 403: …" for a 4xx instead of returning
+// the status; this gets it back. Null for a network error.
+const statusOfError = (error) => {
+  const match = /Client error (\d{3})/.exec(error?.message || '');
+  return match ? Number(match[1]) : null;
+};
+
 const normalizeRoom = (room) => ({
   id: room.id,
   name: room.name,
@@ -62,6 +69,46 @@ const normalizeRoom = (room) => ({
   // doesn't send one yet; until it does, the widgets show their solo faces.
   schedule: room.schedule || null,
 });
+
+// GET /room/open returns rooms as someone outside them sees them: no invite
+// code or members, just enough for the card and the preview.
+const normalizeOpenRoom = (room) => ({
+  id: room.id,
+  name: room.name,
+  description: room.description || '',
+  currentBookTitle: room.current_book?.title || null,
+  coverUrl: room.current_book?.cover_image_url || null,
+  memberCount: room.member_count ?? 0,
+  creatorName: room.creator_username || null,
+});
+
+// After either kind of join: the room joins `rooms`, and its book is adopted
+// (or picked back up) the way joining by code always has.
+const afterJoin = async (response, set, get) => {
+  const joined = normalizeRoom(response);
+  log.info('Joined room:', joined.name);
+  set((state) => ({
+    rooms: state.rooms.some((r) => r.id === joined.id)
+      ? state.rooms.map((r) => (r.id === joined.id ? { ...r, ...joined } : r))
+      : [...state.rooms, joined],
+  }));
+  // Joining a room that is already reading something is an unambiguous
+  // signal: adopt its book if the reader has none, or pick the room's
+  // social layer back up if they're already reading it on their own.
+  //
+  // The join returns the full Room Detail, book included. An older API
+  // returned only the room row — no book, so nothing to adopt — and the
+  // join must still land, so ask for the detail in that case.
+  let room = joined;
+  if (!room.currentBookId) {
+    const detail = await get().fetchRoomDetail(joined.id);
+    if (detail.status === 200) {
+      room = detail.response;
+    }
+  }
+  useReadingProgressStore.getState().attachRoom(room, { adopt: true });
+  return joined;
+};
 
 // Fixture used by the Home/Rooms redesign (1a/1c) so the screens have
 // something meaningful to show before a user has joined a real room, or
@@ -112,7 +159,9 @@ const useRoomStore = create((set, get) => ({
     const backendPayload = {
       name: roomData.name?.trim(),
       description: roomData.description?.trim(),
-      is_private: roomData.isPrivate ?? roomData.is_private ?? false,
+      // Invite only unless the creator chose Open: no room becomes findable
+      // by accident.
+      is_private: roomData.isPrivate ?? roomData.is_private ?? true,
     };
 
     try {
@@ -182,28 +231,7 @@ const useRoomStore = create((set, get) => ({
       );
 
       if (status === 200 || status === 201) {
-        const joined = normalizeRoom(response);
-        log.info('Joined room:', joined.name);
-        set((state) => ({
-          rooms: state.rooms.some((r) => r.id === joined.id)
-            ? state.rooms.map((r) => (r.id === joined.id ? { ...r, ...joined } : r))
-            : [...state.rooms, joined],
-        }));
-        // Joining a room that is already reading something is an unambiguous
-        // signal: adopt its book if the reader has none, or pick the room's
-        // social layer back up if they're already reading it on their own.
-        //
-        // /room/join returns the full Room Detail, book included. An older API
-        // returned only the room row — no book, so nothing to adopt — and the
-        // join must still land, so ask for the detail in that case.
-        let room = joined;
-        if (!room.currentBookId) {
-          const detail = await get().fetchRoomDetail(joined.id);
-          if (detail.status === 200) {
-            room = detail.response;
-          }
-        }
-        useReadingProgressStore.getState().attachRoom(room, { adopt: true });
+        const joined = await afterJoin(response, set, get);
         return { status: 200, response: joined };
       }
 
@@ -217,6 +245,106 @@ const useRoomStore = create((set, get) => ({
     } catch (error) {
       log.error('Error joining room:', error);
       return { status: 500, error: error.message || 'Network error' };
+    }
+  },
+
+  // GET /room/open — open rooms the reader isn't in, optionally only those
+  // reading bookId. Not kept in the store: the Rooms tab, See all and Book
+  // detail each hold their own list, so one book's rooms can't replace the
+  // tab's.
+  fetchOpenRooms: async ({ bookId, limit = 20, offset = 0 } = {}) => {
+    const query = `limit=${limit}&offset=${offset}${bookId ? `&book_id=${encodeURIComponent(bookId)}` : ''}`;
+    try {
+      const { status, response } = await makeAuthenticatedGetRequest(
+        getBackendUrl(`/room/open?${query}`),
+      );
+      if (status === 200) {
+        return {
+          status: 200,
+          rooms: (response?.rooms || []).map(normalizeOpenRoom),
+          hasMore: !!response?.has_more,
+        };
+      }
+      log.error('Failed to fetch open rooms:', response);
+      return { status: status || 500, rooms: [], hasMore: false };
+    } catch (error) {
+      log.error('Error fetching open rooms:', error);
+      return { status: 500, rooms: [], hasMore: false };
+    }
+  },
+
+  // POST /room/{id}/join — join an open room, no code. The preview it was
+  // tapped from can be stale, so the API's answers become things to say.
+  joinOpenRoom: async (roomId) => {
+    let status;
+    let response;
+    try {
+      ({ status, response } = await makeAuthenticatedPostRequest(
+        getBackendUrl(`/room/${roomId}/join`),
+        {},
+        // A tap waiting on a spinner: say so now rather than after retries.
+        { maxRetries: 0 },
+      ));
+    } catch (error) {
+      // apiService throws on a 4xx rather than returning it.
+      status = statusOfError(error);
+      if (!status) {
+        log.error('Error joining open room:', error);
+      }
+    }
+
+    if (status === 200 || status === 201) {
+      const joined = await afterJoin(response, set, get);
+      return { status: 200, response: joined };
+    }
+    // Already in it: the caller opens the room instead.
+    if (status === 409) {
+      return { status: 409, already: true };
+    }
+    if (status === 403) {
+      return { status, error: 'This room is invite-only now' };
+    }
+    if (status === 404) {
+      return { status, error: 'This room is gone' };
+    }
+    return { status: status || 500, error: 'Couldn\'t join that room. Try again.' };
+  },
+
+  // PATCH /room/{id} — who can join. Creator-only. Shown at once, and put
+  // back if the API says no.
+  setRoomPrivacy: async (roomId, isPrivate) => {
+    const apply = (value) => set((state) => ({
+      rooms: state.rooms.map((r) => (r.id === roomId ? { ...r, isPrivate: value } : r)),
+      activeRoom: state.activeRoom?.id === roomId
+        ? { ...state.activeRoom, isPrivate: value }
+        : state.activeRoom,
+    }));
+    const previous = get().rooms.find((r) => r.id === roomId)?.isPrivate;
+    apply(isPrivate);
+
+    try {
+      const { status, response } = await makeAuthenticatedPatchRequest(
+        getBackendUrl(`/room/${roomId}`),
+        { is_private: isPrivate },
+        // It's already shown as changed; a failure should put it back now,
+        // not after the retries' backoff.
+        { maxRetries: 0 },
+      );
+      if (status === 200) {
+        const detail = normalizeRoom(response);
+        set((state) => ({
+          rooms: state.rooms.map((r) => (r.id === detail.id ? { ...r, ...detail } : r)),
+          activeRoom: state.activeRoom?.id === detail.id ? detail : state.activeRoom,
+        }));
+        return { status: 200, response: detail };
+      }
+      log.error('Failed to change who can join, reverting:', response);
+      apply(previous);
+      return { status: status || 500, error: 'Couldn\'t change who can join' };
+    } catch (error) {
+      log.error('Error changing who can join, reverting:', error);
+      apply(previous);
+      return { status: 500, error: 'Couldn\'t change who can join' };
     }
   },
 

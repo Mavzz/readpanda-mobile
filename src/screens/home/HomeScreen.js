@@ -196,6 +196,7 @@ const Home = ({ navigation }) => {
       <NewInRooms
         section={sections.newInRooms}
         split={sizeClass === 'regular'}
+        labelInside={sizeClass === 'wide'}
         onSeeAll={openRoom}
       />
     ) : null,

@@ -18,7 +18,10 @@ const PopularThisWeek = ({ variant = 'phone', width, gutter = 24, onOpenBook, on
   }
 
   const coverWidth = variant === 'phone' ? 80 : (width - GAP * (COLUMNS[variant] - 1)) / COLUMNS[variant];
-  const coverHeight = variant === 'landscape' ? 140 : coverWidth * 1.45;
+  // Landscape is 140pt tall on the 11" iPad, where six of those just fit the
+  // books column. The 13" in portrait gets this layout too, with a narrower
+  // column, so the covers shrink to fit rather than run under Rooms tonight.
+  const coverHeight = variant === 'landscape' ? Math.min(140, coverWidth * 1.45) : coverWidth * 1.45;
   const covers = books.map((book) => (
     <PressableScale
       key={book.book_id}
