@@ -12,7 +12,7 @@ const OFFSET = 8;
 // under it, flipping above when there isn't room. Callers wrap the control
 // in a View with collapsable={false} and pass its ref, or, for a native
 // control, pass its window frame as `anchorRect` ({ x, y, w, h }).
-const Popover = ({ visible, anchorRef, anchorRect, onClose, width = 340, maxHeight = 420, children }) => {
+const Popover = ({ visible, anchorRef, anchorRect, onClose, onDismiss, width = 340, maxHeight = 420, children }) => {
   const window = useWindowDimensions();
   const [anchor, setAnchor] = useState(null);
 
@@ -44,7 +44,7 @@ const Popover = ({ visible, anchorRef, anchorRect, onClose, width = 340, maxHeig
   }
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose} onDismiss={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
         {position ? (
           <View

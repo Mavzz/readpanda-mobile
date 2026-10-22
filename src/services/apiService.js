@@ -182,6 +182,9 @@ class ApiService {
      * Execute HTTP request with retry logic
      */
   async executeRequest(requestConfig, attempt = 0) {
+    // A caller can ask for fewer retries (maxRetries: 0) when someone is
+    // waiting on the answer.
+    const maxRetries = requestConfig.maxRetries ?? this.maxRetries;
     try {
       const { url, method, headers = {}, body } = requestConfig;
 
@@ -226,15 +229,15 @@ class ApiService {
 
       // Handle server errors (5xx) - retry with exponential backoff
       if (response.status >= 500) {
-        if (attempt < this.maxRetries) {
+        if (attempt < maxRetries) {
           const delay = this.retryDelay * Math.pow(2, attempt);
-          log.warn(`Server error (${response.status}), retrying in ${delay}ms (attempt ${attempt + 1}/${this.maxRetries})`);
+          log.warn(`Server error (${response.status}), retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
 
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.executeRequest(requestConfig, attempt + 1);
         } else {
           const errorText = await response.text();
-          throw new Error(`Server error ${response.status} after ${this.maxRetries} attempts: ${errorText}`);
+          throw new Error(`Server error ${response.status} after ${maxRetries} attempts: ${errorText}`);
         }
       }
 
@@ -254,9 +257,9 @@ class ApiService {
 
     } catch (error) {
       // Network errors or other non-HTTP errors - retry with exponential backoff
-      if (attempt < this.maxRetries && !error.message.includes('Client error')) {
+      if (attempt < maxRetries && !error.message.includes('Client error')) {
         const delay = this.retryDelay * Math.pow(2, attempt);
-        log.warn(`Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${this.maxRetries}):`, error);
+        log.warn(`Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries}):`, error);
 
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.executeRequest(requestConfig, attempt + 1);
@@ -269,7 +272,7 @@ class ApiService {
 
   /**
      * GET request with retry capabilities.
-     * options: { skipAuthRetry } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries } — see executeRequest.
      */
   async get(url, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'GET', headers, ...options });
@@ -277,7 +280,7 @@ class ApiService {
 
   /**
      * POST request with retry capabilities.
-     * options: { skipAuthRetry } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries } — see executeRequest.
      */
   async post(url, body = {}, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'POST', headers, body, ...options });
@@ -285,7 +288,7 @@ class ApiService {
 
   /**
      * PUT request with retry capabilities.
-     * options: { skipAuthRetry } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries } — see executeRequest.
      */
   async put(url, body = {}, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'PUT', headers, body, ...options });
@@ -293,7 +296,7 @@ class ApiService {
 
   /**
      * DELETE request with retry capabilities.
-     * options: { skipAuthRetry } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries } — see executeRequest.
      */
   async delete(url, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'DELETE', headers, ...options });
@@ -301,7 +304,7 @@ class ApiService {
 
   /**
      * PATCH request with retry capabilities.
-     * options: { skipAuthRetry } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries } — see executeRequest.
      */
   async patch(url, body = {}, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'PATCH', headers, body, ...options });

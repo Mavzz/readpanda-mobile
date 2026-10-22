@@ -72,7 +72,18 @@ const RoomTonightCard = ({ item, onOpen, onStart, inList = false }) => {
           </Text>
         ) : null}
       </View>
-      <Text style={styles.detail} numberOfLines={1}>{detail}</Text>
+      {inList && (state === 'notStarted' || state === 'noBook') ? (
+        // In the iPad list the pill sits beside the line it acts on, so a
+        // room is two lines, not three.
+        <View style={[styles.footer, styles.footerSpread]}>
+          <Text style={[styles.detail, styles.detailBeside]} numberOfLines={1}>{detail}</Text>
+          {state === 'notStarted'
+            ? <Pill icon="play" label="Start" onPress={() => onStart(room)} />
+            : <Pill icon="add" label="Choose the book" onPress={() => onOpen(room)} />}
+        </View>
+      ) : (
+        <Text style={styles.detail} numberOfLines={1}>{detail}</Text>
+      )}
 
       {state === 'together' && schedule ? (
         <>
@@ -89,7 +100,14 @@ const RoomTonightCard = ({ item, onOpen, onStart, inList = false }) => {
         </>
       ) : null}
 
-      {state === 'notStarted' ? (
+      {state === 'notStarted' && inList && item.reading > 0 ? (
+        <View style={styles.footer}>
+          <Avatars members={others.filter((m) => m.progressPct > 0)} />
+          <Text style={styles.footerText}>{item.reading} reading</Text>
+        </View>
+      ) : null}
+
+      {state === 'notStarted' && !inList ? (
         <View style={[styles.footer, styles.footerSpread]}>
           {item.reading > 0 ? (
             <View style={styles.footer}>
@@ -101,7 +119,7 @@ const RoomTonightCard = ({ item, onOpen, onStart, inList = false }) => {
         </View>
       ) : null}
 
-      {state === 'noBook' ? (
+      {state === 'noBook' && !inList ? (
         <Pill icon="add" label="Choose the book" onPress={() => onOpen(room)} />
       ) : null}
     </PressableScale>
@@ -144,6 +162,10 @@ const styles = StyleSheet.create({
   detail: {
     ...DS.type.meta,
     color: DS.colors.onSurfaceVariant,
+  },
+  detailBeside: {
+    flex: 1,
+    minWidth: 0,
   },
   track: {
     height: 5,

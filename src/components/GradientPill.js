@@ -12,11 +12,12 @@ import PressableScale from './PressableScale';
 // 12d: disabled is never a filled pill — a disabled pill drops the gradient
 // and the glow, and the caller colours its label DS.colors.disabled. Prefer
 // not rendering a disabled primary at all (modals use a header text action).
-const GradientPill = ({ onPress, children, style, disabled }) => (
+const GradientPill = ({ onPress, children, style, disabled, ...rest }) => (
   <PressableScale
     onPress={onPress}
     disabled={disabled}
     style={[styles.wrap, style, disabled && styles.disabled]}
+    {...rest}
   >
     {disabled ? null : (
       <LinearGradient

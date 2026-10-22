@@ -48,7 +48,7 @@ export const makeAuthenticatedGetRequest = async (url) => {
   return await apiService.get(url, headers);
 };
 
-export const makeAuthenticatedPostRequest = async (url, body) => {
+export const makeAuthenticatedPostRequest = async (url, body, options = {}) => {
   const token = enhancedStorage.getAuthToken();
 
   if (!token) {
@@ -59,7 +59,7 @@ export const makeAuthenticatedPostRequest = async (url, body) => {
     'Authorization': `Bearer ${token}`,
   };
 
-  return await apiService.post(url, body, headers);
+  return await apiService.post(url, body, headers, options);
 };
 
 export const makeAuthenticatedPutRequest = async (url, body) => {
@@ -90,7 +90,7 @@ export const makeAuthenticatedDeleteRequest = async (url) => {
   return await apiService.delete(url, headers);
 };
 
-export const makeAuthenticatedPatchRequest = async (url, body) => {
+export const makeAuthenticatedPatchRequest = async (url, body, options = {}) => {
   const token = enhancedStorage.getAuthToken();
 
   if (!token) {
@@ -101,7 +101,7 @@ export const makeAuthenticatedPatchRequest = async (url, body) => {
     'Authorization': `Bearer ${token}`,
   };
 
-  return await apiService.patch(url, body, headers);
+  return await apiService.patch(url, body, headers, options);
 };
 
 // ========== CONVENIENCE EXPORTS ==========

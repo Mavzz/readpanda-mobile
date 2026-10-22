@@ -24,20 +24,24 @@ import Popover from './Popover';
 // On iPad a sheet that belongs to one control (pass that control's wrapper as
 // `anchorRef`) opens as a popover anchored to it; any other sheet stays a
 // bottom sheet, capped at 640pt and centered (IPAD_AND_HOME_14_16.md § 1).
+//
+// `onDismiss` runs once the sheet has finished closing (iOS only, as RN's
+// Modal does): iOS can't present a second modal while this one is still
+// animating away, so a pick that opens another sheet waits for it.
 const PickerSheet = ({ anchorRef, anchorRect, ...props }) => {
   const { isLarge } = useLayout();
-  const { visible, onClose } = props;
+  const { visible, onClose, onDismiss } = props;
 
   if (isLarge && (anchorRef || anchorRect)) {
     return (
-      <Popover visible={visible} anchorRef={anchorRef} anchorRect={anchorRect} onClose={onClose}>
+      <Popover visible={visible} anchorRef={anchorRef} anchorRect={anchorRect} onClose={onClose} onDismiss={onDismiss}>
         <PickerContent {...props} />
       </Popover>
     );
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose} onDismiss={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={[styles.sheet, isLarge && styles.sheetLarge]} onPress={(e) => e.stopPropagation()}>
           <PickerContent {...props} />

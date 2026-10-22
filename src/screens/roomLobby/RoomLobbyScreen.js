@@ -5,6 +5,7 @@ import useRoomLobby from './useRoomLobby';
 import LobbyHeader from './LobbyHeader';
 import BookSection from './BookSection';
 import InviteSection from './InviteSection';
+import WhoCanJoin from './WhoCanJoin';
 import MemberList from './MemberList';
 import DangerZone from './DangerZone';
 import ReadableColumn from '../../components/ReadableColumn';
@@ -40,7 +41,12 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   if (roomBook) {
     // The invite card (code, Copy, Share, QR) as in the setup state, rather
     // than 2c's header icon — decided after device review.
-    const invite = <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={false} />;
+    const invite = (
+      <>
+        <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={false} isPrivate={room?.isPrivate} />
+        <WhoCanJoin room={room} iAmCreator={iAmCreator} />
+      </>
+    );
     const place = <YourPlaceCard book={roomBook} />;
     const everyone = <WhereEveryoneIs book={roomBook} />;
     let body;
@@ -106,7 +112,13 @@ const RoomLobbyScreen = ({ navigation, route }) => {
       )}
       right={(
         <View>
-          <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={iAmCreator} />
+          <InviteSection
+            roomName={room?.name}
+            inviteCode={inviteCode}
+            iAmCreator={iAmCreator}
+            isPrivate={room?.isPrivate}
+          />
+          <WhoCanJoin room={room} iAmCreator={iAmCreator} style={styles.whoCanJoin} />
           <MemberList members={members} />
           {dangerZone}
         </View>
@@ -149,6 +161,9 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: 16,
+  },
+  whoCanJoin: {
+    marginTop: 12,
   },
 });
 

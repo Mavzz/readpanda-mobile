@@ -25,7 +25,7 @@ backend lives in the sibling `readpanda` repo.
 
 ## Spec-driven workflow
 Every non-trivial feature has a spec in `specs/<feature>/`:
-- `requirements.md`: user stories and EARS-style acceptance criteria (`WHEN … THE <x> SHALL …`)
+- `requirements.md`: user stories and EARS-style acceptance criteria (`WHEN … THE <x> SHALL …`), plus a `## Flows` section with a Mermaid sequence diagram per main flow, labelled with the requirement IDs
 - `design.md`: approach, files touched, data and navigation changes, edge cases
 - `tasks.md`: a numbered checklist where each task cites the requirement IDs it covers
 

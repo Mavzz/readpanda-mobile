@@ -64,8 +64,8 @@ const ContinueHero = ({ hero, onContinue }) => {
             </View>
           ) : null}
           <Text style={[styles.title, isLarge && styles.titleLarge]} numberOfLines={2}>{book.title}</Text>
-          <Text style={styles.meta}>{hero.place}</Text>
-          {hero.timeLeft ? <Text style={styles.meta}>{hero.timeLeft}</Text> : null}
+          <Text style={[styles.meta, isLarge && styles.metaLarge]}>{hero.place}</Text>
+          {hero.timeLeft ? <Text style={[styles.meta, isLarge && styles.metaLarge]}>{hero.timeLeft}</Text> : null}
           {isLarge ? <View style={styles.ctaSlot}>{cta}</View> : null}
         </View>
       </View>
@@ -144,6 +144,10 @@ const styles = StyleSheet.create({
   meta: {
     ...DS.type.meta,
     color: DS.colors.onSurfaceVariant,
+  },
+  // 16c sets the iPad hero's place and pace a size up, 13/600.
+  metaLarge: {
+    fontSize: 13,
   },
   // iPad: the CTA hugs its label at the bottom of the text column.
   ctaSlot: {

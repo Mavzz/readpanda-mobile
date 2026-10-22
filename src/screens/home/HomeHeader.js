@@ -29,11 +29,13 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
   return (
     <>
       <View style={[styles.header, isLarge && { paddingHorizontal: pagePad }]}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>{dayAndPart()}</Text>
+        {/* Phone: the day above the name. iPad (16c): one line, the day after. */}
+        <View style={[styles.headerLeft, isLarge && styles.headerLeftLarge]}>
+          {isLarge ? null : <Text style={styles.greeting}>{dayAndPart()}</Text>}
           <Text style={[styles.username, isLarge && styles.usernameLarge]} numberOfLines={1} ellipsizeMode="tail">
             Hi, {firstName(username)}
           </Text>
+          {isLarge ? <Text style={[styles.greeting, styles.greetingLarge]} numberOfLines={1}>{dayAndPart()}</Text> : null}
         </View>
         <View style={styles.headerRight}>
           {/* No bell on first run — nothing can notify you yet. */}
@@ -108,6 +110,15 @@ const styles = StyleSheet.create({
   },
   usernameLarge: {
     ...DS.type.pageTitleLarge,
+    flexShrink: 1,
+  },
+  headerLeftLarge: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 12,
+  },
+  greetingLarge: {
+    fontSize: 14,
   },
   headerLeft: {
     flex: 1,

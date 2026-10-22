@@ -10,6 +10,11 @@ import RoomTonightCard from './RoomTonightCard';
 // to the screen edge (`gutter` is the page padding it bleeds past). iPad: the
 // same states stacked in one card (`stacked`). With no rooms, the join-by-code
 // row (3a) takes the section's place.
+//
+// The iPad card shares its column with Your week and New in your rooms, so it
+// holds the first few (the order puts the most pressing first) and "All
+// rooms" has the rest; it otherwise grows with every room joined.
+const STACKED_MAX = 3;
 const RoomsTonight = ({ items, ready, stacked = false, gutter = 24, onOpenRoom, onStartRoom, onAllRooms, onJoinByCode }) => {
   if (items.length === 0) {
     if (!ready) {
@@ -28,10 +33,12 @@ const RoomsTonight = ({ items, ready, stacked = false, gutter = 24, onOpenRoom, 
 
   return (
     <View>
-      <SectionHeader title="Rooms tonight" link="All rooms" onLink={onAllRooms} />
+      {stacked ? null : <SectionHeader title="Rooms tonight" link="All rooms" onLink={onAllRooms} />}
       {stacked ? (
+        // On iPad the label sits inside the card, as in Your week (16c).
         <View style={styles.stack}>
-          {items.map((item, i) => (
+          <SectionHeader title="Rooms tonight" link="All rooms" onLink={onAllRooms} eyebrow style={styles.headerInside} />
+          {items.slice(0, STACKED_MAX).map((item, i) => (
             <View key={item.room.id}>
               {i > 0 ? <View style={styles.divider} /> : null}
               <RoomTonightCard item={item} inList onOpen={onOpenRoom} onStart={onStartRoom} />
@@ -55,6 +62,10 @@ const RoomsTonight = ({ items, ready, stacked = false, gutter = 24, onOpenRoom, 
 };
 
 const styles = StyleSheet.create({
+  headerInside: {
+    paddingTop: 16,
+    marginBottom: 0,
+  },
   row: {
     gap: 12,
   },

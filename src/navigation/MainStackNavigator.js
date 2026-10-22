@@ -8,6 +8,7 @@ import HelpScreen from '../screens/profile/HelpScreen';
 import InterestScreen from '../screens/InterestScreen';
 import CreateBucketScreen from '../screens/CreateBucketScreen';
 import CreateRoomScreen from '../screens/CreateRoomScreen';
+import OpenRoomsScreen from '../screens/OpenRoomsScreen';
 import RoomLobbyScreen from '../screens/roomLobby/RoomLobbyScreen';
 import BookDetailScreen from '../screens/BookDetailScreen';
 import CuratedBucketScreen from '../screens/CuratedBucketScreen';
@@ -88,6 +89,9 @@ const MainStackNavigator = () => {
       <Stack.Screen name="CreateBucketScreen" component={CreateBucketScreen} options={createFlow} />
       <Stack.Screen name="CreateRoomScreen" component={CreateRoomScreen} options={shortTask} />
       <Stack.Screen name="RoomLobbyScreen" component={RoomLobbyScreen} />
+      {/* Rooms › Open rooms › See all. Here beside the room page, since the
+          Rooms tab has no stack of its own. */}
+      <Stack.Screen name="OpenRooms" component={OpenRoomsScreen} />
       {/* Book detail (8c) is opened from Discover, any bucket and search, so
           it sits here beside the reader rather than in one tab's stack — and,
           like the reader, over the tab bar. */}
