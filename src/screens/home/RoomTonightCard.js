@@ -20,6 +20,24 @@ const dueLine = (schedule, now = Date.now()) => {
   return `p. ${schedule.targetPage} due ${new Date(schedule.dueAt).toLocaleDateString(undefined, { weekday: 'short' })}`;
 };
 
+// Who's already into the room's book you haven't opened: the one furthest
+// in, by name, so it reads as a nudge rather than a count. Under 1% still
+// reads as started.
+export const startedLine = (readers) => {
+  const ahead = [...readers].sort((a, b) => b.progressPct - a.progressPct);
+  const first = ahead[0];
+  if (!first) {
+    return '';
+  }
+  const pct = Math.max(1, Math.round(first.progressPct));
+  const who = first.name || 'Someone';
+  const rest = ahead.length - 1;
+  if (rest === 0) {
+    return `${who} is ${pct}% in`;
+  }
+  return `${who} is ${pct}% in · ${rest} more reading`;
+};
+
 const Avatars = ({ members }) => (
   <View style={styles.avatars}>
     {members.slice(0, 3).map((m, i) => (
@@ -49,6 +67,8 @@ const RoomTonightCard = ({ item, onOpen, onStart, inList = false }) => {
   const { room, state, schedule, bookTitle, unread, members, myPct } = item;
   const others = members.filter((m) => !m.isMe);
   const ahead = others.filter((m) => m.progressPct > myPct);
+  const started = others.filter((m) => m.progressPct > 0);
+  const nudge = state === 'notStarted' ? startedLine(started) : '';
 
   let detail = bookTitle;
   if (state === 'noBook') {
@@ -62,7 +82,7 @@ const RoomTonightCard = ({ item, onOpen, onStart, inList = false }) => {
       onPress={() => onOpen(room)}
       style={inList ? styles.row : styles.card}
       accessibilityRole="button"
-      accessibilityLabel={`${room.name}, ${detail}${unread ? `, ${unread} new` : ''}`}
+      accessibilityLabel={`${room.name}, ${detail}${nudge ? `, ${nudge}` : ''}${unread ? `, ${unread} new` : ''}`}
     >
       <View style={styles.header}>
         <Text style={styles.name} numberOfLines={1}>{room.name}</Text>
@@ -100,19 +120,19 @@ const RoomTonightCard = ({ item, onOpen, onStart, inList = false }) => {
         </>
       ) : null}
 
-      {state === 'notStarted' && inList && item.reading > 0 ? (
+      {state === 'notStarted' && inList && nudge ? (
         <View style={styles.footer}>
-          <Avatars members={others.filter((m) => m.progressPct > 0)} />
-          <Text style={styles.footerText}>{item.reading} reading</Text>
+          <Avatars members={started} />
+          <Text style={[styles.footerText, styles.nudge]} numberOfLines={1}>{nudge}</Text>
         </View>
       ) : null}
 
       {state === 'notStarted' && !inList ? (
         <View style={[styles.footer, styles.footerSpread]}>
-          {item.reading > 0 ? (
-            <View style={styles.footer}>
-              <Avatars members={others.filter((m) => m.progressPct > 0)} />
-              <Text style={styles.footerText}>{item.reading} reading</Text>
+          {nudge ? (
+            <View style={[styles.footer, styles.nudgeWrap]}>
+              <Avatars members={started} />
+              <Text style={[styles.footerText, styles.nudge]} numberOfLines={1}>{nudge}</Text>
             </View>
           ) : <View />}
           <Pill icon="play" label="Start" onPress={() => onStart(room)} />
@@ -198,6 +218,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: DS.font.semibold,
     color: DS.colors.onSurfaceVariant,
+  },
+  // A long name gives way to the Start pill rather than pushing it off.
+  nudgeWrap: {
+    flex: 1,
+  },
+  nudge: {
+    flexShrink: 1,
   },
   avatars: {
     flexDirection: 'row',

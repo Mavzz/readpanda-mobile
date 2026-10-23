@@ -104,7 +104,6 @@ const useHomeSections = () => {
         members,
         myPct: mine?.progressPct || 0,
         totalPages: mine?.totalChapters || 0,
-        reading: members.filter((m) => !m.isMe && m.progressPct > 0).length,
       };
     }).sort((a, b) => {
       const rank = (r) => {

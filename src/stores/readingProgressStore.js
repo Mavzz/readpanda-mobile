@@ -38,6 +38,7 @@ export const roomMembersOf = (room) => {
     const name = m.name || m.username || '';
     return {
       userId: m.userId || m.user_id || `member-${i}`,
+      name,
       initials: m.initials || getInitials(name),
       isMe: !!m.isMe || (!!me && name === me),
     };
@@ -74,6 +75,7 @@ const toStoredBook = (book, { roomId = null, roomName = null, roomMembers = null
 // hasn't heard from sits at 0 — they genuinely haven't opened the book.
 export const roomMemberProgress = (members, myProgressPct, remote) => (members || []).map((m) => ({
   userId: m.userId,
+  name: m.name || '',
   initials: m.initials,
   progressPct: m.isMe ? myProgressPct : (remote?.[m.userId] ?? 0),
   isMe: !!m.isMe,
