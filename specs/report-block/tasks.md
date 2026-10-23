@@ -157,3 +157,4 @@ Start after specs/open-rooms has merged.
 - Task 23: added while checking (your call, 2026-10-24): you expected a refresh, not only a write, to sign a suspended reader out. Only the two refresh reads check, so the rest of the API still needs no lookup per request.
 - Task 23 (found while checking): Home and Rooms' pull to refresh toasted "Refreshed!" or "Connection error" over the suspended alert. Both stop once the reader is signed out.
 - After the PR (your call, 2026-10-24): the block confirmation adds "You'll stay in any rooms you share.", since blocking a room's creator keeps you in their room (R5.6) and that surprised you while checking.
+- After release prep (your call, 2026-10-24): the list grew to regional slurs, and matching keeps Indic vowel signs in the word (R8.2 now says "in any script"). Tests in `check_test.go`.

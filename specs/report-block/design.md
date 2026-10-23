@@ -52,6 +52,15 @@ ALTER TABLE book_comments ADD COLUMN deleted_at timestamp,
   It returns `ErrBlockedWords` if any word is on the list.
 - Matching is on whole words only, so "Scunthorpe" passes (R8.2).
   Multi-word entries match as a run of words.
+- Accents are dropped only in Latin, Greek and Cyrillic. In Indic scripts
+  the combining marks are vowel signs and viramas, so they stay in the word
+  and count as part of it; zero-width joiners are dropped. Without this a
+  Devanagari word split at its vowel signs and matched pieces of ordinary
+  words ("रडार", radar).
+- The list covers English (with UK and Australian slurs) and Indian
+  languages, romanized and in their own scripts: caste and religious slurs
+  and sexual abuse. A word that's also an ordinary word, a name or a place
+  stays off, in any language.
 - It's called from:
   - `CreateComment` (body)
   - `CreateRoom` (name, description)
