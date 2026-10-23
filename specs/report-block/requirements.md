@@ -335,8 +335,9 @@ in the first place.
 1. THE API SHALL refuse a comment, room name, room description or new
    username that contains a word on its blocked-words list, with "That
    includes words we don't allow."
-2. THE match SHALL be on whole words, ignoring case. A blocked word inside
-   a longer ordinary word (for example "Scunthorpe") SHALL NOT be refused.
+2. THE match SHALL be on whole words, ignoring case, in any script. A
+   blocked word inside a longer ordinary word (for example "Scunthorpe")
+   SHALL NOT be refused.
 3. WHEN a comment is refused THE app SHALL show the message, SHALL NOT
    offer Retry for it, and SHALL keep the text so the reader can change it.
 4. WHEN a room name, description or username is refused THE app SHALL
