@@ -4,7 +4,7 @@ import { DS } from '../../styles/global';
 import { roomAgeLabel } from './roomLobbyFormat';
 import PressableScale from '../../components/PressableScale';
 
-const LobbyHeader = ({ room, bookTitle, bucket, memberCount, onBack }) => (
+const LobbyHeader = ({ room, bookTitle, bucket, memberCount, onBack, onMore }) => (
   <View style={styles.header}>
     <PressableScale
       onPress={onBack}
@@ -22,6 +22,16 @@ const LobbyHeader = ({ room, bookTitle, bucket, memberCount, onBack }) => (
         {bucket?.name ? ` · from ${bucket.name}` : ''}
       </Text>
     </View>
+    {onMore ? (
+      <PressableScale
+        onPress={onMore}
+        style={styles.moreButton}
+        accessibilityLabel="More actions for this room"
+        accessibilityRole="button"
+      >
+        <Icon name="ellipsis-horizontal" size={18} color={DS.colors.onSurface} />
+      </PressableScale>
+    ) : null}
   </View>
 );
 
@@ -33,6 +43,15 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: DS.colors.surfaceContainerHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Report room, for everyone but the creator (report-block R2.2).
+  moreButton: {
     width: 38,
     height: 38,
     borderRadius: 19,

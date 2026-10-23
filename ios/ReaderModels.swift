@@ -62,6 +62,7 @@ struct NormalizedRect {
 struct ReaderComment {
     let id: String
     let clientId: String
+    let userId: String
     let username: String
     let initials: String
     let page: Int
@@ -74,11 +75,20 @@ struct ReaderComment {
     let createdAt: Double
     let pending: Bool
     let failed: Bool
+    /// Refused for its words (report-block R8.3): Edit, not Retry.
+    let refused: Bool
+    /// Written by this reader: its menu offers Delete, not Report.
+    let isMine: Bool
+    /// "author" or "moderator" on a deleted comment kept for its replies, and
+    /// "reported" on one this reader reported. Shown as a placeholder.
+    let deleted: String?
+    let hidden: String?
     let replies: [ReaderComment]
 
     init(_ dict: NSDictionary) {
         id = ReaderComment.string(dict["id"])
         clientId = ReaderComment.string(dict["clientId"])
+        userId = ReaderComment.string(dict["userId"])
         username = ReaderComment.string(dict["username"])
         initials = ReaderComment.string(dict["initials"])
         page = (dict["page"] as? NSNumber)?.intValue ?? 0
@@ -90,8 +100,29 @@ struct ReaderComment {
         read = (dict["read"] as? NSNumber)?.boolValue ?? true
         createdAt = (dict["createdAt"] as? NSNumber)?.doubleValue ?? 0
         pending = (dict["pending"] as? NSNumber)?.boolValue ?? false
-        failed = (dict["failed"] as? NSNumber)?.boolValue ?? false
+        // `failed` is true, or the reason the comment was refused.
+        let failure = dict["failed"]
+        refused = (failure as? String) == "blocked_words"
+        failed = refused || ((failure as? NSNumber)?.boolValue ?? false)
+        isMine = (dict["isMine"] as? NSNumber)?.boolValue ?? false
+        let deletedBy = ReaderComment.string(dict["deleted"])
+        deleted = deletedBy.isEmpty ? nil : deletedBy
+        let hiddenAs = ReaderComment.string(dict["hidden"])
+        hidden = hiddenAs.isEmpty ? nil : hiddenAs
         replies = ((dict["replies"] as? [NSDictionary]) ?? []).map { ReaderComment($0) }
+    }
+
+    /// A placeholder stands in for a comment that's gone but has replies.
+    var isPlaceholder: Bool {
+        return deleted != nil || hidden != nil
+    }
+
+    /// What a placeholder says, aloud too (report-block R7.4, R12.3).
+    var placeholderText: String {
+        if hidden != nil {
+            return "You reported this comment"
+        }
+        return deleted == "moderator" ? "Removed by ReadPanda" : "Comment deleted"
     }
 
     /// Ids arrive as strings from the server and as minted client ids locally;
@@ -128,7 +159,8 @@ struct ReaderThread {
 
     /// Roots and replies alike — what the sheet header counts.
     var totalCount: Int {
-        return comments.reduce(0) { $0 + 1 + $1.replies.count }
+        // A placeholder isn't a comment anyone can read.
+        return comments.reduce(0) { $0 + ($1.isPlaceholder ? 0 : 1) + $1.replies.count }
     }
 }
 

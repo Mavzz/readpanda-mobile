@@ -16,6 +16,7 @@ import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
 import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
+import useAuthStore from '../stores/authStore';
 import usePlusGate from '../hooks/usePlusGate';
 import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
@@ -86,6 +87,11 @@ const RoomsScreen = () => {
     const [{ status }] = await Promise.all([fetchRooms(), loadOpenRooms()]);
     if (showRefresh) {
       setRefreshing(false);
+      // Signed out mid-refresh (a suspended account, report-block R10.2):
+      // the alert says what happened.
+      if (!useAuthStore.getState().isAuthenticated) {
+        return;
+      }
       if (status === 200) {
         showToast('Rooms refreshed', 'success');
       } else {

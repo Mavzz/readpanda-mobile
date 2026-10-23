@@ -7,6 +7,7 @@ import enhancedStorage from '../utils/enhancedStorage';
 import getInitials from '../utils/getInitials';
 import { bookIdOf } from '../utils/bookId';
 import persistSlice from './persistSlice';
+import { statusOfError, bodyOfError } from '../utils/apiError';
 
 // GET /room/my-rooms and GET /room/{id} return members as
 // { user_id, username, role, joined_at, progress_pct }. The API doesn't flag
@@ -25,16 +26,11 @@ const normalizeMembers = (members) => {
         joinedAt: m.joined_at ?? m.joinedAt ?? null,
         isMe: !!m.isMe || (!!me && name === me),
         progressPct: m.progress_pct ?? m.progressPct ?? 0,
+        // The reader has blocked this member (report-block R5.6).
+        blocked: !!m.blocked,
       };
     })
     .sort((a, b) => Number(b.isMe) - Number(a.isMe));
-};
-
-// apiService throws "Client error 403: …" for a 4xx instead of returning
-// the status; this gets it back. Null for a network error.
-const statusOfError = (error) => {
-  const match = /Client error (\d{3})/.exec(error?.message || '');
-  return match ? Number(match[1]) : null;
 };
 
 const normalizeRoom = (room) => ({
@@ -123,6 +119,9 @@ const useRoomStore = create((set, get) => ({
   // "this reader has no rooms" — which is a state it renders, see
   // FIRST_RUN_3a_3b.md § 3a — from "we haven't asked yet".
   roomsLoaded: false,
+  // Rooms found gone while open: an admin deleted them (report-block R9.9).
+  // A room page still showing one reads this to close itself.
+  removedRoomIds: [],
 
   fetchRooms: async () => {
     set({ loading: true });
@@ -183,7 +182,14 @@ const useRoomStore = create((set, get) => ({
       }
     } catch (error) {
       log.error('Error creating room:', error);
-      return { status: 500, error: error.message || 'Network error' };
+      // A refusal says which field (a name with a blocked word, report-block
+      // R8.4) or that the account is suspended.
+      const status = statusOfError(error);
+      if (status) {
+        const body = bodyOfError(error);
+        return { status, error: body.error || 'Failed to create room', field: body.field || null, code: body.code || null };
+      }
+      return { status: 500, error: 'Couldn\'t create the room. Check your connection and try again.' };
     }
   },
 
@@ -212,6 +218,11 @@ const useRoomStore = create((set, get) => ({
       log.error('Failed to fetch room detail:', response);
       return { status: status || 500, error: response?.error || 'Failed to load room' };
     } catch (error) {
+      // A 4xx arrives thrown. 404 means the room no longer exists.
+      if (statusOfError(error) === 404) {
+        get().roomGone(roomId);
+        return { status: 404, error: 'This room was removed' };
+      }
       log.error('Error fetching room detail:', error);
       return { status: 500, error: error.message || 'Network error' };
     }
@@ -399,6 +410,18 @@ const useRoomStore = create((set, get) => ({
     }
   },
 
+  // Mark a member blocked or not in every loaded room (report-block R5.6),
+  // so the member list says so before the next fetch.
+  setMemberBlocked: (userId, blocked) => {
+    const mark = (room) => (room?.members?.some((m) => m.userId === userId)
+      ? { ...room, members: room.members.map((m) => (m.userId === userId ? { ...m, blocked } : m)) }
+      : room);
+    set((state) => ({
+      rooms: state.rooms.map(mark),
+      activeRoom: mark(state.activeRoom),
+    }));
+  },
+
   setActiveRoom: (room) => {
     log.info('Setting active room:', room?.name);
     set({ activeRoom: room });
@@ -422,6 +445,29 @@ const useRoomStore = create((set, get) => ({
     set((state) => ({
       participants: state.participants.filter((p) => p.user_id !== userId),
     }));
+  },
+
+  // The room no longer exists, though this reader didn't delete it: an admin
+  // did (report-block R9.9). Drop it as deleteRoom does, and note it for a
+  // page still showing it.
+  roomGone: (roomId) => {
+    const goneName = (get().rooms.find((r) => r.id === roomId) || get().activeRoom)?.name || null;
+    set((state) => ({
+      rooms: state.rooms.filter((r) => r.id !== roomId),
+      activeRoom: state.activeRoom?.id === roomId ? null : state.activeRoom,
+      removedRoomIds: state.removedRoomIds.includes(roomId) ? state.removedRoomIds : [...state.removedRoomIds, roomId],
+    }));
+    useReadingProgressStore.getState().detachRoom(roomId, goneName);
+  },
+
+  // A moderation notice can't say which room it's about (report-block R9.9),
+  // so re-read the last one opened. Not the list: fetchRooms swaps in rows
+  // without members, which would empty an open room page.
+  recheckActiveRoom: () => {
+    const { activeRoom } = get();
+    if (activeRoom?.id && !String(activeRoom.id).startsWith('fixture-')) {
+      get().fetchRoomDetail(activeRoom.id);
+    }
   },
 
   // DELETE /room/{id} — creator only. Members cascade with the room.
@@ -505,7 +551,7 @@ const useRoomStore = create((set, get) => ({
   clearRooms: () => {
     // roomsLoaded too, so the next account's Home waits for its own fetch
     // before deciding between the first-run and room states.
-    set({ rooms: [], activeRoom: null, participants: [], roomsLoaded: false });
+    set({ rooms: [], activeRoom: null, participants: [], roomsLoaded: false, removedRoomIds: [] });
   },
 }));
 

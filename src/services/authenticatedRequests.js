@@ -76,7 +76,7 @@ export const makeAuthenticatedPutRequest = async (url, body) => {
   return await apiService.put(url, body, headers);
 };
 
-export const makeAuthenticatedDeleteRequest = async (url) => {
+export const makeAuthenticatedDeleteRequest = async (url, options = {}) => {
   const token = enhancedStorage.getAuthToken();
 
   if (!token) {
@@ -87,7 +87,7 @@ export const makeAuthenticatedDeleteRequest = async (url) => {
     'Authorization': `Bearer ${token}`,
   };
 
-  return await apiService.delete(url, headers);
+  return await apiService.delete(url, headers, options);
 };
 
 export const makeAuthenticatedPatchRequest = async (url, body, options = {}) => {

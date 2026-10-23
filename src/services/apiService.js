@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { getBackendUrl } from '../utils/Helper';
 import enhancedStorage from '../utils/enhancedStorage';
 import log from '../utils/logger';
@@ -7,6 +8,21 @@ export const AUTH_ERRORS = {
   NO_TOKENS: 'NO_TOKENS',
   REFRESH_FAILED: 'REFRESH_FAILED',
   TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+};
+
+// What a suspended reader is told as they're signed out (report-block R10.2).
+export const SUSPENDED_MESSAGE =
+  'Your account has been suspended. Email readpanda.support@gmail.com if you think this is a mistake.';
+
+const isSuspended = (status, bodyText) => {
+  if (status !== 403) {
+    return false;
+  }
+  try {
+    return JSON.parse(bodyText)?.code === 'account_suspended';
+  } catch {
+    return false;
+  }
 };
 
 // Custom error class for authentication errors
@@ -25,6 +41,9 @@ class ApiService {
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second initial delay
     this.authCallback = null; // Callback to handle auth failures
+    // Set while the suspended alert is up, so several calls failing at once
+    // show it once.
+    this.suspendedShown = false;
   }
 
   /**
@@ -81,6 +100,30 @@ class ApiService {
   }
 
   /**
+     * The API says this account is suspended (report-block R10): sign out and
+     * say why, once however many calls were refused. Sign-in screens get the
+     * same alert, so they skip their own message for it.
+     */
+  async handleSuspended() {
+    if (this.suspendedShown) {
+      return;
+    }
+    this.suspendedShown = true;
+    log.warn('Account suspended; signing out');
+    enhancedStorage.clearAuthData();
+    if (this.authCallback) {
+      try {
+        await this.authCallback();
+      } catch (error) {
+        log.error('Error in auth failure callback:', error);
+      }
+    }
+    Alert.alert('Account suspended', SUSPENDED_MESSAGE, [
+      { text: 'OK', onPress: () => { this.suspendedShown = false; } },
+    ], { onDismiss: () => { this.suspendedShown = false; } });
+  }
+
+  /**
      * Refresh the authentication token
      */
   async refreshAuthToken() {
@@ -132,6 +175,11 @@ class ApiService {
         log.info('Token refreshed successfully');
         return accessToken;
       } else if (tokenResponse.status === 401 || tokenResponse.status === 403) {
+        const bodyText = await tokenResponse.text().catch(() => '');
+        if (isSuspended(tokenResponse.status, bodyText)) {
+          await this.handleSuspended();
+          throw new AuthError(AUTH_ERRORS.NO_TOKENS, 'Account suspended');
+        }
         // Refresh token is invalid or expired
         await this.handleAuthenticationFailure(`Refresh token invalid or expired (status: ${tokenResponse.status})`);
         return;
@@ -224,7 +272,12 @@ class ApiService {
       // Handle other client errors (4xx) - don't retry
       if (response.status >= 400 && response.status < 500) {
         const errorText = await response.text();
-        throw new Error(`Client error ${response.status}: ${errorText}`);
+        const error = new Error(`Client error ${response.status}: ${errorText}`);
+        if (isSuspended(response.status, errorText)) {
+          error.suspended = true;
+          await this.handleSuspended();
+        }
+        throw error;
       }
 
       // Handle server errors (5xx) - retry with exponential backoff

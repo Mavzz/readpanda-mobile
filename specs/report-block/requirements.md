@@ -1,6 +1,6 @@
 # Report & block: Requirements
 
-Status: Draft <!-- Draft → Approved -->
+Status: Approved <!-- Draft → Approved -->
 Design handoff: none. The menus use the system menu and action sheet. The
 report sheet and Blocked readers screen follow the Settings sheets and
 sub-screens (specs/bug-reporting, NotificationSettingsScreen) and
@@ -181,6 +181,11 @@ sequenceDiagram
         API->>DB: No change to the content
     end
     API->>DB: Report and any duplicates closed with the action, who and when (R9.5)
+    opt Comment removed, room closed or room deleted
+        API-->>AApp: "Your comment was removed" / "Your room is invite-only now" / "Your room was removed", with the reason; a deleted room's other members get "A room was removed" (R9.8)
+        AApp->>API: GET /room/{id} for the room on screen
+        API-->>AApp: 404, so the room page closes: "This room was removed" (R9.9)
+    end
     AApp->>API: Next refresh or post
     API-->>AApp: 403 account suspended (R10.1)
     AApp-->>A: Signed out, "Your account has been suspended. Email ..." (R10.2)
@@ -361,6 +366,20 @@ in the first place.
 6. THE Users page SHALL show whether each reader is suspended, and SHALL
    let an admin suspend or reinstate them.
 7. ONLY admins SHALL be able to use any of this.
+8. WHEN an admin removes a comment, closes a room or deletes a room THE API
+   SHALL tell the people it affects, in the bell and by push:
+   - removing a comment: its author, "Your comment was removed"
+   - closing a room: its creator, "Your room is invite-only now"
+   - deleting a room: its creator, "Your room was removed", and every other
+     member, "A room was removed"
+   The author's or creator's message SHALL name the room and the report's
+   reason (unless it's "Something else") and give the support email. No
+   message SHALL say who reported it or what they wrote. Nothing is sent for
+   a comment its author had already deleted.
+9. WHEN a room is deleted while a member has its page open THE app SHALL
+   take them back to where they came from and show "This room was
+   removed". It SHALL check when a moderation notice arrives, when the app
+   comes back to the foreground, and when the page loads.
 
 ### R10. Suspended accounts
 **User story:** As an admin, I want a suspended reader to be unable to post
@@ -372,6 +391,8 @@ or keep using the app.
    - refreshing its tokens
    - posting comments, creating, joining or changing rooms, reporting,
      and blocking
+   - the reads the app refreshes with: the unread count and the reader's
+     room list, so the next refresh signs them out
 2. WHEN the app is told the account is suspended THE app SHALL sign out and
    SHALL say "Your account has been suspended. Email
    readpanda.support@gmail.com if you think this is a mistake."

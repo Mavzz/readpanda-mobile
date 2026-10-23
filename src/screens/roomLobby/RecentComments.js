@@ -5,6 +5,7 @@ import { DS } from '../../styles/global';
 import useCommentsStore from '../../stores/commentsStore';
 import CommentThreadSheet from '../../components/CommentThreadSheet';
 import relativeTime from '../../utils/relativeTime';
+import previewComment from '../../utils/commentPreview';
 
 // "Recent · unlocked for you" (2c / 14i): the newest comments up to the
 // reader's position, and everything beyond it as a count only — the server
@@ -26,9 +27,10 @@ const RecentComments = ({ book, limit = 3 }) => {
   const threads = commentEntry?.threads || [];
   const lockedCount = commentEntry?.lockedCount || 0;
   const openThread = threads.find((t) => t.anchorKey === openThreadKey) || null;
+  // A thread whose first comment is a placeholder previews its first reply.
   const recent = threads
-    .filter((t) => t.comments[0])
-    .sort((a, b) => b.comments[0].createdAt - a.comments[0].createdAt)
+    .filter((t) => previewComment(t))
+    .sort((a, b) => previewComment(b).createdAt - previewComment(a).createdAt)
     .slice(0, limit);
 
   if (recent.length === 0 && lockedCount === 0) {
@@ -40,7 +42,7 @@ const RecentComments = ({ book, limit = 3 }) => {
       <Text style={styles.eyebrow}>Recent · unlocked for you</Text>
 
       {recent.map((thread) => {
-        const root = thread.comments[0];
+        const root = previewComment(thread);
         return (
           <Pressable
             key={thread.anchorKey}
@@ -79,6 +81,8 @@ const RecentComments = ({ book, limit = 3 }) => {
       <CommentThreadSheet
         visible={!!openThread}
         thread={openThread}
+        bookId={book.id}
+        roomId={book.roomId}
         roomName={book.roomName}
         submitting={false}
         onSubmit={({ body, parentId }) =>

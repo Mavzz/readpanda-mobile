@@ -145,6 +145,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     @objc var onSubmitComment: RCTDirectEventBlock?
     @objc var onLikeComment: RCTDirectEventBlock?
     @objc var onRetryComment: RCTDirectEventBlock?
+    @objc var onManageComment: RCTDirectEventBlock?
     @objc var onRoomPickerRequested: RCTDirectEventBlock?
     @objc var onCreateHighlight: RCTDirectEventBlock?
     @objc var onRemoveHighlight: RCTDirectEventBlock?
@@ -880,6 +881,18 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     func commentSheet(_ sheet: CommentSheetView, didRetry comment: ReaderComment) {
         onRetryComment?(["clientId": comment.clientId])
+    }
+
+    /// Delete, report, block, or drop a refused comment (report-block). JS
+    /// asks, confirms and calls the API; new threads come back as a prop.
+    func commentSheet(_ sheet: CommentSheetView, didChoose action: CommentAction, for comment: ReaderComment) {
+        onManageComment?([
+            "action": action.rawValue,
+            "commentId": comment.id,
+            "clientId": comment.clientId,
+            "userId": comment.userId,
+            "username": comment.username,
+        ])
     }
 
     /// Drops the passage highlight the reader made. Leaving it selected under a

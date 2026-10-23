@@ -20,6 +20,18 @@ import UIKit
 
 private let visibleReplies = 2
 
+/// The Deleted reader can't be reported or blocked (report-block R2.4).
+private let deletedReaderId = "00000000-0000-0000-0000-000000000000"
+
+/// What a comment's ⋯ menu asks for; JS does the rest (useSafetyActions).
+enum CommentAction: String {
+    case delete
+    case report
+    case block
+    /// A refused comment taken back into the composer (R8.3).
+    case discard
+}
+
 // MARK: - Avatar
 
 private class AvatarView: UIView {
@@ -61,25 +73,108 @@ private class CommentRowView: UIView {
     private let onLike: (ReaderComment) -> Void
     private let onReply: (ReaderComment) -> Void
     private let onRetry: (ReaderComment) -> Void
+    private let onAction: (CommentAction, ReaderComment) -> Void
+    private let onEdit: (ReaderComment) -> Void
 
     init(
         comment: ReaderComment,
         isReply: Bool,
         onLike: @escaping (ReaderComment) -> Void,
         onReply: @escaping (ReaderComment) -> Void,
-        onRetry: @escaping (ReaderComment) -> Void
+        onRetry: @escaping (ReaderComment) -> Void,
+        onAction: @escaping (CommentAction, ReaderComment) -> Void,
+        onEdit: @escaping (ReaderComment) -> Void
     ) {
         self.comment = comment
         self.isReply = isReply
         self.onLike = onLike
         self.onReply = onReply
         self.onRetry = onRetry
+        self.onAction = onAction
+        self.onEdit = onEdit
         super.init(frame: .zero)
-        build()
+        if comment.isPlaceholder {
+            buildPlaceholder()
+        } else {
+            build()
+        }
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    /// "Comment deleted", "Removed by ReadPanda", "You reported this comment":
+    /// where it was, nothing of what it said, and no actions (R7.4). Read out
+    /// as what it says rather than skipped (R12.3).
+    private func buildPlaceholder() {
+        translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = comment.placeholderText
+        label.font = DS.Fonts.italic(13)
+        label.textColor = DS.Colors.onSurfaceVariant
+        label.numberOfLines = 0
+        label.adjustsFontForContentSizeCategory = true
+        label.isAccessibilityElement = true
+        label.accessibilityLabel = comment.placeholderText
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16),
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: isReply ? 40 : 0),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+    }
+
+    /// Saved comments get a ⋯ menu (R1.1, R7.1): Delete for your own, Report
+    /// and Block for anyone else's. Not while sending, and not on the Deleted
+    /// reader's.
+    private func menuButton() -> UIButton? {
+        // Until the server has it, its id is still the one minted on the phone.
+        guard !comment.pending, !comment.failed, comment.id != comment.clientId else {
+            return nil
+        }
+        let actions: [UIAction]
+        if comment.isMine {
+            actions = [
+                UIAction(title: "Delete comment", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
+                    guard let self = self else { return }
+                    self.onAction(.delete, self.comment)
+                },
+            ]
+        } else {
+            guard !comment.userId.isEmpty, comment.userId != deletedReaderId else {
+                return nil
+            }
+            actions = [
+                UIAction(title: "Report comment", image: UIImage(systemName: "flag")) { [weak self] _ in
+                    guard let self = self else { return }
+                    self.onAction(.report, self.comment)
+                },
+                UIAction(title: "Block \(comment.username)", image: UIImage(systemName: "hand.raised"), attributes: .destructive) { [weak self] _ in
+                    guard let self = self else { return }
+                    self.onAction(.block, self.comment)
+                },
+            ]
+        }
+
+        let button = UIButton(type: .system)
+        button.setImage(readerIcon("ellipsis", size: 13), for: .normal)
+        button.tintColor = DS.Colors.onSurfaceVariant
+        button.menu = UIMenu(children: actions)
+        button.showsMenuAsPrimaryAction = true
+        // R12.1.
+        button.accessibilityLabel = "More actions for \(comment.username)'s comment"
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 32),
+            button.heightAnchor.constraint(equalToConstant: 28),
+        ])
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        return button
     }
 
     private func build() {
@@ -119,6 +214,9 @@ private class CommentRowView: UIView {
         let spacer = UIView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         meta.addArrangedSubview(spacer)
+        if let menu = menuButton() {
+            meta.addArrangedSubview(menu)
+        }
 
         let text = UILabel()
         text.text = comment.body
@@ -147,7 +245,8 @@ private class CommentRowView: UIView {
     }
 
     /// What someone just typed is never thrown away silently — it stays on
-    /// screen and offers to go again.
+    /// screen and offers to go again. One refused for its words can't go
+    /// again as it is, so it offers Edit instead (R8.3).
     private func failedRow() -> UIView {
         let icon = UIImageView(image: readerIcon("exclamationmark.circle", size: 11))
         icon.tintColor = DS.Colors.error
@@ -156,9 +255,10 @@ private class CommentRowView: UIView {
         icon.widthAnchor.constraint(equalToConstant: 12).isActive = true
 
         let label = UILabel()
-        label.text = "Couldn't send · Retry"
+        label.text = comment.refused ? "Includes words we don't allow · Edit" : "Couldn't send · Retry"
         label.font = DS.Fonts.bold(11)
         label.textColor = DS.Colors.error
+        label.numberOfLines = 0
 
         let stack = UIStackView(arrangedSubviews: [icon, label, UIView()])
         stack.axis = .horizontal
@@ -167,7 +267,13 @@ private class CommentRowView: UIView {
         stack.isLayoutMarginsRelativeArrangement = true
         stack.layoutMargins = UIEdgeInsets(top: 6, left: 0, bottom: 0, right: 0)
         stack.isUserInteractionEnabled = true
-        stack.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapRetry)))
+        stack.addGestureRecognizer(UITapGestureRecognizer(
+            target: self,
+            action: comment.refused ? #selector(tapEdit) : #selector(tapRetry)
+        ))
+        stack.isAccessibilityElement = true
+        stack.accessibilityTraits = .button
+        stack.accessibilityLabel = comment.refused ? "Includes words we don't allow. Edit" : "Couldn't send. Retry"
         return stack
     }
 
@@ -221,6 +327,10 @@ private class CommentRowView: UIView {
     @objc private func tapRetry() {
         onRetry(comment)
     }
+
+    @objc private func tapEdit() {
+        onEdit(comment)
+    }
 }
 
 // MARK: - Sheet
@@ -230,6 +340,7 @@ protocol CommentSheetDelegate: AnyObject {
     func commentSheet(_ sheet: CommentSheetView, didSubmit body: String, parentId: String?)
     func commentSheet(_ sheet: CommentSheetView, didLike comment: ReaderComment)
     func commentSheet(_ sheet: CommentSheetView, didRetry comment: ReaderComment)
+    func commentSheet(_ sheet: CommentSheetView, didChoose action: CommentAction, for comment: ReaderComment)
 }
 
 class CommentSheetView: UIView, UITextViewDelegate {
@@ -714,8 +825,39 @@ class CommentSheetView: UIView, UITextViewDelegate {
             onRetry: { [weak self] in
                 guard let self = self else { return }
                 self.delegate?.commentSheet(self, didRetry: $0)
+            },
+            onAction: { [weak self] action, comment in
+                guard let self = self else { return }
+                self.delegate?.commentSheet(self, didChoose: action, for: comment)
+            },
+            onEdit: { [weak self] in
+                self?.editRefused($0)
             }
         )
+    }
+
+    /// Takes a refused comment back into the composer (R8.3), replying to
+    /// the same comment if it was a reply, and has JS drop the failed row.
+    private func editRefused(_ comment: ReaderComment) {
+        if let parentId = comment.parentId {
+            let comments = target.flatMap { $0.resolve(in: threads) }?.comments ?? []
+            replyTo = comments.first { $0.id == parentId }
+        } else {
+            replyTo = nil
+        }
+        // A refused comment on a new passage is its thread's only comment, so
+        // dropping it drops the thread too. Aim the sheet back at the passage,
+        // or Send would have nothing to post to.
+        if let thread = target?.resolve(in: threads),
+           thread.comments.count == 1,
+           thread.comments.first?.clientId == comment.clientId {
+            target = .draft(page: thread.page, anchorText: thread.anchorText, bounds: thread.bounds, fileHash: thread.fileHash)
+        }
+        composerInput.text = comment.body
+        textViewDidChange(composerInput)
+        delegate?.commentSheet(self, didChoose: .discard, for: comment)
+        render()
+        composerInput.becomeFirstResponder()
     }
 
     private func moreRepliesRow(rootId: String, hidden: Int) -> UIView {

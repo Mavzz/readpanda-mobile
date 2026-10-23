@@ -42,6 +42,9 @@ const useRoomLobby = (routeRoom) => {
     const name = m.name || m.username || m.initials || 'Member';
     return {
       id: m.userId || m.user_id || `member-${i}`,
+      // The real id, for Report and Block; none on a placeholder member.
+      userId: m.userId || m.user_id || null,
+      blocked: !!m.blocked,
       name,
       initials: m.initials || getInitials(name),
       isSelf: m.isMe || name === selfName,

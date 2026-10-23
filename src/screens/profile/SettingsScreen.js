@@ -18,6 +18,7 @@ import useSubscriptionStore from '../../stores/subscriptionStore';
 import { isPlusEnabled } from '../../services/purchasesService';
 import useNotificationStore, { summarizeSettings } from '../../stores/notificationStore';
 import useNotificationPermission from '../../hooks/useNotificationPermission';
+import useBlocksStore from '../../stores/blocksStore';
 import packageJson from '../../../package.json';
 import useLayout from '../../hooks/useLayout';
 import profileStyles from './profileStyles';
@@ -45,12 +46,15 @@ const SettingsScreen = () => {
   const notificationSettings = useNotificationStore((s) => s.settings);
   const fetchNotificationSettings = useNotificationStore((s) => s.fetchSettings);
   const notificationsPermitted = useNotificationPermission();
+  const blockedCount = useBlocksStore((s) => (s.loaded ? s.blocked.length : null));
+  const fetchBlocks = useBlocksStore((s) => s.fetch);
 
-  // On focus, so the row's value is current after coming back from the
-  // Notifications screen.
+  // On focus, so the rows' values are current after coming back from the
+  // Notifications and Blocked readers screens.
   useFocusEffect(useCallback(() => {
     fetchNotificationSettings();
-  }, [fetchNotificationSettings]));
+    fetchBlocks();
+  }, [fetchNotificationSettings, fetchBlocks]));
 
   const [pageMode, setPageMode] = useReaderSetting('pageMode');
   const [pageTheme, setPageTheme] = useReaderSetting('pageTheme');
@@ -156,6 +160,12 @@ const SettingsScreen = () => {
         label="Who sees my progress"
         value={labelForSetting('progressVisibility', progressVisibility)}
         onPress={() => setChoice('progressVisibility')}
+      />
+      <SettingsRow
+        icon="hand-left-outline"
+        label="Blocked readers"
+        value={blockedCount === null ? undefined : blockedCount === 0 ? 'None' : String(blockedCount)}
+        onPress={() => navigation.navigate('BlockedReaders')}
       />
       <SettingsRow
         icon="shield-checkmark-outline"

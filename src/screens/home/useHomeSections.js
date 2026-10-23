@@ -6,6 +6,7 @@ import enhancedStorage from '../../utils/enhancedStorage';
 import scheduleOf from '../../utils/roomSchedule';
 import { sameId } from '../../utils/bookId';
 import { chapterOf, lastSevenDays, timeLeft } from './homeCopy';
+import previewComment from '../../utils/commentPreview';
 
 const NEW_COMMENTS = 3;
 
@@ -130,7 +131,8 @@ const useHomeSections = () => {
       const entry = byBook[bookId];
       locked += entry?.lockedCount || 0;
       (entry?.threads || []).forEach((thread) => {
-        const root = thread.comments[0];
+        // A placeholder ("Comment deleted") previews its first reply.
+        const root = previewComment(thread);
         if (root) {
           newest.push({ thread, root, room, bookId, bookTitle: room.currentBookTitle });
         }

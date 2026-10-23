@@ -33,6 +33,7 @@ Rules:
 - Don't write feature code until `tasks.md` exists and the status line at the top of `requirements.md` says `Approved`.
 - Do one task at a time. When it's done, tick it in `tasks.md` and add a one-line note if the result differs from `design.md`.
 - If the spec turns out to be wrong, update the spec first, then the code.
+- When every task is done, check the acceptance criteria before committing. Go one requirement at a time, together: I check what the code, API and database can show; you check what needs a device. Tick each criterion in the `## Acceptance` list in `tasks.md`, or note why it's partial or waived. Fix what fails, then re-check it. Commit once every criterion is ticked or waived.
 - Templates live in `specs/_templates/`. Commands: `/spec-new`, `/spec-task`, `/spec-verify`.
 
 ## Code style

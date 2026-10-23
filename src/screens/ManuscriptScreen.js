@@ -16,6 +16,9 @@ import enhancedStorage from '../utils/enhancedStorage';
 import { getReaderSetting } from '../utils/readerSettings';
 import useLayout from '../hooks/useLayout';
 import { showToast } from '../components/Toaster';
+import useSafetyActions from '../hooks/useSafetyActions';
+import { bodyOfError } from '../utils/apiError';
+import { sameId } from '../utils/bookId';
 import { DS } from '../styles/global';
 import WidgetOpenMorph from '../widget/WidgetOpenMorph';
 
@@ -45,6 +48,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const saveProgress = useReadingProgressStore((s) => s.saveProgress);
   const loadProgress = useReadingProgressStore((s) => s.loadProgress);
   const shelf = useReadingProgressStore((s) => s.shelf);
+  const attachRoom = useReadingProgressStore((s) => s.attachRoom);
 
   // Subscribing to the data, not only to the actions: the actions have stable
   // identities, so a screen that reads them alone never re-renders when
@@ -55,6 +59,8 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const retryComment = useCommentsStore((s) => s.retryComment);
   const toggleLike = useCommentsStore((s) => s.toggleLike);
   const markThreadRead = useCommentsStore((s) => s.markThreadRead);
+  const discardFailed = useCommentsStore((s) => s.discardFailed);
+  const { reportComment, blockUser, confirmDelete } = useSafetyActions();
   const rooms = useRoomStore((s) => s.rooms);
   const bookHighlights = useHighlightsStore((s) => s.byBook[book.book_id]);
   const loadHighlights = useHighlightsStore((s) => s.loadHighlights);
@@ -89,22 +95,38 @@ const ManuscriptScreen = ({ route, navigation }) => {
     () => shelf.filter((b) => b.id === book.book_id && b.roomId).map((b) => ({ id: b.roomId, name: b.roomName })),
     [shelf, book.book_id],
   );
+  // The shelf can miss a room: one joined, or whose book was chosen, before
+  // the book was on this device's shelf has nothing to tag, and Book detail
+  // then starts it solo. My rooms reading it still count.
+  const roomsReadingIt = useMemo(
+    () => (rooms || []).filter((r) => sameId(r.currentBookId, book.book_id)),
+    [rooms, book.book_id],
+  );
+  const bookRooms = useMemo(
+    () => (shelfRooms.length ? shelfRooms : roomsReadingIt.map((r) => ({ id: r.id, name: r.name }))),
+    [shelfRooms, roomsReadingIt],
+  );
 
   useEffect(() => {
-    if (roomId || shelfRooms.length === 0) {
+    if (roomId || bookRooms.length === 0) {
       return;
     }
     // A widget tap asks for a particular room's layer (WIDGETS_13a_13f.md).
     const requested = route.params?.roomId;
     const remembered = enhancedStorage.getUserPreference(lastRoomKey(book.book_id));
-    const match = shelfRooms.find((r) => r.id === requested) || shelfRooms.find((r) => r.id === remembered);
-    setRoomId(match?.id || shelfRooms[0].id);
-  }, [shelfRooms, roomId, book.book_id, route.params?.roomId]);
+    const match = bookRooms.find((r) => r.id === requested) || bookRooms.find((r) => r.id === remembered);
+    const chosen = match?.id || bookRooms[0].id;
+    setRoomId(chosen);
+    if (!shelfRooms.length) {
+      // So Home and My Books show it with the room too.
+      attachRoom(roomsReadingIt.find((r) => r.id === chosen));
+    }
+  }, [bookRooms, shelfRooms, roomsReadingIt, roomId, book.book_id, route.params?.roomId, attachRoom]);
 
   const entry = byBook[book.book_id];
   const threads = useMemo(() => entry?.threads || [], [entry]);
   const roomName =
-    shelfRooms.find((r) => r.id === roomId)?.name ||
+    bookRooms.find((r) => r.id === roomId)?.name ||
     rooms?.find((r) => r.id === roomId)?.name ||
     '';
 
@@ -314,10 +336,15 @@ const ManuscriptScreen = ({ route, navigation }) => {
         body,
         fileHash: fileHash || fileHashRef.current,
       });
-    } catch {
-      // The comment is still on screen, flagged for retry — the toast just
-      // says so, since the sheet has already moved on.
-      showToast('Couldn\'t post that — tap retry on the comment', 'error');
+    } catch (e) {
+      // The comment is still on screen, flagged — the toast just says so,
+      // since the sheet has already moved on. One refused for its words
+      // offers Edit rather than Retry (report-block R8.3).
+      const refused = bodyOfError(e).code === 'blocked_words';
+      showToast(
+        refused ? 'That includes words we don\'t allow.' : 'Couldn\'t post that — tap retry on the comment',
+        'error',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -330,6 +357,27 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const handleRetry = useCallback((clientId) => {
     retryComment(book.book_id, clientId);
   }, [book.book_id, retryComment]);
+
+  // A comment's ⋯ menu, or Edit on a refused one (report-block). The sheet
+  // only knows ids, so find the comment it means.
+  const handleManageComment = useCallback(({ action, commentId, clientId, userId, username }) => {
+    if (action === 'discard') {
+      discardFailed(book.book_id, clientId);
+      return;
+    }
+    const all = threads.flatMap((t) => t.comments.flatMap((c) => [c, ...(c.replies || [])]));
+    const comment = all.find((c) => c.id === commentId);
+    if (!comment) {
+      return;
+    }
+    if (action === 'delete') {
+      confirmDelete(comment, book.book_id);
+    } else if (action === 'report') {
+      reportComment(comment, { bookId: book.book_id, roomId });
+    } else if (action === 'block') {
+      blockUser({ userId: userId || comment.userId, username: username || comment.username });
+    }
+  }, [threads, book.book_id, roomId, discardFailed, confirmDelete, reportComment, blockUser]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -372,7 +420,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         threads={nativeThreads}
         highlights={nativeHighlights}
         hasRoom={!!roomId}
-        canPickRoom={shelfRooms.length > 1}
+        canPickRoom={bookRooms.length > 1}
         roomName={roomName}
         unreadTotal={roomId ? entry?.unreadCount || 0 : 0}
         lockedCount={roomId ? entry?.lockedCount || 0 : 0}
@@ -385,6 +433,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         onSubmitComment={handleSubmitComment}
         onLikeComment={handleLike}
         onRetryComment={handleRetry}
+        onManageComment={handleManageComment}
         onRoomPickerRequested={handleRoomPicker}
         onCreateHighlight={handleCreateHighlight}
         onRemoveHighlight={handleRemoveHighlight}
@@ -397,7 +446,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         visible={roomPickerOpen}
         title="Comment in which room?"
         subtitle="This book is being read in more than one."
-        items={shelfRooms.map((r) => ({ id: r.id, title: r.name || 'Room', isBucket: true }))}
+        items={bookRooms.map((r) => ({ id: r.id, title: r.name || 'Room', isBucket: true }))}
         onSelect={(item) => {
           setRoomId(item.id);
           enhancedStorage.storeUserPreference(lastRoomKey(book.book_id), item.id);
