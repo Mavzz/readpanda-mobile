@@ -95,7 +95,7 @@ sequenceDiagram
     actor A as Reader A
 
     B->>App: Block A, from a comment's ⋯ or the member list (R1.1, R2.1)
-    App-->>B: "Block A? You won't see their comments or rooms, and they won't be told." (R5.1)
+    App-->>B: "Block A? You won't see their comments or rooms, and they won't be told. You'll stay in any rooms you share." (R5.1)
     B->>App: Block
     App->>API: POST /users/me/blocks
     API->>DB: Save B blocks A
@@ -280,7 +280,7 @@ anything from them again.
 **Acceptance criteria**
 1. WHEN the reader chooses "Block <username>" THE app SHALL ask "Block
    <username>? You won't see their comments or rooms, and they won't be
-   told." with Block and Cancel.
+   told. You'll stay in any rooms you share." with Block and Cancel.
 2. WHEN they confirm THE app SHALL show "<username> blocked" and SHALL hide
    that reader's comments everywhere at once: the reader, the room page,
    Home, and comment counts.

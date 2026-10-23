@@ -135,7 +135,7 @@ it('blocks after asking (R5.1, R5.2), and unblocks (R6.3)', async () => {
   await run((a) => a.blockUser({ userId: 'u-ada', username: 'ada' }));
   expect(mockBlocks.block).not.toHaveBeenCalled();
   expect(Alert.alert.mock.calls[0].slice(0, 2)).toEqual([
-    'Block ada?', 'You won\'t see their comments or rooms, and they won\'t be told.',
+    'Block ada?', 'You won\'t see their comments or rooms, and they won\'t be told. You\'ll stay in any rooms you share.',
   ]);
 
   answers = ['Block'];
