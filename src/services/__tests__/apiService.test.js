@@ -9,8 +9,9 @@ jest.mock('../../utils/enhancedStorage', () => ({
   },
 }));
 
+import { Alert } from 'react-native';
 import enhancedStorage from '../../utils/enhancedStorage';
-import apiService, { AuthError, AUTH_ERRORS } from '../apiService';
+import apiService, { AuthError, AUTH_ERRORS, SUSPENDED_MESSAGE } from '../apiService';
 
 const json = (status, body) => ({
   status,
@@ -27,6 +28,7 @@ beforeEach(() => {
   apiService.isRefreshing = false;
   apiService.failedQueue = [];
   apiService.setAuthFailureCallback(null);
+  apiService.suspendedShown = false;
   enhancedStorage.getAuthToken.mockReturnValue('old-access');
   enhancedStorage.getRefreshToken.mockReturnValue('old-refresh');
 });
@@ -124,5 +126,53 @@ describe('apiService', () => {
     enhancedStorage.getRefreshToken.mockReturnValue(null);
     await expect(apiService.refreshAuthToken()).rejects.toMatchObject({ type: AUTH_ERRORS.NO_TOKENS });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  describe('a suspended account (report-block R10.2)', () => {
+    const suspended = { error: SUSPENDED_MESSAGE, code: 'account_suspended' };
+    let alert;
+    beforeEach(() => {
+      alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+    afterEach(() => alert.mockRestore());
+
+    it('signs out and says why, once, however many calls are refused', async () => {
+      const signOut = jest.fn();
+      apiService.setAuthFailureCallback(signOut);
+      fetchMock.mockResolvedValue(json(403, suspended));
+
+      const errors = await Promise.all([
+        apiService.post('https://api/room/create', {}).catch((e) => e),
+        apiService.post('https://api/reports', {}).catch((e) => e),
+      ]);
+
+      expect(errors.every((e) => e.suspended)).toBe(true);
+      expect(enhancedStorage.clearAuthData).toHaveBeenCalled();
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(alert.mock.calls[0].slice(0, 2)).toEqual(['Account suspended', SUSPENDED_MESSAGE]);
+    });
+
+    it('does the same when the refresh is refused', async () => {
+      const signOut = jest.fn();
+      apiService.setAuthFailureCallback(signOut);
+      fetchMock.mockImplementation(async (url) => (url.endsWith('/token/refresh') ? json(403, suspended) : json(401, {})));
+
+      const err = await apiService.get('https://api/x').catch((e) => e);
+
+      expect(err).toBeInstanceOf(AuthError);
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(alert).toHaveBeenCalledWith('Account suspended', SUSPENDED_MESSAGE, expect.any(Array), expect.any(Object));
+    });
+
+    it('leaves other 403s alone', async () => {
+      const signOut = jest.fn();
+      apiService.setAuthFailureCallback(signOut);
+      fetchMock.mockResolvedValue(json(403, { error: 'Only the room creator can change this room' }));
+      const err = await apiService.post('https://api/room/x', {}).catch((e) => e);
+      expect(err.suspended).toBeUndefined();
+      expect(signOut).not.toHaveBeenCalled();
+      expect(alert).not.toHaveBeenCalled();
+    });
   });
 });

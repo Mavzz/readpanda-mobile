@@ -4,6 +4,7 @@ import ManuscriptScreen from '../screens/ManuscriptScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
+import BlockedReadersScreen from '../screens/profile/BlockedReadersScreen';
 import HelpScreen from '../screens/profile/HelpScreen';
 import InterestScreen from '../screens/InterestScreen';
 import CreateBucketScreen from '../screens/CreateBucketScreen';
@@ -80,6 +81,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <Stack.Screen name="BlockedReaders" component={BlockedReadersScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen
         name="Interest"

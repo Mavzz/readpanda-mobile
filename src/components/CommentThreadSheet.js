@@ -17,6 +17,9 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { DS } from '../styles/global';
 import relativeTime from '../utils/relativeTime';
+import useSafetyActions from '../hooks/useSafetyActions';
+import useCommentsStore from '../stores/commentsStore';
+import Toaster from './Toaster';
 
 // The thread sheet (6b). One passage, everything said about it, and a way to
 // add to it — opened from a gutter dot, from the chrome icon (page-level, no
@@ -32,7 +35,27 @@ const Avatar = ({ initials, size }) => (
   </View>
 );
 
-const CommentRow = ({ comment, isReply, onLike, onReply }) => (
+const DELETED_READER_ID = '00000000-0000-0000-0000-000000000000';
+
+// What a placeholder says (report-block R7.4), aloud too (R12.3).
+const placeholderText = (comment) => {
+  if (comment.hidden) {
+    return 'You reported this comment';
+  }
+  return comment.deleted === 'moderator' ? 'Removed by ReadPanda' : 'Comment deleted';
+};
+
+// Saved comments get a ⋯ (R1.1, R7.1); not while sending, not after a
+// failure, and not on the Deleted reader's.
+const hasMenu = (comment) =>
+  !comment.pending && !comment.failed && comment.id !== comment.clientId
+  && (comment.isMine || (!!comment.userId && comment.userId !== DELETED_READER_ID));
+
+const CommentRow = ({ comment, isReply, onLike, onReply, onMenu, onEdit }) => (comment.deleted || comment.hidden ? (
+  <View style={[styles.commentRow, isReply && styles.replyRow]} accessible accessibilityLabel={placeholderText(comment)}>
+    <Text style={styles.placeholderText}>{placeholderText(comment)}</Text>
+  </View>
+) : (
   <View style={[styles.commentRow, isReply && styles.replyRow]}>
     <Avatar initials={comment.initials} size={isReply ? 26 : 30} />
     <View style={styles.commentBody}>
@@ -42,16 +65,35 @@ const CommentRow = ({ comment, isReply, onLike, onReply }) => (
           p. {comment.page + 1} · {relativeTime(comment.createdAt)}
         </Text>
         {!comment.read && <View style={styles.unreadDot} />}
+        <View style={styles.metaSpacer} />
+        {hasMenu(comment) ? (
+          <Pressable
+            onPress={() => onMenu?.(comment)}
+            hitSlop={8}
+            style={styles.menuButton}
+            accessibilityRole="button"
+            accessibilityLabel={`More actions for ${comment.username}'s comment`}
+          >
+            <Icon name="ellipsis-horizontal" size={15} color={DS.colors.onSurfaceVariant} />
+          </Pressable>
+        ) : null}
       </View>
 
       <Text style={styles.commentText}>{comment.body}</Text>
 
       {comment.failed ? (
         // What someone just typed is never thrown away silently — it stays on
-        // screen and offers to go again.
-        <Pressable onPress={() => onReply?.(comment, true)} style={styles.failedRow}>
+        // screen and offers to go again. One refused for its words can't go
+        // as it is, so it offers Edit (report-block R8.3).
+        <Pressable
+          onPress={() => (comment.failed === 'blocked_words' ? onEdit?.(comment) : onReply?.(comment, true))}
+          style={styles.failedRow}
+          accessibilityRole="button"
+        >
           <Icon name="alert-circle-outline" size={12} color={DS.colors.error} />
-          <Text style={styles.failedText}>Couldn't send · Retry</Text>
+          <Text style={styles.failedText}>
+            {comment.failed === 'blocked_words' ? 'Includes words we don\'t allow · Edit' : 'Couldn\'t send · Retry'}
+          </Text>
         </Pressable>
       ) : (
         <View style={styles.actions}>
@@ -85,11 +127,14 @@ const CommentRow = ({ comment, isReply, onLike, onReply }) => (
       )}
     </View>
   </View>
-);
+));
 
+// bookId and roomId are for the ⋯ actions (report-block).
 const CommentThreadSheet = ({
   visible,
   thread,
+  bookId,
+  roomId,
   roomName,
   quote,
   page,
@@ -111,11 +156,32 @@ const CommentThreadSheet = ({
   };
   const [replyTo, setReplyTo] = useState(null);
   const [expanded, setExpanded] = useState({});
+  const { commentMenu } = useSafetyActions();
+  const discardFailed = useCommentsStore((s) => s.discardFailed);
 
-  const comments = useMemo(() => thread?.comments || [], [thread]);
-  const anchorText = quote ?? thread?.anchorText ?? '';
-  const anchorPage = page ?? thread?.page ?? 0;
-  const total = comments.reduce((n, c) => n + 1 + (c.replies?.length || 0), 0);
+  // Callers close the sheet by clearing the thread, in the same render as
+  // `visible` goes false. Keep drawing the last one while the sheet slides
+  // away, or its comments vanish before it does.
+  const [shownThread, setShownThread] = useState(thread);
+  if (thread && thread !== shownThread) {
+    setShownThread(thread);
+  }
+  const current = thread || shownThread;
+
+  const comments = useMemo(() => current?.comments || [], [current]);
+  const anchorText = quote ?? current?.anchorText ?? '';
+  const anchorPage = page ?? current?.page ?? 0;
+  // A placeholder isn't a comment anyone can read.
+  const total = comments.reduce((n, c) => n + (c.deleted || c.hidden ? 0 : 1) + (c.replies?.length || 0), 0);
+
+  const handleMenu = (comment) => commentMenu(comment, { bookId, roomId });
+
+  // A refused comment back in the composer, replying where it did (R8.3).
+  const handleEdit = (comment) => {
+    setBody(comment.body);
+    setReplyTo(comment.parentId ? comments.find((c) => c.id === comment.parentId) || null : null);
+    discardFailed(bookId, comment.clientId);
+  };
 
   // A fresh sheet starts empty — a draft aimed at one passage shouldn't follow
   // the reader to the next one.
@@ -153,7 +219,7 @@ const CommentThreadSheet = ({
 
     return (
       <View key={comment.id}>
-        <CommentRow comment={comment} onLike={onLike} onReply={handleReply} />
+        <CommentRow comment={comment} onLike={onLike} onReply={handleReply} onMenu={handleMenu} onEdit={handleEdit} />
         {shown.map((reply) => (
           <CommentRow
             key={reply.id}
@@ -161,6 +227,8 @@ const CommentThreadSheet = ({
             isReply
             onLike={onLike}
             onReply={handleReply}
+            onMenu={handleMenu}
+            onEdit={handleEdit}
           />
         ))}
         {hidden > 0 && (
@@ -270,6 +338,9 @@ const CommentThreadSheet = ({
           </Pressable>
         </KeyboardAvoidingView>
       </Pressable>
+      {/* Toasts from inside the sheet ("ada blocked") show over it, not
+          behind it: the newest Toaster mounted is the one that shows them. */}
+      <Toaster />
     </Modal>
   );
 };
@@ -427,6 +498,20 @@ const styles = StyleSheet.create({
   },
   actionTextActive: {
     color: DS.colors.primary,
+  },
+  metaSpacer: {
+    flex: 1,
+  },
+  menuButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  // Manrope has no italic face, so a slant, matching the reader's sheet.
+  placeholderText: {
+    fontFamily: DS.font.medium,
+    fontSize: 13,
+    color: DS.colors.onSurfaceVariant,
+    transform: [{ skewX: '-11deg' }],
   },
   failedRow: {
     flexDirection: 'row',

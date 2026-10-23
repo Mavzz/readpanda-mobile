@@ -5,6 +5,7 @@ import { showToast } from '../components/Toaster';
 import useNotificationStore from '../stores/notificationStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
+import useRoomStore from '../stores/roomStore';
 import { NotificationService } from '../services/notificationService';
 import openNotification, { notificationFromPush } from '../utils/openNotification';
 import log from '../utils/logger';
@@ -43,6 +44,9 @@ const handleOpened = async (remoteMessage, navigationRef) => {
 //
 // Runs once signed in — asking for permission on the login screen is asking
 // before the reader knows what they'd be notified about.
+// Pushes that change a room you're in: its book, or who's in it.
+const ROOM_CHANGES = new Set(['ROOM_BOOK', 'ROOM_JOIN']);
+
 const usePushNotifications = ({ isAuthenticated, navigationRef }) => {
   // Pushes that arrive while the app is in the background don't reach
   // onMessage, so the bell's badge would stay stale until it's opened.
@@ -55,6 +59,9 @@ const usePushNotifications = ({ isAuthenticated, navigationRef }) => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         useNotificationStore.getState().refreshUnreadCount();
+        // A room may have changed or gone while the app was away, its push
+        // unseen (report-block R9.9).
+        useRoomStore.getState().recheckActiveRoom();
       }
     });
     return () => subscription.remove();
@@ -99,6 +106,18 @@ const usePushNotifications = ({ isAuthenticated, navigationRef }) => {
           const hero = useReadingProgressStore.getState().activeBook;
           if (hero?.roomId) {
             useCommentsStore.getState().loadComments(hero.roomId, hero.id);
+          }
+          // The room's page and Home read the room from the store, so
+          // fetching it again shows the new book or member without leaving.
+          const { type, room_id: roomId } = remoteMessage.data || {};
+          const rooms = useRoomStore.getState();
+          if (ROOM_CHANGES.has(type) && rooms.rooms.some((r) => r.id === roomId)) {
+            rooms.fetchRoomDetail(roomId);
+          }
+          // A moderation notice carries no room id, and the room it's about
+          // may be the one on screen (report-block R9.9).
+          if (type === 'SYSTEM') {
+            rooms.recheckActiveRoom();
           }
         }));
 

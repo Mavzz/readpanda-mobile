@@ -9,6 +9,7 @@ import useBooksStore from './booksStore';
 import useNotificationStore from './notificationStore';
 import useHighlightsStore from './highlightsStore';
 import useSubscriptionStore from './subscriptionStore';
+import useBlocksStore from './blocksStore';
 
 // What this account's Home and My Books showed last time, read back once
 // storage knows whose it is.
@@ -79,6 +80,7 @@ const useAuthStore = create((set, get) => ({
       useBooksStore.getState().clearBooks();
       useNotificationStore.getState().clearNotifications();
       useHighlightsStore.getState().clearHighlights();
+      useBlocksStore.getState().clear();
       useSubscriptionStore.getState().stop();
       log.info('User signed out');
     } catch (e) {

@@ -97,6 +97,8 @@ const NewInRooms = ({ section, split = false, onSeeAll, labelInside = false }) =
       <CommentThreadSheet
         visible={!!openThread}
         thread={openThread}
+        bookId={open?.bookId}
+        roomId={open?.room?.id}
         roomName={open?.room?.name}
         submitting={false}
         onSubmit={({ body, parentId }) =>

@@ -62,7 +62,10 @@ const SignUp = ({ navigation }) => {
       return;
     }
     log.error(`${which} sign-up failed:`, result.status);
-    showToast(result.error?.error || `Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+    // A suspended account has already been told, by apiService's alert.
+    if (result.error?.code !== 'account_suspended') {
+      showToast(result.error?.error || `Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+    }
   };
 
   const logIn = () => navigation.popTo('Login');

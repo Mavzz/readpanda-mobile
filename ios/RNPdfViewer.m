@@ -38,6 +38,8 @@ RCT_EXPORT_VIEW_PROPERTY(onThreadOpened, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onSubmitComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLikeComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRetryComment, RCTDirectEventBlock)
+// Delete, report, block, or take a refused comment back to edit.
+RCT_EXPORT_VIEW_PROPERTY(onManageComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRoomPickerRequested, RCTDirectEventBlock)
 
 // Personal highlights. Private to the reader, so they exist in solo books too.

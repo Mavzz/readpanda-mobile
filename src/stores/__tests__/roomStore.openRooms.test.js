@@ -164,3 +164,12 @@ it('creates rooms invite-only unless told otherwise (R7.2)', async () => {
   await store().saveRoom({ name: 'Loud', isPrivate: false });
   expect(makeAuthenticatedPostRequest.mock.calls[1][1].is_private).toBe(false);
 });
+
+it('says which field a refused room name is about (report-block R8.4)', async () => {
+  makeAuthenticatedPostRequest.mockRejectedValue(new Error(
+    'Client error 400: {"error":"That includes words we don\'t allow.","code":"blocked_words","field":"name"}',
+  ));
+  expect(await store().saveRoom({ name: 'rude' })).toEqual({
+    status: 400, error: 'That includes words we don\'t allow.', field: 'name', code: 'blocked_words',
+  });
+});

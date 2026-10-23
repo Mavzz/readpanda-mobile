@@ -63,6 +63,14 @@ enum DS {
         static func semibold(_ size: CGFloat) -> UIFont { manrope("Manrope-SemiBold", size, .semibold) }
         static func bold(_ size: CGFloat) -> UIFont { manrope("Manrope-Bold", size, .bold) }
         static func extraBold(_ size: CGFloat) -> UIFont { manrope("Manrope-ExtraBold", size, .heavy) }
+
+        /// Manrope ships no italic, so this slants Medium: placeholder rows
+        /// ("Comment deleted") read as set apart without leaving the typeface.
+        static func italic(_ size: CGFloat) -> UIFont {
+            let slant = CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0)
+            let descriptor = medium(size).fontDescriptor.withMatrix(slant)
+            return UIFont(descriptor: descriptor, size: size)
+        }
     }
 
     enum Radius {

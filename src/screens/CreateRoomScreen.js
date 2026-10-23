@@ -59,6 +59,8 @@ const CreateRoomScreen = ({ navigation, route }) => {
   const [name, setName] = useState('');
   const [privacy, setPrivacy] = useState(ROOM_PRIVACY.invite.key);
   const [saving, setSaving] = useState(false);
+  // A refusal for the name, shown under it (report-block R8.4).
+  const [nameError, setNameError] = useState(null);
   // Set once leaving is intended (created, or discard confirmed) so the
   // beforeRemove guard lets the navigation through.
   const leaving = useRef(false);
@@ -112,7 +114,7 @@ const CreateRoomScreen = ({ navigation, route }) => {
 
     // The API still requires a description — it's collected on the room's
     // page now, so send an empty one.
-    const { status, response, error } = await saveRoom({
+    const { status, response, error, field, code } = await saveRoom({
       name: trimmedName,
       description: '',
       isPrivate,
@@ -138,6 +140,15 @@ const CreateRoomScreen = ({ navigation, route }) => {
     }
 
     setSaving(false);
+    if (code === 'account_suspended') {
+      // apiService has signed out and said why.
+      return;
+    }
+    if (field === 'name') {
+      // By the field, as for its other errors (report-block R8.4).
+      setNameError(error);
+      return;
+    }
     showToast(error || 'Failed to create room', 'error');
   };
 
@@ -181,7 +192,7 @@ const CreateRoomScreen = ({ navigation, route }) => {
             <TextInput
               style={styles.input}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => { setName(text); setNameError(null); }}
               placeholder="e.g. Midnight Club"
               placeholderTextColor={DS.colors.placeholder}
               selectionColor={DS.colors.primary}
@@ -190,7 +201,13 @@ const CreateRoomScreen = ({ navigation, route }) => {
               returnKeyType="done"
               onSubmitEditing={handleCreate}
             />
-            <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
+            {nameError ? (
+              <Text style={[styles.helper, styles.fieldError]} accessibilityLiveRegion="polite" accessibilityRole="alert">
+                {nameError}
+              </Text>
+            ) : (
+              <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
+            )}
 
             {/* Privacy */}
             <Text style={[styles.eyebrow, styles.privacyEyebrow]}>WHO CAN JOIN</Text>
@@ -276,6 +293,9 @@ const styles = StyleSheet.create({
   },
 
   // Name field
+  fieldError: {
+    color: DS.colors.error,
+  },
   input: {
     backgroundColor: DS.colors.surfaceContainerLowest,
     borderRadius: DS.radius.md,

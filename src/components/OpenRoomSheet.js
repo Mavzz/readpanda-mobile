@@ -18,6 +18,7 @@ import BookCoverGradient from './BookCoverGradient';
 import GradientPill from './GradientPill';
 import PressableScale from './PressableScale';
 import { memberCountLabel } from './OpenRoomCard';
+import useSafetyActions from '../hooks/useSafetyActions';
 
 // The look before joining an open room (R5): what it reads, who started it,
 // how many are in it. Comments stay members-only, so there's nothing more to
@@ -31,6 +32,9 @@ const OpenRoomSheet = ({ room, visible, onClose, onJoined, onStale }) => {
   const [error, setError] = useState(null);
   // A second tap can land before the re-render that disables the first.
   const inFlight = useRef(false);
+  // Report room (report-block R2.2). A failure is said in the sheet, where
+  // it can be seen; the thanks is a system alert, which shows over it.
+  const { reportRoom } = useSafetyActions({ say: (message) => setError(message) });
 
   useEffect(() => {
     setError(null);
@@ -125,6 +129,15 @@ const OpenRoomSheet = ({ room, visible, onClose, onJoined, onStale }) => {
                   <Text style={styles.joinText}>Join room</Text>
                 )}
               </GradientPill>
+
+              <Pressable
+                onPress={() => reportRoom(room)}
+                style={styles.reportLink}
+                hitSlop={8}
+                accessibilityRole="button"
+              >
+                <Text style={styles.reportText}>Report room</Text>
+              </Pressable>
             </ScrollView>
           ) : null}
         </Pressable>
@@ -226,6 +239,16 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     marginTop: 24,
+  },
+  reportLink: {
+    alignSelf: 'center',
+    marginTop: 16,
+    paddingVertical: 4,
+  },
+  reportText: {
+    fontSize: 13,
+    fontFamily: DS.font.semibold,
+    color: DS.colors.onSurfaceVariant,
   },
   joinText: {
     fontSize: 15,

@@ -74,10 +74,15 @@ const Login = ({ navigation }) => {
         return;
       }
       log.error(`${which} login failed:`, result.status);
-      showToast(result.error?.error || `Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+      // A suspended account has already been told, by apiService's alert.
+      if (result.error?.code !== 'account_suspended') {
+        showToast(result.error?.error || `Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+      }
     } catch (error) {
       log.error(`${which} login failed with error:`, error);
-      showToast(`Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+      if (!error?.suspended) {
+        showToast(`Couldn't continue with ${which === 'apple' ? 'Apple' : 'Google'}. Try again.`, 'error');
+      }
     } finally {
       setOneTapBusy(null);
     }
@@ -103,7 +108,10 @@ const Login = ({ navigation }) => {
       }
     } catch (error) {
       log.error('Login failed with error:', error);
-      Alert.alert('Login failed', 'An error occurred. Please try again.');
+      // A suspended account has already been told, by apiService's alert.
+      if (!error?.suspended) {
+        Alert.alert('Login failed', 'An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

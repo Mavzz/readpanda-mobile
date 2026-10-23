@@ -37,6 +37,7 @@ const PdfViewer = ({
   onSubmitComment,
   onLikeComment,
   onRetryComment,
+  onManageComment,
   onRoomPickerRequested,
   onCreateHighlight,
   onRemoveHighlight,
@@ -81,6 +82,12 @@ const PdfViewer = ({
   const handleRetryComment = useCallback((e) => {
     onRetryComment?.(e.nativeEvent.clientId);
   }, [onRetryComment]);
+
+  // { action: 'delete' | 'report' | 'block' | 'discard', commentId, clientId,
+  // userId, username } from a comment's ⋯ menu or a refused comment's Edit.
+  const handleManageComment = useCallback((e) => {
+    onManageComment?.(e.nativeEvent);
+  }, [onManageComment]);
 
   // Carries the comment button's window frame ({ x, y, width, height }) so
   // iPad can anchor the room popover to it.
@@ -129,6 +136,7 @@ const PdfViewer = ({
       onSubmitComment={handleSubmitComment}
       onLikeComment={handleLikeComment}
       onRetryComment={handleRetryComment}
+      onManageComment={handleManageComment}
       onRoomPickerRequested={handleRoomPickerRequested}
       onCreateHighlight={handleCreateHighlight}
       onRemoveHighlight={handleRemoveHighlight}

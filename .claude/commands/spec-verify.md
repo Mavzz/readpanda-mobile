@@ -10,3 +10,4 @@ Verify the spec `specs/$ARGUMENTS/` against the code.
 3. Flag code changes on this branch that no requirement asks for (scope creep).
 4. Flag UI that breaks `docs/DESIGN.md`: raw hex, 1px borders, non-Manrope fonts.
 5. Reply with a table of criteria and then a short list of fixes. Don't edit code unless I ask.
+6. Then walk the criteria with me one requirement at a time, as `CLAUDE.md` describes: give me the device steps for that requirement, wait for my result, and tick the criteria in `tasks.md`'s `## Acceptance` list (create it if it's missing).
