@@ -1,10 +1,13 @@
+import { useEffect } from 'react';
 import { View, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DS } from '../../styles/global';
 import useRoomLobby from './useRoomLobby';
 import LobbyHeader from './LobbyHeader';
 import BookSection from './BookSection';
 import InviteSection from './InviteSection';
+import WhoCanJoin from './WhoCanJoin';
 import MemberList from './MemberList';
 import DangerZone from './DangerZone';
 import ReadableColumn from '../../components/ReadableColumn';
@@ -15,6 +18,9 @@ import YourPlaceCard from './YourPlaceCard';
 import WhereEveryoneIs from './WhereEveryoneIs';
 import RecentComments from './RecentComments';
 import useActiveRoomBook from './useActiveRoomBook';
+import useSafetyActions from '../../hooks/useSafetyActions';
+import useRoomStore from '../../stores/roomStore';
+import { showToast } from '../../components/Toaster';
 
 // Room Detail. Until the room has a book it's the setup flow (2a,
 // ROOM_DETAIL_2a-2.md): decide what to read, bring your people. Once it has
@@ -33,6 +39,21 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   } = useRoomLobby(route?.params?.room ?? null);
   const { sizeClass, isLarge, pagePad } = useLayout();
   const roomBook = useActiveRoomBook(room);
+  const { roomMenu } = useSafetyActions();
+  // Report room, for everyone but its creator (report-block R2.2).
+  const onMore = !iAmCreator && room?.id ? () => roomMenu(room) : undefined;
+  // An admin deleted the room while it was open (report-block R9.9). Wait
+  // until this page is on top, so a reader opened from it isn't the one
+  // closed.
+  const routeId = route?.params?.room?.id;
+  const removed = useRoomStore((s) => !!routeId && s.removedRoomIds.includes(routeId));
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (removed && isFocused) {
+      showToast('This room was removed', 'info');
+      navigation.goBack();
+    }
+  }, [removed, isFocused, navigation]);
   const dangerZone = (
     <DangerZone room={room} iAmCreator={iAmCreator} onGone={() => navigation.goBack()} />
   );
@@ -40,9 +61,17 @@ const RoomLobbyScreen = ({ navigation, route }) => {
   if (roomBook) {
     // The invite card (code, Copy, Share, QR) as in the setup state, rather
     // than 2c's header icon — decided after device review.
-    const invite = <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={false} />;
+    const invite = (
+      <>
+        <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={false} isPrivate={room?.isPrivate} />
+        <WhoCanJoin room={room} iAmCreator={iAmCreator} />
+      </>
+    );
     const place = <YourPlaceCard book={roomBook} />;
     const everyone = <WhereEveryoneIs book={roomBook} />;
+    // Named rows to tap, for Report and Block (report-block R2.1, R5.6); the
+    // dots above don't say who's who.
+    const memberList = <View><MemberList members={members} roomId={room?.id} /></View>;
     let body;
     if (sizeClass === 'wide') {
       // 14i: your place and the room on the left, comments on the right.
@@ -50,7 +79,7 @@ const RoomLobbyScreen = ({ navigation, route }) => {
         <SplitLayout
           ratio={[3, 2]}
           left={<View style={styles.stack}>{place}{everyone}{dangerZone}</View>}
-          right={<View style={styles.stack}><RecentComments book={roomBook} limit={6} />{invite}</View>}
+          right={<View style={styles.stack}><RecentComments book={roomBook} limit={6} />{memberList}{invite}</View>}
         />
       );
     } else {
@@ -60,6 +89,7 @@ const RoomLobbyScreen = ({ navigation, route }) => {
           {place}
           {everyone}
           <RecentComments book={roomBook} />
+          {memberList}
           {invite}
           {dangerZone}
         </View>
@@ -77,6 +107,7 @@ const RoomLobbyScreen = ({ navigation, route }) => {
             bookTitle={bookTitle}
             memberCount={members.length}
             onBack={() => navigation.goBack()}
+            onMore={onMore}
           />
           <View style={styles.activeBody}>
             {sizeClass === 'regular' ? <ReadableColumn>{body}</ReadableColumn> : body}
@@ -106,8 +137,14 @@ const RoomLobbyScreen = ({ navigation, route }) => {
       )}
       right={(
         <View>
-          <InviteSection roomName={room?.name} inviteCode={inviteCode} iAmCreator={iAmCreator} />
-          <MemberList members={members} />
+          <InviteSection
+            roomName={room?.name}
+            inviteCode={inviteCode}
+            iAmCreator={iAmCreator}
+            isPrivate={room?.isPrivate}
+          />
+          <WhoCanJoin room={room} iAmCreator={iAmCreator} style={styles.whoCanJoin} />
+          <MemberList members={members} roomId={room?.id} />
           {dangerZone}
         </View>
       )}
@@ -128,6 +165,7 @@ const RoomLobbyScreen = ({ navigation, route }) => {
           bucket={bucket}
           memberCount={members.length}
           onBack={() => navigation.goBack()}
+          onMore={onMore}
         />
         {sizeClass === 'regular' ? <ReadableColumn>{sections}</ReadableColumn> : sections}
       </ScrollView>
@@ -149,6 +187,9 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: 16,
+  },
+  whoCanJoin: {
+    marginTop: 12,
   },
 });
 

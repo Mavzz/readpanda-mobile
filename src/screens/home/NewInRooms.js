@@ -34,7 +34,7 @@ const Row = ({ item, first, onPress }) => {
 // thread right here — see design.md for why not the reader. `section` is
 // from useHomeSections; `split` lays the rows out as two cards (iPad
 // portrait, 16d).
-const NewInRooms = ({ section, split = false, onSeeAll }) => {
+const NewInRooms = ({ section, split = false, onSeeAll, labelInside = false }) => {
   const toggleLike = useCommentsStore((s) => s.toggleLike);
   const markThreadRead = useCommentsStore((s) => s.markThreadRead);
   const retryComment = useCommentsStore((s) => s.retryComment);
@@ -67,13 +67,20 @@ const NewInRooms = ({ section, split = false, onSeeAll }) => {
     </View>
   ) : null;
 
+  const header = (
+    <SectionHeader
+      title="New in your rooms"
+      link={items.length ? 'See all' : null}
+      onLink={() => onSeeAll(items[0].room)}
+      eyebrow={labelInside}
+      style={labelInside && styles.headerInside}
+    />
+  );
+
+  // iPad landscape: the label sits inside the card, as in Your week (16c).
   return (
     <View>
-      <SectionHeader
-        title="New in your rooms"
-        link={items.length ? 'See all' : null}
-        onLink={() => onSeeAll(items[0].room)}
-      />
+      {labelInside ? null : header}
       {split ? (
         <View style={styles.splitRow}>
           {rows.map((row) => <View key={row.key} style={[styles.card, styles.splitCard]}>{row}</View>)}
@@ -81,6 +88,7 @@ const NewInRooms = ({ section, split = false, onSeeAll }) => {
         </View>
       ) : (
         <View style={styles.card}>
+          {labelInside ? header : null}
           {rows}
           {lockedRow}
         </View>
@@ -89,6 +97,8 @@ const NewInRooms = ({ section, split = false, onSeeAll }) => {
       <CommentThreadSheet
         visible={!!openThread}
         thread={openThread}
+        bookId={open?.bookId}
+        roomId={open?.room?.id}
         roomName={open?.room?.name}
         submitting={false}
         onSubmit={({ body, parentId }) =>
@@ -112,6 +122,10 @@ const NewInRooms = ({ section, split = false, onSeeAll }) => {
 };
 
 const styles = StyleSheet.create({
+  headerInside: {
+    paddingTop: 16,
+    marginBottom: 0,
+  },
   card: {
     paddingHorizontal: 14,
     paddingVertical: 4,

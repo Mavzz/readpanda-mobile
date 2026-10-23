@@ -16,6 +16,7 @@ import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
 import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
+import useAuthStore from '../stores/authStore';
 import usePlusGate from '../hooks/usePlusGate';
 import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
@@ -23,10 +24,14 @@ import haptics from '../utils/haptics';
 import ProgressFill from '../components/ProgressFill';
 import RollingCount from '../components/RollingCount';
 import useLayout from '../hooks/useLayout';
+import OpenRoomCard from '../components/OpenRoomCard';
+import OpenRoomSheet from '../components/OpenRoomSheet';
 
-// Merges the old Join Room + My Rooms tabs — invite-only clubs, one place.
-// See design_handoff_redesign § 1c.
+// Merges the old Join Room + My Rooms tabs: your rooms, then open rooms you
+// could join. See design_handoff_redesign § 1c and specs/open-rooms.
 const CARD_GAP = 16;
+// Two show; asking for three says whether See all is needed.
+const OPEN_ROOMS_SHOWN = 2;
 
 const RoomsScreen = () => {
   const navigation = useNavigation();
@@ -35,6 +40,11 @@ const RoomsScreen = () => {
   const rooms = useRoomStore((s) => s.rooms);
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
   const joinRoomByCode = useRoomStore((s) => s.joinRoomByCode);
+  const fetchOpenRooms = useRoomStore((s) => s.fetchOpenRooms);
+  // This tab's own list (the store doesn't keep one). Empty hides the
+  // section, which is also what a failed load does.
+  const [openRooms, setOpenRooms] = useState([]);
+  const [previewRoom, setPreviewRoom] = useState(null);
   const [inviteCode, setInviteCode] = useState('');
   // Local, not the store's `loading`: Home refreshes rooms too, and that
   // shouldn't spin this tab's pull-to-refresh indicator.
@@ -63,13 +73,25 @@ const RoomsScreen = () => {
     }, [route.params?.focusCode, navigation]),
   );
 
+  const loadOpenRooms = useCallback(async () => {
+    const { status, rooms: found } = await fetchOpenRooms({ limit: OPEN_ROOMS_SHOWN + 1 });
+    setOpenRooms(status === 200 ? found : []);
+  }, [fetchOpenRooms]);
+
   const loadRooms = async (showRefresh = false) => {
     if (showRefresh) {
       setRefreshing(true);
     }
-    const { status } = await fetchRooms();
+    // The toast is about the reader's own rooms; open rooms just hide if
+    // they can't load.
+    const [{ status }] = await Promise.all([fetchRooms(), loadOpenRooms()]);
     if (showRefresh) {
       setRefreshing(false);
+      // Signed out mid-refresh (a suspended account, report-block R10.2):
+      // the alert says what happened.
+      if (!useAuthStore.getState().isAuthenticated) {
+        return;
+      }
       if (status === 200) {
         showToast('Rooms refreshed', 'success');
       } else {
@@ -84,7 +106,8 @@ const RoomsScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchRooms();
-    }, [fetchRooms]),
+      loadOpenRooms();
+    }, [fetchRooms, loadOpenRooms]),
   );
 
   const handleCreateRoom = () => {
@@ -111,6 +134,19 @@ const RoomsScreen = () => {
 
   const openRoom = (room) => {
     navigation.navigate('RoomLobbyScreen', { room });
+  };
+
+  const handleOpenRoomJoined = (room) => {
+    setPreviewRoom(null);
+    showToast(`Joined ${room.name}`, 'success');
+    openRoom(room);
+  };
+
+  // The room changed under the preview (closed or deleted); the sheet has
+  // said so, and the list should stop offering it.
+  const handleOpenRoomStale = () => {
+    setPreviewRoom(null);
+    loadOpenRooms();
   };
 
   const renderRoom = ({ item: room }) => (
@@ -200,7 +236,7 @@ const RoomsScreen = () => {
         <View style={[styles.headerBlock, isLarge && styles.headerBlockLarge, isLarge && { paddingHorizontal: pagePad }]}>
           <View style={isLarge && styles.headerText}>
             <Text style={[styles.title, isLarge && styles.titleLarge]}>Rooms</Text>
-            <Text style={styles.subtitle}>Private clubs with your people — no set meeting time.</Text>
+            <Text style={styles.subtitle}>Read with your people, or join an open room. No set meeting time.</Text>
           </View>
           {isLarge ? actions : null}
         </View>
@@ -234,16 +270,53 @@ const RoomsScreen = () => {
         }
         ListFooterComponent={
           <>
+            {openRooms.length > 0 ? (
+              <View style={styles.openSection}>
+                <View style={styles.openHeader}>
+                  <Text style={[styles.sectionLabel, styles.openLabel]} accessibilityRole="header">
+                    Open rooms
+                  </Text>
+                  {openRooms.length > OPEN_ROOMS_SHOWN ? (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('OpenRooms')}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.seeAll}>See all</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <View style={isLarge && styles.openGrid}>
+                  {openRooms.slice(0, OPEN_ROOMS_SHOWN).map((room) => (
+                    <OpenRoomCard
+                      key={room.id}
+                      room={room}
+                      onPress={setPreviewRoom}
+                      style={isLarge && [styles.roomCardLarge, { width: cardWidth }]}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
             {/* ── Empty / invite state ───────────────────────────── */}
             <View style={styles.inviteCard}>
               <Icon name="mail-open-outline" size={28} color={DS.colors.onSurfaceVariant} />
               <Text style={styles.inviteCardTitle}>Invite a friend</Text>
               <Text style={styles.inviteCardBody}>
-                Rooms are invite-only. Share a code and read the same book on your own schedules.
+                Share a code and read the same book on your own schedules.
               </Text>
             </View>
           </>
         }
+      />
+
+      <OpenRoomSheet
+        room={previewRoom}
+        visible={!!previewRoom}
+        onClose={() => setPreviewRoom(null)}
+        onJoined={handleOpenRoomJoined}
+        onStale={handleOpenRoomStale}
       />
     </View>
   );
@@ -444,6 +517,31 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: DS.colors.primary,
     borderRadius: DS.radius.full,
+  },
+
+  // Open rooms
+  openSection: {
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  openHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  openLabel: {
+    marginBottom: 0,
+  },
+  seeAll: {
+    fontSize: 13,
+    fontFamily: DS.font.bold,
+    color: DS.colors.primary,
+  },
+  openGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
   },
 
   // Invite card

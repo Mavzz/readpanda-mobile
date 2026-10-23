@@ -10,7 +10,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DS } from '../styles/global';
 import { showToast } from '../components/Toaster';
@@ -18,53 +18,18 @@ import log from '../utils/logger';
 import useRoomStore from '../stores/roomStore';
 import PressableScale from '../components/PressableScale';
 import FormSheetFrame from '../components/FormSheetFrame';
+import useLayout from '../hooks/useLayout';
 import haptics from '../utils/haptics';
+import { ROOM_PRIVACY, PrivacyCard } from '../components/RoomPrivacy';
 
 // Creating a room is one decision (the name) plus one setting (privacy).
 // Invite-only is pre-selected — this is a private-friends product. The
 // description is deferred to the room's page. See design_handoff § 2b.
-const PRIVACY = {
-  invite: {
-    key: 'invite',
-    icon: 'lock-closed',
-    label: 'Invite only',
-    body: 'Only people with your code can join.',
-  },
-  open: {
-    key: 'open',
-    icon: 'globe-outline',
-    label: 'Open',
-    body: 'Anyone on ReadPanda can find it.',
-  },
-};
-
 const STEPS = [
   { numeral: '1', label: 'Name' },
   { numeral: '2', label: 'Pick the book' },
   { numeral: '3', label: 'Invite' },
 ];
-
-const PrivacyCard = ({ option, selected, onPress }) => (
-  <PressableScale
-    onPress={onPress}
-    style={[
-      styles.privacyCard,
-      selected ? styles.privacyCardSelected : styles.privacyCardIdle,
-    ]}
-  >
-    <View style={styles.privacyHeader}>
-      <Icon
-        name={option.icon}
-        size={15}
-        color={selected ? DS.colors.primary : DS.colors.onSurfaceVariant}
-      />
-      <Text style={[styles.privacyLabel, selected ? styles.privacyLabelSelected : styles.privacyLabelIdle]}>
-        {option.label}
-      </Text>
-    </View>
-    <Text style={styles.privacyBody}>{option.body}</Text>
-  </PressableScale>
-);
 
 const StepsStrip = () => (
   <View style={[styles.steps, styles.stepsStrip]}>
@@ -92,15 +57,24 @@ const CreateRoomScreen = ({ navigation, route }) => {
   // find the book again in the picker.
   const seedBook = route?.params?.seedBook || null;
   const [name, setName] = useState('');
-  const [privacy, setPrivacy] = useState(PRIVACY.invite.key);
+  const [privacy, setPrivacy] = useState(ROOM_PRIVACY.invite.key);
   const [saving, setSaving] = useState(false);
+  // A refusal for the name, shown under it (report-block R8.4).
+  const [nameError, setNameError] = useState(null);
   // Set once leaving is intended (created, or discard confirmed) so the
   // beforeRemove guard lets the navigation through.
   const leaving = useRef(false);
+  // From the provider, not a SafeAreaView: inside a full-screen modal a
+  // SafeAreaView reports no top inset and the header sits under the clock
+  // (same as CreateBucketScreen). Inside the iPad sheet the window's insets
+  // don't apply.
+  const { isLarge } = useLayout();
+  const windowInsets = useSafeAreaInsets();
+  const insets = isLarge ? { top: 0, bottom: 0 } : windowInsets;
 
   const trimmedName = name.trim();
   const canCreate = trimmedName.length > 0 && !saving;
-  const isDirty = trimmedName.length > 0 || privacy !== PRIVACY.invite.key;
+  const isDirty = trimmedName.length > 0 || privacy !== ROOM_PRIVACY.invite.key;
 
   // 12b: confirm before dismissing with changes — the ×, a swipe, or back.
   useEffect(() => navigation.addListener('beforeRemove', (e) => {
@@ -135,12 +109,12 @@ const CreateRoomScreen = ({ navigation, route }) => {
     if (!canCreate) return;
     setSaving(true);
 
-    const isPrivate = privacy === PRIVACY.invite.key;
+    const isPrivate = privacy === ROOM_PRIVACY.invite.key;
     log.info('Creating room:', { name: trimmedName, isPrivate });
 
     // The API still requires a description — it's collected on the room's
     // page now, so send an empty one.
-    const { status, response, error } = await saveRoom({
+    const { status, response, error, field, code } = await saveRoom({
       name: trimmedName,
       description: '',
       isPrivate,
@@ -166,6 +140,15 @@ const CreateRoomScreen = ({ navigation, route }) => {
     }
 
     setSaving(false);
+    if (code === 'account_suspended') {
+      // apiService has signed out and said why.
+      return;
+    }
+    if (field === 'name') {
+      // By the field, as for its other errors (report-block R8.4).
+      setNameError(error);
+      return;
+    }
     showToast(error || 'Failed to create room', 'error');
   };
 
@@ -173,7 +156,7 @@ const CreateRoomScreen = ({ navigation, route }) => {
     // Bottom too: the steps strip sits at the foot of a full-screen modal
     // and has to clear the home indicator.
     <FormSheetFrame onClose={() => navigation.goBack()}>
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
 
         <KeyboardAvoidingView
@@ -209,7 +192,7 @@ const CreateRoomScreen = ({ navigation, route }) => {
             <TextInput
               style={styles.input}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => { setName(text); setNameError(null); }}
               placeholder="e.g. Midnight Club"
               placeholderTextColor={DS.colors.placeholder}
               selectionColor={DS.colors.primary}
@@ -218,20 +201,26 @@ const CreateRoomScreen = ({ navigation, route }) => {
               returnKeyType="done"
               onSubmitEditing={handleCreate}
             />
-            <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
+            {nameError ? (
+              <Text style={[styles.helper, styles.fieldError]} accessibilityLiveRegion="polite" accessibilityRole="alert">
+                {nameError}
+              </Text>
+            ) : (
+              <Text style={styles.helper}>This is what your friends will see on the invite.</Text>
+            )}
 
             {/* Privacy */}
             <Text style={[styles.eyebrow, styles.privacyEyebrow]}>WHO CAN JOIN</Text>
             <View style={styles.privacyRow}>
               <PrivacyCard
-                option={PRIVACY.invite}
-                selected={privacy === PRIVACY.invite.key}
-                onPress={() => { haptics.light(); setPrivacy(PRIVACY.invite.key); }}
+                option={ROOM_PRIVACY.invite}
+                selected={privacy === ROOM_PRIVACY.invite.key}
+                onPress={() => { haptics.light(); setPrivacy(ROOM_PRIVACY.invite.key); }}
               />
               <PrivacyCard
-                option={PRIVACY.open}
-                selected={privacy === PRIVACY.open.key}
-                onPress={() => { haptics.light(); setPrivacy(PRIVACY.open.key); }}
+                option={ROOM_PRIVACY.open}
+                selected={privacy === ROOM_PRIVACY.open.key}
+                onPress={() => { haptics.light(); setPrivacy(ROOM_PRIVACY.open.key); }}
               />
             </View>
             <Text style={styles.helper}>Add a description later from the room&apos;s page.</Text>
@@ -241,7 +230,7 @@ const CreateRoomScreen = ({ navigation, route }) => {
             <StepsStrip />
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </FormSheetFrame>
   );
 };
@@ -304,6 +293,9 @@ const styles = StyleSheet.create({
   },
 
   // Name field
+  fieldError: {
+    color: DS.colors.error,
+  },
   input: {
     backgroundColor: DS.colors.surfaceContainerLowest,
     borderRadius: DS.radius.md,
@@ -329,46 +321,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  privacyCard: {
-    flex: 1,
-    borderRadius: DS.radius.comment,
-  },
-  // The selection ring is the one sanctioned stroke — it's a state, not a
-  // divider. Padding drops to 12 so the 2px border doesn't shift content.
-  privacyCardSelected: {
-    backgroundColor: DS.colors.surfaceContainerHigh,
-    borderWidth: 2,
-    borderColor: DS.colors.primary,
-    padding: 12,
-  },
-  privacyCardIdle: {
-    backgroundColor: DS.colors.surfaceContainerLow,
-    padding: 14,
-  },
-  privacyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  privacyLabel: {
-    fontSize: 13,
-  },
-  privacyLabelSelected: {
-    fontFamily: DS.font.extraBold,
-    color: DS.colors.primary,
-  },
-  privacyLabelIdle: {
-    fontFamily: DS.font.bold,
-    color: DS.colors.onSurfaceVariant,
-  },
-  privacyBody: {
-    fontSize: 11,
-    fontFamily: DS.font.medium,
-    color: DS.colors.onSurfaceVariant,
-    lineHeight: 15,
-    marginTop: 6,
-  },
-
   spacer: {
     flex: 1,
   },

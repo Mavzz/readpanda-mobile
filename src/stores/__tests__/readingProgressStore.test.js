@@ -113,17 +113,17 @@ describe('readingProgressStore', () => {
       roomId: 'rm_1',
       roomName: 'Club',
       roomMembers: [
-        { userId: 'u-me', initials: 'ME', isMe: true },
-        { userId: 'u-bob', initials: 'BO', isMe: false },
-        { userId: 'u-cat', initials: 'CA', isMe: false },
+        { userId: 'u-me', name: 'me', initials: 'ME', isMe: true },
+        { userId: 'u-bob', name: 'bob', initials: 'BO', isMe: false },
+        { userId: 'u-cat', name: 'cat', initials: 'CA', isMe: false },
       ],
     });
     await new Promise(setImmediate);
 
     expect(store().memberProgress).toEqual([
-      { userId: 'u-me', initials: 'ME', progressPct: 50, isMe: true }, // local, not the server's 1
-      { userId: 'u-bob', initials: 'BO', progressPct: 70, isMe: false },
-      { userId: 'u-cat', initials: 'CA', progressPct: 0, isMe: false }, // never opened it
+      { userId: 'u-me', name: 'me', initials: 'ME', progressPct: 50, isMe: true }, // local, not the server's 1
+      { userId: 'u-bob', name: 'bob', initials: 'BO', progressPct: 70, isMe: false },
+      { userId: 'u-cat', name: 'cat', initials: 'CA', progressPct: 0, isMe: false }, // never opened it
     ]);
   });
 

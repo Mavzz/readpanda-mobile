@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -7,6 +7,9 @@ import { DS } from '../styles/global';
 import BookCoverGradient from '../components/BookCoverGradient';
 import GradientPill from '../components/GradientPill';
 import PickerSheet from '../components/PickerSheet';
+import OpenRoomSheet from '../components/OpenRoomSheet';
+import { memberCountLabel } from '../components/OpenRoomCard';
+import { showToast } from '../components/Toaster';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useBucketsStore from '../stores/bucketsStore';
 import useRoomStore from '../stores/roomStore';
@@ -25,6 +28,8 @@ import useLayout from '../hooks/useLayout';
 // already on the shelf open from there into 4b/1b instead — this screen never
 // shows the pace card, that's 4b's.
 const NEW_ITEM = '__new';
+// R4.4: the sheet lists at most this many open rooms.
+const OPEN_ROOMS_LIMIT = 5;
 
 // "Grace has read this" / "Grace and Ravi have read this" /
 // "Grace, Ravi and 2 others have read this".
@@ -67,6 +72,14 @@ const BookDetailScreen = () => {
   const removeBookFromBucket = useBucketsStore((s) => s.removeBookFromBucket);
   const rooms = useRoomStore((s) => s.rooms);
   const fetchRooms = useRoomStore((s) => s.fetchRooms);
+  const fetchOpenRooms = useRoomStore((s) => s.fetchOpenRooms);
+  // Open rooms reading this book, asked for each time the sheet opens. Until
+  // they arrive, or if there are none, the sheet is as it always was.
+  const [openRooms, setOpenRooms] = useState([]);
+  // An open room picked in the sheet waits here until the sheet has gone,
+  // then opens in the preview.
+  const pickedOpenRoom = useRef(null);
+  const [previewRoom, setPreviewRoom] = useState(null);
 
   const loadDetail = useCallback(async () => {
     if (!bookId) {
@@ -129,8 +142,26 @@ const BookDetailScreen = () => {
     navigation.navigate('ManuscriptScreen', { book: readerBook });
   };
 
+  const loadOpenRooms = useCallback(async () => {
+    const { status, rooms: found } = await fetchOpenRooms({ bookId, limit: OPEN_ROOMS_LIMIT });
+    setOpenRooms(status === 200 ? found : []);
+  }, [fetchOpenRooms, bookId]);
+
+  const openRoomSheet = () => {
+    setSheet('room');
+    loadOpenRooms();
+  };
+
   const onPickRoom = (item) => {
     setSheet(null);
+    if (item.openRoom) {
+      if (Platform.OS === 'ios') {
+        pickedOpenRoom.current = item.openRoom;
+      } else {
+        setPreviewRoom(item.openRoom);
+      }
+      return;
+    }
     if (item.id === NEW_ITEM) {
       // 2b, pre-filled. Any solo progress carries over when the room attaches.
       gate('rooms', () => navigation.navigate('CreateRoomScreen', { seedBook: readerBook }));
@@ -169,8 +200,33 @@ const BookDetailScreen = () => {
       subtitle: `Reading this · ${r.members.length} member${r.members.length === 1 ? '' : 's'}`,
       icon: 'people',
     })),
+    ...openRooms.map((r) => ({
+      id: `open:${r.id}`,
+      title: r.name,
+      subtitle: `Open room · ${memberCountLabel(r.memberCount)}`,
+      icon: 'globe-outline',
+      openRoom: r,
+    })),
     { id: NEW_ITEM, title: 'Start a new room', subtitle: 'Your progress carries over', icon: 'add' },
   ];
+
+  const onRoomSheetDismissed = () => {
+    if (pickedOpenRoom.current) {
+      setPreviewRoom(pickedOpenRoom.current);
+      pickedOpenRoom.current = null;
+    }
+  };
+
+  const onOpenRoomJoined = (room) => {
+    setPreviewRoom(null);
+    showToast(`Joined ${room.name}`, 'success');
+    navigation.navigate('RoomLobbyScreen', { room });
+  };
+
+  const onOpenRoomStale = () => {
+    setPreviewRoom(null);
+    loadOpenRooms();
+  };
 
   const bucketItems = [
     ...customBuckets.map((b) => ({
@@ -231,7 +287,7 @@ const BookDetailScreen = () => {
       </GradientPill>
 
       <PressableScale
-        onPress={() => setSheet('room')}
+        onPress={openRoomSheet}
         style={styles.secondary}
         accessibilityRole="button"
       >
@@ -284,7 +340,7 @@ const BookDetailScreen = () => {
           </GradientPill>
           <View ref={roomAnchor} collapsable={false}>
             <PressableScale
-              onPress={() => setSheet('room')}
+              onPress={openRoomSheet}
               style={styles.secondaryLarge}
               accessibilityRole="button"
             >
@@ -351,10 +407,13 @@ const BookDetailScreen = () => {
         anchorRef={roomAnchor}
         visible={sheet === 'room'}
         title="Read with a room"
-        subtitle={roomsReadingThis.length > 0 ? 'Your rooms reading this book' : null}
+        subtitle={roomsReadingThis.length > 0
+          ? 'Your rooms reading this book'
+          : openRooms.length > 0 ? 'Open rooms reading this book' : null}
         items={roomItems}
         onSelect={onPickRoom}
         onClose={() => setSheet(null)}
+        onDismiss={onRoomSheetDismissed}
       />
       <PickerSheet
         anchorRef={bucketAnchor}
@@ -364,6 +423,13 @@ const BookDetailScreen = () => {
         items={bucketItems}
         onSelect={onPickBucket}
         onClose={() => setSheet(null)}
+      />
+      <OpenRoomSheet
+        room={previewRoom}
+        visible={!!previewRoom}
+        onClose={() => setPreviewRoom(null)}
+        onJoined={onOpenRoomJoined}
+        onStale={onOpenRoomStale}
       />
     </View>
   );

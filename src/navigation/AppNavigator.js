@@ -7,6 +7,7 @@ import AuthStackNavigator from './AuthStackNavigator';
 import MainStackNavigator from './MainStackNavigator';
 import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
+import SafetySheetHost from '../components/SafetySheetHost';
 import useInviteDeepLink from '../hooks/useInviteDeepLink';
 import usePushNotifications from '../hooks/usePushNotifications';
 import useWidgetDeepLink from '../hooks/useWidgetDeepLink';
@@ -86,6 +87,7 @@ const AppNavigator = () => {
     <AuthProvider>
       <AppContent />
       <Toaster />
+      <SafetySheetHost />
     </AuthProvider>
   );
 };

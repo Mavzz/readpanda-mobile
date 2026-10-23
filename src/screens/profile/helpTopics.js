@@ -34,10 +34,10 @@ export const helpTopics = (plusEnabled) => [
     answer: 'Go to Settings → Page turning to choose Scroll or Page, and Settings → Page theme for Paper, Sepia or Night.',
   },
   {
-    // Until in-app reporting exists, email is how the terms say to report.
+    // In the app first (report-block R11.1); email stays the other way.
     id: 'report',
     question: 'How do I report a comment or a reader?',
-    answer: 'Email us at the address below with the room, the reader\'s username and what happened. We review every report and act promptly.',
+    answer: 'Tap ⋯ on the comment, or tap their name in the room\'s member list, and choose Report. You can block them from the same menu, and unblock them in Settings → Blocked readers. We review every report promptly. You can also email us at the address below.',
   },
   {
     id: 'delete',

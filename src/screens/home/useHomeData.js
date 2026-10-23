@@ -7,6 +7,7 @@ import useRoomStore from '../../stores/roomStore';
 import useReadingProgressStore from '../../stores/readingProgressStore';
 import useCommentsStore from '../../stores/commentsStore';
 import useNotificationStore from '../../stores/notificationStore';
+import useAuthStore from '../../stores/authStore';
 
 // Everything Home fetches: the first load after sign-in, the re-read on every
 // focus, and pull-to-refresh. Sections read the results from their stores.
@@ -34,6 +35,12 @@ const useHomeData = ({ user, navigation }) => {
       fetchCustomBuckets(),
       fetchRooms(),
     ]);
+    // Signed out mid-refresh (a suspended account, report-block R10.2): stop
+    // here. The alert says what happened, so no toast on top of it, and the
+    // loads below would only fail without a token.
+    if (!useAuthStore.getState().isAuthenticated) {
+      return;
+    }
     // After the rooms, so a book started on another device comes back tagged
     // with the room reading it.
     await syncFromServer(useRoomStore.getState().rooms);

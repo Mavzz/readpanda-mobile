@@ -9,6 +9,8 @@ import {
   likeComment,
   unlikeComment,
 } from '../services/commentsService';
+import { deleteComment as deleteCommentRequest } from '../services/safetyService';
+import { statusOfError, bodyOfError } from '../utils/apiError';
 
 // Passage-anchored, room-scoped comments (handoff 6a/6b).
 //
@@ -36,10 +38,23 @@ const authorName = (raw) => (
   raw.user_id === DELETED_READER_ID ? 'Deleted reader' : raw.username || ''
 );
 
+// The API doesn't flag which comments are mine (the profile has no uuid), so
+// match on username the way rooms' isMe does.
+const isMineRaw = (raw) => {
+  const me = enhancedStorage.getUserProfile()?.username;
+  return !!me && !!raw.username && raw.user_id !== DELETED_READER_ID && raw.username === me;
+};
+
 const toComment = (raw) => ({
   id: raw.id,
   clientId: raw.client_id || null,
   userId: raw.user_id,
+  isMine: isMineRaw(raw),
+  // A first comment kept only for its replies (report-block R7.4, R1.4):
+  // 'author' | 'moderator' when deleted, 'reported' when this reader
+  // reported it. It has no author, body or likes.
+  deleted: raw.deleted || null,
+  hidden: raw.hidden || null,
   username: authorName(raw),
   initials: getInitials(authorName(raw)),
   page: raw.page || 0,
@@ -91,6 +106,56 @@ const commentIdsIn = (thread) =>
 
 const countUnread = (threads) =>
   threads.reduce((total, t) => total + t.unreadCount, 0);
+
+const isPlaceholder = (c) => !!(c.deleted || c.hidden);
+
+// After comments are taken out locally: a placeholder with no replies left
+// goes (it was only there for them), an empty thread goes, and the unread
+// counts follow what's left.
+const tidy = (threads) =>
+  threads
+    .map((t) => {
+      const comments = t.comments.filter((c) => !isPlaceholder(c) || c.replies.length > 0);
+      const unreadCount = comments.reduce(
+        (n, c) => n + (c.read ? 0 : 1) + c.replies.filter((r) => !r.read).length,
+        0,
+      );
+      return { ...t, comments, unreadCount };
+    })
+    .filter((t) => t.comments.length > 0);
+
+// What a first comment becomes when it has to go but its replies stay.
+const asPlaceholder = (c, mark) => ({
+  ...c,
+  ...mark,
+  userId: null,
+  username: '',
+  initials: '',
+  body: '',
+  likes: 0,
+  likedByMe: false,
+  read: true,
+  isMine: false,
+});
+
+// Take one comment out of a set of threads: a reply goes; a first comment
+// with replies becomes a placeholder (mark), one without goes.
+const withoutComment = (threads, commentId, mark) =>
+  tidy(threads.map((t) => ({
+    ...t,
+    comments: t.comments.map((c) => {
+      if (c.id === commentId) {
+        return c.replies.length > 0 ? asPlaceholder(c, mark) : { ...c, gone: true };
+      }
+      return { ...c, replies: c.replies.filter((r) => r.id !== commentId) };
+    }).filter((c) => !c.gone),
+  })));
+
+// A refused comment (report-block R8.3): no Retry, since resending can't
+// help; the text stays so the reader can change it.
+const failureOf = (error) => (
+  statusOfError(error) === 400 && bodyOfError(error).code === 'blocked_words' ? 'blocked_words' : true
+);
 
 const useCommentsStore = create((set, get) => ({
   byBook: {},
@@ -173,7 +238,11 @@ const useCommentsStore = create((set, get) => ({
     const optimistic = {
       id: clientId,
       clientId,
-      userId: profile?.uuid || 'me',
+      // The profile carries no uuid; the server's row brings the real one.
+      userId: null,
+      isMine: true,
+      deleted: null,
+      hidden: null,
       username,
       initials: getInitials(username),
       page: page || 0,
@@ -264,13 +333,14 @@ const useCommentsStore = create((set, get) => ({
       return saved;
     } catch (e) {
       log.error('Failed to post comment:', e);
+      const failed = failureOf(e);
       set((state) => {
         const entry = state.byBook[bookId];
         if (!entry) {
           return state;
         }
         const flag = (c) =>
-          c.clientId === clientId ? { ...c, pending: false, failed: true } : c;
+          c.clientId === clientId ? { ...c, pending: false, failed } : c;
         const threads = entry.threads.map((t) => ({
           ...t,
           comments: t.comments.map((c) => ({ ...flag(c), replies: c.replies.map(flag) })),
@@ -345,9 +415,10 @@ const useCommentsStore = create((set, get) => ({
       });
     } catch (e) {
       log.error('Failed to retry comment:', e);
+      const failed = failureOf(e);
       set((state) => {
         const current = state.byBook[bookId];
-        const mark = (c) => (c.clientId === clientId ? { ...c, pending: false, failed: true } : c);
+        const mark = (c) => (c.clientId === clientId ? { ...c, pending: false, failed } : c);
         const threads = current.threads.map((t) => ({
           ...t,
           comments: t.comments.map((c) => ({ ...mark(c), replies: c.replies.map(mark) })),
@@ -447,6 +518,91 @@ const useCommentsStore = create((set, get) => ({
       // reappearing dot on the next fetch, not correctness.
       log.error('Failed to mark comments read:', e);
     }
+  },
+
+  // Take a refused comment out so its text can go back in the composer
+  // (report-block R8.3). It was never saved, so there's nothing to delete.
+  discardFailed: (bookId, clientId) => {
+    set((state) => {
+      const entry = state.byBook[bookId];
+      if (!entry) {
+        return state;
+      }
+      const keep = (c) => c.clientId !== clientId;
+      const threads = tidy(entry.threads.map((t) => ({
+        ...t,
+        comments: t.comments.filter(keep).map((c) => ({ ...c, replies: c.replies.filter(keep) })),
+      })));
+      return { byBook: { ...state.byBook, [bookId]: { ...entry, threads, unreadCount: countUnread(threads) } } };
+    });
+  },
+
+  // Delete one of your own comments (report-block R7.3, R7.5). Gone or down
+  // to "Comment deleted" at once, and put back if the API says no. Returns
+  // { ok }.
+  deleteComment: async (bookId, commentId) => {
+    const before = get().byBook[bookId];
+    if (!before) {
+      return { ok: false };
+    }
+    const restore = () => set((state) => ({
+      byBook: { ...state.byBook, [bookId]: { ...(state.byBook[bookId] || before), threads: before.threads, unreadCount: before.unreadCount } },
+    }));
+
+    set((state) => {
+      const entry = state.byBook[bookId];
+      const threads = withoutComment(entry.threads, commentId, { deleted: 'author' });
+      return { byBook: { ...state.byBook, [bookId]: { ...entry, threads, unreadCount: countUnread(threads) } } };
+    });
+
+    try {
+      const { status } = await deleteCommentRequest(commentId);
+      // 404: already gone, which is what was asked for.
+      if (status === 204 || status === 200 || status === 404) {
+        return { ok: true };
+      }
+      restore();
+      return { ok: false };
+    } catch (e) {
+      log.error('Failed to delete comment:', e);
+      restore();
+      return { ok: false };
+    }
+  },
+
+  // A comment this reader just reported leaves their view at once (R1.4):
+  // a reply goes, a first comment with replies becomes "You reported this
+  // comment". The next fetch says the same.
+  hideReported: (bookId, commentId) => {
+    set((state) => {
+      const entry = state.byBook[bookId];
+      if (!entry) {
+        return state;
+      }
+      const threads = withoutComment(entry.threads, commentId, { hidden: 'reported' });
+      return { byBook: { ...state.byBook, [bookId]: { ...entry, threads, unreadCount: countUnread(threads) } } };
+    });
+  },
+
+  // Someone was just blocked (R5.2): their threads, with every reply, and
+  // their replies elsewhere leave every loaded book at once.
+  dropAuthor: (userId) => {
+    if (!userId) {
+      return;
+    }
+    set((state) => {
+      const byBook = {};
+      Object.entries(state.byBook).forEach(([bookId, entry]) => {
+        const threads = tidy(entry.threads.map((t) => ({
+          ...t,
+          comments: t.comments
+            .filter((c) => c.userId !== userId)
+            .map((c) => ({ ...c, replies: c.replies.filter((r) => r.userId !== userId) })),
+        })));
+        byBook[bookId] = { ...entry, threads, unreadCount: countUnread(threads) };
+      });
+      return { byBook };
+    });
   },
 
   // Threads anchored to one page — what the reader draws in the gutter.

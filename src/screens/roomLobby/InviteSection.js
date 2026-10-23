@@ -23,7 +23,7 @@ export const shareInvite = async (roomName, inviteCode) => {
   }
 };
 
-const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
+const InviteSection = ({ roomName, inviteCode, iAmCreator, isPrivate }) => {
   const [copied, setCopied] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const copiedTimer = useRef(null);
@@ -84,7 +84,13 @@ const InviteSection = ({ roomName, inviteCode, iAmCreator }) => {
           </PressableScale>
         </View>
 
-        <Text style={styles.inviteCaption}>Anyone with the code can join this room</Text>
+        {/* An open room keeps its code: the open-rooms list can't be
+            searched, so the code is still how a friend finds this one. */}
+        <Text style={styles.inviteCaption}>
+          {isPrivate === false
+            ? 'Anyone on ReadPanda can find this room. Share the code to bring friends straight in.'
+            : 'Anyone with the code can join this room'}
+        </Text>
       </View>
 
       <Modal
