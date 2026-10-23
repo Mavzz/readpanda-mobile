@@ -30,7 +30,9 @@ export const REPORT_REASONS = [
 const MAX_DETAILS = 500;
 const DELETED_READER_ID = '00000000-0000-0000-0000-000000000000';
 
-const BLOCK_BODY = 'You won\'t see their comments or rooms, and they won\'t be told.';
+// Blocking a room's creator doesn't take you out of their room (R5.6), so
+// say so before someone expects it to.
+const BLOCK_BODY = 'You won\'t see their comments or rooms, and they won\'t be told. You\'ll stay in any rooms you share.';
 
 // R1.3: a few words for "Something else", up to 500 characters. Nothing is
 // sent without them: a blank answer asks again.

@@ -88,7 +88,7 @@ Start after specs/open-rooms has merged.
 - [x] R4.1 admins get "New report" · "<reason> · <what>" — inbox rows checked in db; push toast on iPad signed in as admin, 2026-10-24
 - [x] R4.2 the notification has no reported text — database: messages name the reason and the target, never the text
 - [x] R4.3 the report is saved and shown even if the push fails — no admin has a device registered, so no push went out, and every report still saved and shows in the portal
-- [x] R5.1 "Block <username>? …" with Block and Cancel — device, 2026-10-24
+- [x] R5.1 "Block <username>? …" with Block and Cancel — device, 2026-10-24; "You'll stay in any rooms you share." added after, tested in useSafetyActions.test.js
 - [x] R5.2 "<username> blocked"; comments gone at once everywhere, counts too — device, 2026-10-24
 - [x] R5.3 API leaves out their replies, threads and counts — device: blocked creator's comments hidden for aditya n, back after unblocking; blocks_test.go
 - [x] R5.4 open-room lists leave out their rooms — device, 2026-10-24
@@ -156,3 +156,4 @@ Start after specs/open-rooms has merged.
 - Task 22: added while checking (your call, 2026-10-24). apiService throws a 4xx rather than returning it, so the 404 is read in the catch (the first try checked the return and never fired on a device). The re-check reads only the active room: `fetchRooms` swaps in list rows without members, which would empty an open room page. The tests cover the store (`roomStore.removed.test.js`); the page's go-back is checked on a device, since rendering the room page means mocking most of the app. 22 suites, 180 tests.
 - Task 23: added while checking (your call, 2026-10-24): you expected a refresh, not only a write, to sign a suspended reader out. Only the two refresh reads check, so the rest of the API still needs no lookup per request.
 - Task 23 (found while checking): Home and Rooms' pull to refresh toasted "Refreshed!" or "Connection error" over the suspended alert. Both stop once the reader is signed out.
+- After the PR (your call, 2026-10-24): the block confirmation adds "You'll stay in any rooms you share.", since blocking a room's creator keeps you in their room (R5.6) and that surprised you while checking.
