@@ -75,7 +75,15 @@ class CommentablePDFView: PDFView {
         super.buildMenu(with: builder)
         // The main menu (iPad keyboard/Catalyst) isn't where passage actions
         // belong; the selection's edit menu is.
-        guard builder.system != .main, hasSelectedText else {
+        guard builder.system != .main else {
+            return
+        }
+        // Nothing selected means a tap on a comment or highlight, which opens
+        // the thread sheet or the highlight menu. PDFKit's own menu for the
+        // mark (Highlight, Remove, Add Note) came up over them, offering to
+        // edit marks the reader draws.
+        guard hasSelectedText else {
+            builder.replaceChildren(ofMenu: .root) { _ in [] }
             return
         }
         var actions: [UIMenuElement] = [
@@ -161,9 +169,29 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// The highlight a tap menu is currently about.
     private var menuHighlightKey: String?
     private var highlightMenu: UIInteraction?
+    private var markTap: UITapGestureRecognizer?
+    /// Whether the touch markTap is following started on a marked passage.
+    private var touchIsOnMark = false
+    /// When that touch came down, on the touch clock (system uptime).
+    private var touchBegan: TimeInterval = 0
+    /// Held longer than this, a touch is a press to select text, not a tap:
+    /// above a tap's length, below the system's 0.5s press. Lifting the
+    /// finger after one mustn't also open the thread under it.
+    private static let longestTap: TimeInterval = 0.35
     private var documentHash: String = ""
     private var currentPageIndex: Int = 0
     private var addedHighlights: [(PDFPage, PDFAnnotation)] = []
+    /// One passage fill, as drawn. Overlays are worked out again
+    /// on every scroll, zoom and layout, but the marks only change when the
+    /// threads, the highlights, the theme or the document do. Taking them off
+    /// and putting them back each time made them flicker while PDFKit redrew.
+    private struct Mark: Equatable {
+        let page: Int
+        let rect: CGRect
+        let color: UIColor
+    }
+    private var wantedMarks: [(page: PDFPage, mark: Mark)] = []
+    private var drawnMarks: (document: PDFDocument, theme: PageTheme, marks: [Mark])?
     /// Each dot with the page and page-space rect it is pinned to, so scrolling
     /// only has to move frames rather than rebuild the overlay.
     private var gutterDots: [(button: UIButton, page: PDFPage, rect: CGRect)] = []
@@ -177,6 +205,8 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private var isPaged = false
     /// Settings → Page turning, as set; `isPaged` is what's applied.
     private var pagedSetting = false
+    /// Settings → Page theme. Set before the document loads, as `pageMode` is.
+    private var theme = PageTheme.paper
     /// The iPad layout (window ≥ 700pt), from JS.
     private var isLarge = false
     /// iPad scrolling (14f): pages fit to the window with one even gap round
@@ -212,10 +242,10 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     // Comments are blue and personal highlights yellow: a pair that stays
     // distinct for the common colour-vision deficiencies. Commented passages
-    // are also underlined and carry a gutter dot, so colour is never the only
-    // cue. All three blues are measured against the white page:
+    // also carry a gutter dot, so colour is never the only cue. All three
+    // blues are measured against the white page:
     //  - fill under black text: ≥15:1 at either opacity
-    //  - underline, unread dot (and its white count): 4.7:1
+    //  - unread dot (and its white count): 4.7:1
     //  - read dot: 3.2:1 (WCAG non-text minimum is 3:1)
     private let commentFill = UIColor(rgb: 0x8ec5ff)
     private let commentInk = UIColor(rgb: 0x2f6fde)
@@ -256,8 +286,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
         pdfView.autoScales = true
         // PDFKit's default is a mid gray that reads as a bug against the app's
-        // dark chrome; the paper should meet the card edge cleanly.
-        pdfView.backgroundColor = .white
+        // dark chrome; the paper should meet the card edge cleanly. In the
+        // page theme's colour, so Night never shows white round the page.
+        pdfView.backgroundColor = theme.paperColor
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         defaultPageBreakMargins = pdfView.pageBreakMargins
@@ -293,6 +324,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         tap.delegate = self
         tap.cancelsTouchesInView = false
         pdfView.addGestureRecognizer(tap)
+        markTap = tap
 
         if #available(iOS 16.0, *) {
             let interaction = UIEditMenuInteraction(delegate: self)
@@ -533,6 +565,27 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         }
     }
 
+    /// "paper" (the default), "sepia" or "night", from Settings → Page theme
+    /// (specs/page-theme). Read once when the book opens.
+    @objc var pageTheme: NSString? {
+        didSet {
+            theme = PageTheme(pageTheme as String?)
+            // iPad scrolling keeps the app's ground between pages; everywhere
+            // else the space round the page is the page's own colour.
+            if !appliedLargeScroll {
+                pdfView.backgroundColor = theme.paperColor
+            }
+            // Normally set before the book loads. If it ever comes after, the
+            // pages already drawn have to be drawn again.
+            if let document = pdfView.document as? ThemedPdfDocument, document.theme != theme {
+                document.theme = theme
+                pdfView.accessibilityIgnoresInvertColors = theme == .night
+                pdfView.layoutDocumentView()
+                refreshOverlays()
+            }
+        }
+    }
+
     /// The iPad layout (window ≥ 700pt, from JS's useLayout). Switches as the
     /// window crosses it — rotation, Split View — keeping the spot being read.
     @objc var largeLayout: NSNumber? {
@@ -573,7 +626,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         // follow that one, not the old.
         resetScrollObserver()
         guard usesLargeScroll else {
-            pdfView.backgroundColor = .white
+            pdfView.backgroundColor = theme.paperColor
             pdfView.pageBreakMargins = defaultPageBreakMargins
             pdfView.minScaleFactor = defaultScaleRange.min
             pdfView.maxScaleFactor = defaultScaleRange.max
@@ -990,15 +1043,17 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     }
 
     private func refreshOverlays() {
-        clearHighlights()
+        wantedMarks.removeAll()
         gutterLayer.subviews.forEach { $0.removeFromSuperview() }
         gutterDots.removeAll()
         tapTargets.removeAll()
         observeScrolling()
 
         guard let document = pdfView.document else {
+            clearHighlights()
             return
         }
+        defer { applyMarks(in: document) }
 
         // The reader's own marks go down first, so a passage that is both
         // highlighted and commented shows the conversation tint on top.
@@ -1039,7 +1094,6 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             }
 
             drawHighlights(rects, on: page, color: commentFill.withAlphaComponent(thread.unreadCount > 0 ? 0.55 : 0.35))
-            drawUnderlines(rects, on: page)
             drawGutterDot(for: thread, firstLine: rects[0], on: page)
             tapTargets.append((target: .thread(thread.anchorKey), page: page, rects: rects))
         }
@@ -1090,26 +1144,34 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// Runtime only. These annotations are never written back — the manuscript
     /// on disk is the author's file, not a scratch pad.
     private func drawHighlights(_ rects: [CGRect], on page: PDFPage, color: UIColor) {
+        let index = pdfView.document?.index(for: page) ?? -1
         for rect in rects {
-            let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
-            annotation.color = color
-            annotation.shouldDisplay = true
-            annotation.shouldPrint = false
-            page.addAnnotation(annotation)
-            addedHighlights.append((page, annotation))
+            wantedMarks.append((page, Mark(page: index, rect: rect, color: color)))
         }
     }
 
-    /// The non-colour cue for a commented passage.
-    private func drawUnderlines(_ rects: [CGRect], on page: PDFPage) {
-        for rect in rects {
-            let annotation = PDFAnnotation(bounds: rect, forType: .underline, withProperties: nil)
-            annotation.color = commentInk
+    /// Puts the marks this pass asked for on the page, unless they're the ones
+    /// already there.
+    private func applyMarks(in document: PDFDocument) {
+        let marks = wantedMarks.map { $0.mark }
+        if let drawn = drawnMarks, drawn.document === document, drawn.theme == theme, drawn.marks == marks {
+            return
+        }
+        clearHighlights()
+        for (page, mark) in wantedMarks {
+            // Each theme's paper needs its own strength of fill, and Night its
+            // own kind (specs/page-theme R6).
+            let fill = theme.fillColor(mark.color)
+            let annotation = theme == .night
+                ? ThemedMark(bounds: mark.rect, color: fill)
+                : PDFAnnotation(bounds: mark.rect, forType: .highlight, withProperties: nil)
+            annotation.color = fill
             annotation.shouldDisplay = true
             annotation.shouldPrint = false
             page.addAnnotation(annotation)
             addedHighlights.append((page, annotation))
         }
+        drawnMarks = (document, theme, marks)
     }
 
     private func clearHighlights() {
@@ -1117,6 +1179,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             page.removeAnnotation(annotation)
         }
         addedHighlights.removeAll()
+        drawnMarks = nil
     }
 
     private func drawGutterDot(for thread: ReaderThread, firstLine: CGRect, on page: PDFPage) {
@@ -1185,17 +1248,59 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         return true
     }
 
-    @objc private func handlePageTap(_ recognizer: UITapGestureRecognizer) {
-        let point = recognizer.location(in: pdfView)
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if gestureRecognizer === markTap {
+            touchIsOnMark = !marks(at: touch.location(in: pdfView)).isEmpty
+            touchBegan = touch.timestamp
+        }
+        return true
+    }
+
+    /// Ours is only ever a quick tap on a marked passage. Anywhere else, or
+    /// held long enough to select a word, it fails at once, so PDFKit's taps
+    /// waiting on it (below) go ahead: clearing a selection is one of them.
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer === markTap else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+        return touchIsOnMark
+            && ProcessInfo.processInfo.systemUptime - touchBegan < RNPdfView.longestTap
+    }
+
+    /// On a marked passage PDFKit's own taps wait for ours, which wins there.
+    /// Left alongside, PDFKit took the tap as one on its highlight annotation
+    /// and put up its Highlight / Remove / Add Note menu over the thread
+    /// sheet or our highlight menu. Scrolling, zooming and press-to-select
+    /// never wait, and nowhere else does anything.
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        guard gestureRecognizer === markTap, touchIsOnMark,
+            otherGestureRecognizer.view?.isDescendant(of: pdfView) == true
+        else {
+            return false
+        }
+        return !(otherGestureRecognizer is UIPanGestureRecognizer
+            || otherGestureRecognizer is UIPinchGestureRecognizer
+            || otherGestureRecognizer is UILongPressGestureRecognizer)
+    }
+
+    /// The marked passages under a point in the PDF view.
+    private func marks(at point: CGPoint) -> [(target: TapTarget, page: PDFPage, rects: [CGRect])] {
         guard let page = pdfView.page(for: point, nearest: false) else {
-            return
+            return []
         }
         let pagePoint = pdfView.convert(point, to: page)
         // Lines are tight; a couple of points of slack makes a tap on the
         // edge of a word still count.
-        let hits = tapTargets.filter { target in
+        return tapTargets.filter { target in
             target.page == page && target.rects.contains { $0.insetBy(dx: -2, dy: -2).contains(pagePoint) }
         }
+    }
+
+    @objc private func handlePageTap(_ recognizer: UITapGestureRecognizer) {
+        let hits = marks(at: recognizer.location(in: pdfView))
         // The reader's own highlight wins: its menu can still reach the
         // conversation through "Comment".
         if let hit = hits.first(where: { if case .highlight = $0.target { return true } else { return false } }),
@@ -1285,6 +1390,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// on page 1. Page reports stay held until the jump, so page 1 never
     /// reaches JS as progress.
     private func showDocument(_ document: PDFDocument) {
+        (document as? ThemedPdfDocument)?.theme = theme
+        // Night is already inverted: Smart Invert on top would turn it back.
+        pdfView.accessibilityIgnoresInvertColors = theme == .night
         isRepositioning = true
         needsInitialJump = true
         pdfView.document = document
@@ -1327,7 +1435,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         status.show(.loading)
 
         if url.isFileURL {
-            if let data = try? Data(contentsOf: url), let document = PDFDocument(data: data) {
+            if let data = try? Data(contentsOf: url), let document = ThemedPdfDocument(data: data) {
                 showDocument(document)
                 notifyLoadComplete(document: document, data: data)
             } else {
@@ -1341,7 +1449,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         // every open fetched the whole file again.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             if let cached = ManuscriptCache.read(url) {
-                if let document = PDFDocument(data: cached) {
+                if let document = ThemedPdfDocument(data: cached) {
                     DispatchQueue.main.async { self?.open(document, data: cached) }
                     return
                 }
@@ -1357,7 +1465,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private func download(_ url: URL) {
         URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 200
-            let document = data.flatMap { PDFDocument(data: $0) }
+            let document = data.flatMap { ThemedPdfDocument(data: $0) }
             DispatchQueue.main.async {
                 guard let self = self, url == self.lastLoadedURL else {
                     return

@@ -43,6 +43,8 @@ All hexes in the HTML map to existing tokens in `src/styles/global.js`:
 - #d6c3b2 → DS.colors.onSurfaceVariant (secondary text)
 - #ffddb8 → DS.colors.primary; #ffb95f → DS.colors.primaryBright
 - #472a00 / #2b1800 → DS.colors.onPrimary
+- #ffffff / #f4ecd8 / #000000 (the reader's page only) → DS.colors.readerPaper /
+  readerSepia / readerNight (specs/page-theme)
 - Gradient CTA: linear-gradient(135deg, primary, primaryBright), text onPrimary
 - Glow progress fill: linear-gradient(90deg, #ffddb8, #e8c49a) + shadow
   0 0 8–10px rgba(255,221,184,0.6) (use shadowColor/elevation or a wrapper View)

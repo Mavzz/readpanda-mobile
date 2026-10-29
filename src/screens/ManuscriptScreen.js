@@ -76,6 +76,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const initialPage = savedProgress?.currentPage || 0;
   log.info(`ManuscriptScreen initial page for ${book.title}: ${initialPage}`);
   const [pageMode] = useState(() => getReaderSetting('pageMode'));
+  const [pageTheme] = useState(() => getReaderSetting('pageTheme'));
   // iPad layouts scroll with pages fit to the window (14f). Spread was tried
   // and dropped: two fixed PDF pages side by side made the text too small.
   const { isLarge } = useLayout();
@@ -422,6 +423,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         bookTitle={book.title}
         initialPage={initialPage}
         pageMode={pageMode}
+        pageTheme={pageTheme}
         largeLayout={isLarge}
         threads={nativeThreads}
         highlights={nativeHighlights}
