@@ -182,9 +182,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// iPad scrolling (14f): pages fit to the window with one even gap round
     /// them. Page turning ("page") keeps the phone's paged reader on iPad too.
     private var usesLargeScroll: Bool { isLarge && !pagedSetting }
-    /// How far past the page container a dot may sit: into the outer margin
-    /// on iPad, not at all on the phone (where it stays on the card's edge).
-    private var dotOverhang: CGFloat { usesLargeScroll ? RNPdfView.pageGap / 2 : -2 }
+    /// How far in from the card's right edge a dot sits. Never past it: a
+    /// landscape iPad page fills the card, and letting the dot into the outer
+    /// margin put it half off. Further in on iPad, where 6pt on a page that
+    /// wide reads as touching the edge. Wherever the page leaves a margin
+    /// (iPad portrait, 14f), the dot still sits just beside the page.
+    private var dotInset: CGFloat { isLarge ? 16 : 6 }
     /// iPad scrolling: the one gap between a page and anything next to it —
     /// the window edge, the header, the scrubber or the next page — in both
     /// orientations, kept as tight as the phone's 12pt card inset. Half is the
@@ -972,7 +975,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             let pageInView = gutterRect(dot.page.bounds(for: .cropBox), on: dot.page)
             let size = dot.button.frame.width
             dot.button.frame = CGRect(
-                x: min(field.width + dotOverhang - size - 4, pageInView.maxX + 6),
+                x: min(field.width - dotInset - size, pageInView.maxX + 6),
                 y: lineInView.midY - size / 2,
                 width: size,
                 height: size
@@ -1125,7 +1128,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         let size: CGFloat = unread > 0 ? 22 : 12
         let dot = UIButton(type: .custom)
         dot.frame = CGRect(
-            x: min(field.width + dotOverhang - size - 4, pageInView.maxX + 6),
+            x: min(field.width - dotInset - size, pageInView.maxX + 6),
             y: lineInView.midY - size / 2,
             width: size,
             height: size
