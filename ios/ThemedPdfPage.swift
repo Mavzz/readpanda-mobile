@@ -130,6 +130,10 @@ class ThemedMark: PDFAnnotation {
 
     override func draw(with box: PDFDisplayBox, in context: CGContext) {
         context.saveGState()
+        // Into the shown box's space. The crop box starts at the page's
+        // origin, so leaving this out only showed once a trimmed art box was
+        // shown (specs/reader-fit): the fill landed off the words.
+        page?.transform(context, for: box)
         context.setFillColor(color.cgColor)
         // Rounded like PDFKit's own highlight.
         let radius = bounds.height / 4
