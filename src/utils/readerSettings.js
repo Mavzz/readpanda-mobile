@@ -22,22 +22,6 @@ export const READER_SETTINGS = {
       { value: 'night', label: 'Night' },
     ],
   },
-  progressVisibility: {
-    key: 'progress_visibility',
-    defaultValue: 'members',
-    options: [
-      { value: 'members', label: 'Room members' },
-      { value: 'me', label: 'Only me' },
-    ],
-  },
-  spoilerProtection: {
-    key: 'spoiler_protection',
-    defaultValue: 'on',
-    options: [
-      { value: 'on', label: 'On' },
-      { value: 'off', label: 'Off' },
-    ],
-  },
 };
 
 export const getReaderSetting = (name) => {

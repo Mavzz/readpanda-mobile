@@ -47,7 +47,7 @@ This is the list for approval (see the open question in requirements.md):
 | `comments` | always | Why can't I see some comments? | Comments in a room are pinned to the page they're about. You see a comment once you've read up to that page, so nobody spoils what's ahead. Keep reading and they'll appear. |
 | `join` | always | How do I join a room? | Open the invite link or scan the QR code a member shares, or go to the Rooms tab and enter the room's invite code. |
 | `start` | always | How do I start a room? | Go to the Rooms tab and tap New, then share its invite code, link or QR code from the room. *Plus on, adds:* Free accounts host {hostedRooms} room. |
-| `progress` | always | Who can see how far I've read? | Room members, by default. To hide it, go to Settings → Who sees my progress and choose Only me. |
+| `progress` | always | Who can see how far I've read? | Everyone in the room. Seeing how far everyone else has read is the point of reading together. |
 | `reading` | always | How do I change how books look? | Go to Settings → Page turning to choose Scroll or Page, and Settings → Page theme for Paper, Sepia or Night. |
 | `report` | always | How do I report a comment or a reader? | Email us at the address below with the room, the reader's username and what happened. We review every report and act promptly. |
 | `delete` | always | How do I delete my account? | Go to Settings → Delete account. Your reading history, buckets and highlights are deleted, rooms you created pass to another member, and your comments stay as "Deleted reader". This can't be undone. |
@@ -64,8 +64,10 @@ Changes from the first draft:
   to report, and App Review looks for a way to do it. When the report/block
   spec lands, its answer changes.
 
-Spoiler protection is left out on purpose. The setting is saved, but nothing
-reads it yet, so an answer would promise something the app doesn't do.
+Spoiler protection is left out on purpose. The server always holds back
+comments you haven't reached, so there's no setting to explain. The
+"Who sees my progress" setting is gone too: progress is always shared within
+a room, because that's what rooms are for.
 
 **Email us (R3).** A new `src/utils/support.js` exports:
 - `SUPPORT_EMAIL = 'readpanda.support@gmail.com'`, a constant. It's the same
