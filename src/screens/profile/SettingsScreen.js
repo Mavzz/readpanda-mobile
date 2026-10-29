@@ -25,6 +25,7 @@ import profileStyles from './profileStyles';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
 import { BugReportSheet, ChoiceSheet, ConfirmSheet } from './SettingsSheets';
 import PressableScale from '../../components/PressableScale';
+import useOutboxStore from '../../stores/outboxStore';
 
 const CHOICE_TITLES = {
   pageMode: 'Page turning',
@@ -36,6 +37,11 @@ const CHOICE_TITLES = {
 const pickedGenreCount = (preferences) => Object.values(preferences || {})
   .flat()
   .filter((p) => p?.preference_value).length;
+
+// R3.8: "1 change hasn't synced yet", "3 changes haven't synced yet".
+export const signOutUnsentTitle = (n) => (
+  n === 1 ? '1 change hasn\'t synced yet' : `${n} changes haven't synced yet`
+);
 
 const SettingsScreen = () => {
   const { isLarge, pagePad } = useLayout();
@@ -64,6 +70,8 @@ const SettingsScreen = () => {
   // Which ChoiceSheet / ConfirmSheet is open, if any.
   const [choice, setChoice] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  // Offline changes not yet sent, which signing out would lose (R3.8).
+  const unsent = useOutboxStore((s) => s.items.length);
   const [deleting, setDeleting] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
 
@@ -83,6 +91,10 @@ const SettingsScreen = () => {
     // Before logout: this needs the access token that signOut clears.
     await unregisterPushDevice();
     await logout(user?.username, enhancedStorage.getRefreshToken());
+    // What was done offline and never sent goes too: the reader was told
+    // (specs/offline-first R3.8). Cleared while still signed in, so the
+    // account's stored copy is emptied, not just the one in memory.
+    useOutboxStore.getState().clearOutbox();
     signOut();
     log.info('User signed out successfully');
   };
@@ -276,9 +288,12 @@ const SettingsScreen = () => {
 
       <ConfirmSheet
         visible={confirm === 'signOut'}
-        title="Sign out?"
-        message="Your reading positions stay on this device for when you're back."
+        title={unsent > 0 ? signOutUnsentTitle(unsent) : 'Sign out?'}
+        message={unsent > 0
+          ? 'Sign out anyway? What you did offline will be lost.'
+          : 'Your reading positions stay on this device for when you\'re back.'}
         confirmLabel="Sign out"
+        destructive={unsent > 0}
         onConfirm={handleSignOut}
         onClose={() => setConfirm(null)}
       />

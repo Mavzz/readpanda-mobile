@@ -4,6 +4,9 @@ import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
 import getInitials from '../utils/getInitials';
 import { putReadingProgress, fetchRoomProgress, fetchMyProgress } from '../services/progressService';
+import useOutboxStore, { registerOutboxHandlers } from './outboxStore';
+import useCommentsStore from './commentsStore';
+import persistSlice from './persistSlice';
 
 // There is deliberately no fixture *active book*: "no activeBook" is a real
 // state the app has to render (FIRST_RUN_3a_3b.md § 3a/3b), so a reader who
@@ -327,12 +330,17 @@ const useReadingProgressStore = create((set, get) => ({
       get().loadShelf();
 
       // Publish my place so the rooms reading this book can show it. Local
-      // storage above is what this device renders, so a failed push costs
-      // nothing but freshness on other people's pace tracks — never the
-      // reader's own position.
-      putReadingProgress(manuscriptId, progress).catch((e) => {
-        log.error('Failed to publish reading progress:', e);
+      // storage above is what this device renders, so the push only matters
+      // to other people's pace tracks. It goes through the outbox: offline it
+      // waits there, and saves made meanwhile collapse to the latest one, with
+      // when it was read (specs/offline-first R3.1, R9.1).
+      const outbox = useOutboxStore.getState();
+      outbox.enqueue({
+        kind: 'progress',
+        bookId: manuscriptId,
+        payload: { currentPage: progress.currentPage, totalPages: progress.totalPages, readAt: Date.now() },
       });
+      outbox.flush();
     } catch (e) {
       log.error('Failed to save reading progress:', e);
     }
@@ -693,5 +701,33 @@ const useReadingProgressStore = create((set, get) => ({
     });
   },
 }));
+
+// Sending a position the outbox kept. Accepted, it may have carried the
+// reader past comments that were locked, read offline or not: reload them so
+// they appear (R4.4). The API says when there were none, which is most saves.
+registerOutboxHandlers('progress', {
+  send: (item) => putReadingProgress(item.bookId, item.payload, { readAt: item.payload.readAt, quiet: true }),
+  onAccepted: (item, result) => {
+    if (result?.response?.newly_unlocked === 0) {
+      return;
+    }
+    const roomId = enhancedStorage.getReadingPosition(item.bookId)?.book?.room_id;
+    if (roomId) {
+      useCommentsStore.getState().loadComments(roomId, item.bookId);
+    }
+  },
+  // The book is gone (404) or the save was malformed: other people's pace
+  // tracks miss one update, the reader's own position is untouched.
+  onRejected: (item, error) => log.warn(`Progress for ${item.bookId} was refused:`, error),
+});
+
+// Where everyone in the reader's rooms had got to, as last fetched: the pace
+// track and the room lobby show it offline too (specs/offline-first R4.3,
+// R5.1). Read back before Home's first loadActiveBook, so the track is
+// built from it straight away.
+export const hydrateMemberProgress = persistSlice(useReadingProgressStore, 'memberProgress', {
+  pick: (s) => ({ remoteProgress: s.remoteProgress }),
+  restore: ({ remoteProgress }) => ({ remoteProgress: remoteProgress || {} }),
+});
 
 export default useReadingProgressStore;

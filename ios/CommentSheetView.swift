@@ -131,10 +131,12 @@ private class CommentRowView: UIView {
 
     /// Saved comments get a ⋯ menu (R1.1, R7.1): Delete for your own, Report
     /// and Block for anyone else's. Not while sending, and not on the Deleted
-    /// reader's.
+    /// reader's. One written offline and waiting to be sent can be deleted:
+    /// it's taken back before it ever goes (specs/offline-first R3.4).
     private func menuButton() -> UIButton? {
         // Until the server has it, its id is still the one minted on the phone.
-        guard !comment.pending, !comment.failed, comment.id != comment.clientId else {
+        let saved = !comment.pending && !comment.failed && comment.id != comment.clientId
+        guard saved || (comment.queued && comment.isMine) else {
             return nil
         }
         let actions: [UIAction]
@@ -305,7 +307,16 @@ private class CommentRowView: UIView {
             stack.addArrangedSubview(reply)
         }
 
-        if comment.pending {
+        if comment.queued {
+            // Not sending, so no spinner: it goes when the connection does.
+            let waiting = UILabel()
+            waiting.text = "Will send when you're back online"
+            waiting.font = DS.Fonts.semibold(11)
+            waiting.textColor = DS.Colors.onSurfaceVariant
+            waiting.adjustsFontForContentSizeCategory = true
+            waiting.numberOfLines = 0
+            stack.addArrangedSubview(waiting)
+        } else if comment.pending {
             let spinner = UIActivityIndicatorView(style: .medium)
             spinner.color = DS.Colors.onSurfaceVariant
             spinner.startAnimating()
@@ -680,6 +691,10 @@ class CommentSheetView: UIView, UITextViewDelegate {
     /// Opens the sheet on a passage, resetting whatever the last one left
     /// behind: a draft aimed at one passage shouldn't follow the reader to the
     /// next one.
+    /// Told when the sheet appears and when it's gone, so JS can move what
+    /// it draws over the reader out of its way (the Offline pill).
+    var onVisibilityChange: ((Bool) -> Void)?
+
     func open(target: SheetTarget) {
         self.target = target
         replyTo = nil
@@ -693,6 +708,7 @@ class CommentSheetView: UIView, UITextViewDelegate {
             return
         }
         isHidden = false
+        onVisibilityChange?(true)
         backdrop.alpha = 0
         layoutIfNeeded()
         container.transform = CGAffineTransform(translationX: 0, y: container.bounds.height)
@@ -719,6 +735,7 @@ class CommentSheetView: UIView, UITextViewDelegate {
                 self.isHidden = true
                 self.container.transform = .identity
                 self.target = nil
+                self.onVisibilityChange?(false)
             }
         )
     }

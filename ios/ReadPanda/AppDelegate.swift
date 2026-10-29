@@ -26,6 +26,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, RNAppAuthAuthorizationFlo
 
     FirebaseApp.configure()
 
+    // Covers live in the shared URL cache, which is what React Native's
+    // images read offline (specs/offline-first R6.6, R8.2). Its default
+    // (about 10 MB on disk, nothing over ~500 KB) holds a few dozen covers and
+    // would evict the rest of a prefetch as it went.
+    URLCache.shared = URLCache(memoryCapacity: 20 * 1024 * 1024, diskCapacity: 200 * 1024 * 1024)
+
     // The window and React Native start in SceneDelegate: iOS 27 won't launch
     // an app built with the current SDK that hasn't adopted scenes.
     return true

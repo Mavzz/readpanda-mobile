@@ -1,21 +1,30 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
-import useReadingProgressStore from './readingProgressStore';
-import useCommentsStore from './commentsStore';
+import useReadingProgressStore, { hydrateMemberProgress } from './readingProgressStore';
+import useCommentsStore, { hydrateComments } from './commentsStore';
 import useRoomStore, { hydrateRooms } from './roomStore';
 import useBucketsStore, { hydrateBuckets } from './bucketsStore';
 import useBooksStore from './booksStore';
-import useNotificationStore from './notificationStore';
-import useHighlightsStore from './highlightsStore';
+import useNotificationStore, { hydrateNotifications } from './notificationStore';
+import useHighlightsStore, { hydrateHighlights } from './highlightsStore';
 import useSubscriptionStore from './subscriptionStore';
 import useBlocksStore from './blocksStore';
+import useOutboxStore, { hydrateOutbox } from './outboxStore';
 
 // What this account's Home and My Books showed last time, read back once
 // storage knows whose it is.
 const hydrateCaches = () => {
   hydrateRooms();
   hydrateBuckets();
+  hydrateHighlights();
+  hydrateComments();
+  hydrateNotifications();
+  hydrateMemberProgress();
+  // After the stores it sends for, so their rows are there to update.
+  hydrateOutbox();
+  // Whatever was left from last time goes now, if it can (R3.3).
+  useOutboxStore.getState().flush();
 };
 
 const useAuthStore = create((set, get) => ({
@@ -81,6 +90,7 @@ const useAuthStore = create((set, get) => ({
       useNotificationStore.getState().clearNotifications();
       useHighlightsStore.getState().clearHighlights();
       useBlocksStore.getState().clear();
+      useOutboxStore.getState().clearOutbox();
       useSubscriptionStore.getState().stop();
       log.info('User signed out');
     } catch (e) {

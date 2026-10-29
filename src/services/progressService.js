@@ -7,13 +7,20 @@ import { makeAuthenticatedGetRequest, makeAuthenticatedPutRequest } from './auth
 //
 // My own reading never waits on this call: the local position written by
 // enhancedStorage stays what this device renders.
-const putReadingProgress = async (bookId, progress) => {
+//
+// `readAt` is when the page was read, which for a save queued offline is
+// well before it's sent: the API keeps a newer page from another device over
+// an older one arriving late (specs/offline-first R9). `quiet` is for callers
+// that handle being offline themselves (the outbox).
+const putReadingProgress = async (bookId, progress, { readAt = Date.now(), quiet = false } = {}) => {
   const { status, response } = await makeAuthenticatedPutRequest(
     getBackendUrl(`/progress/${encodeURIComponent(bookId)}`),
     {
       current_page: progress?.currentPage || 0,
       total_pages: progress?.totalPages || 0,
+      read_at: new Date(readAt).toISOString(),
     },
+    { quiet },
   );
 
   return { status, response };

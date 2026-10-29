@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import { NotificationService } from '../services/notificationService';
+import useOutboxStore, { registerOutboxHandlers } from './outboxStore';
+import persistSlice from './persistSlice';
 
 // The Notifications screen's switches, in the order it shows them.
 export const NOTIFICATION_SETTINGS = ['replies', 'roomComments', 'roomJoins', 'roomBook', 'newBooks'];
@@ -21,6 +23,11 @@ export const summarizeSettings = (settings, permitted) => {
   return on === 0 ? 'All off' : `${on} of ${NOTIFICATION_SETTINGS.length} on`;
 };
 
+const withRead = (state, notificationId, read) => {
+  const notifications = state.notifications.map((n) => (n.id === notificationId ? { ...n, read } : n));
+  return { notifications, unreadCount: notifications.filter((n) => !n.read).length };
+};
+
 const useNotificationStore = create((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -31,9 +38,17 @@ const useNotificationStore = create((set, get) => ({
   fetchNotifications: async () => {
     set({ loading: true });
     try {
-      const fetchedNotifications = await NotificationService.getNotifications();
-      const unreadCount = (fetchedNotifications || []).filter((n) => !n.read).length;
-      set({ notifications: fetchedNotifications || [], unreadCount });
+      const fetched = await NotificationService.getNotifications();
+      // Couldn't be fetched: keep the list from last time (R5.3, R5.4).
+      if (!fetched) {
+        return;
+      }
+      // Read here but not yet on the server: still read (R3.10).
+      const reading = new Set(useOutboxStore.getState().items
+        .filter((i) => i.kind === 'notification.read')
+        .map((i) => i.ref));
+      const notifications = fetched.map((n) => (reading.has(n.id) ? { ...n, read: true } : n));
+      set({ notifications, unreadCount: notifications.filter((n) => !n.read).length });
     } catch (error) {
       log.error('Error fetching notifications:', error);
     } finally {
@@ -43,23 +58,16 @@ const useNotificationStore = create((set, get) => ({
 
   markAsRead: async (notificationId) => {
     // Optimistic — the dot goes the moment it's tapped — and put back if the
-    // server didn't take it, so the badge never claims a read it doesn't hold.
-    const previous = get().notifications;
-    const apply = (notifications) => set({
-      notifications,
-      unreadCount: notifications.filter((n) => !n.read).length,
-    });
-    apply(previous.map((n) => (n.id === notificationId ? { ...n, read: true } : n)));
-    try {
-      const success = await NotificationService.markAsRead(notificationId);
-      if (!success) {
-        apply(get().notifications.map((n) => (
-          n.id === notificationId ? { ...n, read: previous.find((p) => p.id === n.id)?.read ?? n.read } : n
-        )));
-      }
-    } catch (error) {
-      log.error('Error marking notification as read:', error);
+    // server refuses it, so the badge never claims a read it doesn't hold.
+    // Through the outbox, so offline it's kept and sent later (R3.1).
+    const target = get().notifications.find((n) => n.id === notificationId);
+    if (!target || target.read) {
+      return;
     }
+    set((state) => withRead(state, notificationId, true));
+    const outbox = useOutboxStore.getState();
+    outbox.enqueue({ kind: 'notification.read', ref: notificationId });
+    await outbox.flush();
   },
 
   refreshUnreadCount: async () => {
@@ -98,5 +106,16 @@ const useNotificationStore = create((set, get) => ({
     set({ notifications: [], unreadCount: 0, settings: null });
   },
 }));
+
+registerOutboxHandlers('notification.read', {
+  send: (item) => NotificationService.markAsRead(item.ref, { quiet: true }),
+  // Refused (not this reader's, 404): the dot comes back (R3.6).
+  onRejected: (item) => useNotificationStore.setState((state) => withRead(state, item.ref, false)),
+});
+
+// The inbox from last time, offline too (R5.3).
+export const hydrateNotifications = persistSlice(useNotificationStore, 'notifications', {
+  pick: (s) => ({ notifications: s.notifications, unreadCount: s.unreadCount }),
+});
 
 export default useNotificationStore;

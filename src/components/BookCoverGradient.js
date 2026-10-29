@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { DS } from '../styles/global';
 import { duotoneFor, COVER_SHADOW, SCRIM_COLORS } from '../utils/covers';
-import log from '../utils/logger';
+import useConnectivityStore from '../stores/connectivityStore';
 
 // The one cover primitive: a real cover image when the API gave us one, and
 // otherwise the duotone placeholder from FIRST_RUN_3a_3b.md § "Cover fallback"
@@ -11,7 +12,9 @@ import log from '../utils/logger';
 //
 // Cover images are static, so they lean on the platform image caches (iOS
 // NSURLCache / Android Fresco, both disk-backed) that RN's <Image> already
-// uses; no extra image library is pulled in for that.
+// uses; no extra image library is pulled in for that. Offline, the cached
+// copy is used whatever its age; an image that still can't load falls back
+// to the placeholder rather than an empty tile (specs/offline-first R8).
 const BookCoverGradient = ({
   coverUrl,
   title,
@@ -31,13 +34,17 @@ const BookCoverGradient = ({
   style,
   children,
 }) => {
+  const online = useConnectivityStore((s) => s.online);
+  // The image failed to load; a new URL gets a fresh try.
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [coverUrl]);
+
   // Only label the placeholder when there's room for a line or two of it —
   // on small covers the title just got clipped by the bottom edge.
   // A caller that draws its own label over the cover (a collection tile, say)
   // supplies `children`; don't print the fallback title underneath it too.
-
-  log.debug('BookCoverGradient', { coverUrl, title, seed, width, height, borderRadius, titleFontSize, elevated, scrim, style, children });
-
   const showTitle = !!title && !children
     && (typeof height !== 'number' || height >= titleFontSize * 4);
   const box = { width, height, borderRadius };
@@ -48,10 +55,16 @@ const BookCoverGradient = ({
     </View>
   );
 
-  if (coverUrl) {
+  if (coverUrl && !failed) {
     return (
       <View style={[box, elevated && COVER_SHADOW, style]}>
-        <Image source={{ uri: coverUrl }} style={[box, styles.flush]} resizeMode="cover" />
+        <Image
+          source={{ uri: coverUrl, cache: online ? 'default' : 'force-cache' }}
+          style={[box, styles.flush]}
+          resizeMode="cover"
+          onError={() => setFailed(true)}
+          testID="cover-image"
+        />
         {overlay}
       </View>
     );
@@ -61,22 +74,30 @@ const BookCoverGradient = ({
 
   return (
     <View style={[box, elevated && COVER_SHADOW, style]}>
+      {/* Childless: react-native-linear-gradient runs through Fabric's
+          legacy interop, which mislays nested children. The title nested
+          here sat at the top and was clipped by it (specs/offline-first R10),
+          so it's a sibling laid out by a plain View instead. */}
       <LinearGradient
         colors={[start, end]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[box, styles.flush, styles.gradient]}
-      >
-        {showTitle && (
+        style={[box, styles.flush]}
+        testID="cover-gradient"
+      />
+      {showTitle && (
+        <View style={[box, styles.flush, styles.titleBox]} pointerEvents="none">
           <Text
             style={[styles.title, { fontSize: titleFontSize, lineHeight: Math.round(titleFontSize * 1.3) }]}
             numberOfLines={3}
             ellipsizeMode="tail"
+            // Larger Text still has to fit inside the cover (R10.3).
+            maxFontSizeMultiplier={1.3}
           >
             {title}
           </Text>
-        )}
-      </LinearGradient>
+        </View>
+      )}
       {overlay}
     </View>
   );
@@ -91,9 +112,10 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
   },
-  gradient: {
+  titleBox: {
     justifyContent: 'flex-end',
     padding: 10,
+    overflow: 'hidden',
   },
   overlay: {
     overflow: 'hidden',

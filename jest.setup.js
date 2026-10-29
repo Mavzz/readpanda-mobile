@@ -14,6 +14,11 @@ jest.mock('@sentry/react-native', () => ({
   reactNavigationIntegration: () => ({ registerNavigationContainer: jest.fn() }),
 }));
 
+// The library's own mock: online on cellular unless a test says otherwise.
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock.js'),
+);
+
 // Opens the native photo picker; tests call the callback themselves.
 jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(),

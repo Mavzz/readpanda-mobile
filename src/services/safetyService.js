@@ -58,10 +58,11 @@ const fetchBlocks = () =>
   settle(() => makeAuthenticatedGetRequest(getBackendUrl('/users/me/blocks')));
 
 // DELETE /comments/{id} — your own. 204; 403 not yours; 404 already gone.
-const deleteComment = (commentId) =>
+// `options.quiet` for a delete the outbox will keep if it can't be sent.
+const deleteComment = (commentId, options = {}) =>
   settle(() => makeAuthenticatedDeleteRequest(
     getBackendUrl(`/comments/${encodeURIComponent(commentId)}`),
-    NOW,
+    { ...NOW, ...options },
   ));
 
 export { reportContent, blockUser, unblockUser, fetchBlocks, deleteComment };

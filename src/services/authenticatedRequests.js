@@ -34,7 +34,7 @@ export const makePublicPatchRequest = async (url, body = {}, headers = {}) => {
 
 // ========== AUTHENTICATED REQUESTS (require valid tokens) ==========
 
-export const makeAuthenticatedGetRequest = async (url) => {
+export const makeAuthenticatedGetRequest = async (url, options = {}) => {
   const token = enhancedStorage.getAuthToken();
 
   if (!token) {
@@ -45,7 +45,7 @@ export const makeAuthenticatedGetRequest = async (url) => {
     'Authorization': `Bearer ${token}`,
   };
 
-  return await apiService.get(url, headers);
+  return await apiService.get(url, headers, options);
 };
 
 export const makeAuthenticatedPostRequest = async (url, body, options = {}) => {
@@ -62,7 +62,7 @@ export const makeAuthenticatedPostRequest = async (url, body, options = {}) => {
   return await apiService.post(url, body, headers, options);
 };
 
-export const makeAuthenticatedPutRequest = async (url, body) => {
+export const makeAuthenticatedPutRequest = async (url, body, options = {}) => {
   const token = enhancedStorage.getAuthToken();
 
   if (!token) {
@@ -73,7 +73,7 @@ export const makeAuthenticatedPutRequest = async (url, body) => {
     'Authorization': `Bearer ${token}`,
   };
 
-  return await apiService.put(url, body, headers);
+  return await apiService.put(url, body, headers, options);
 };
 
 export const makeAuthenticatedDeleteRequest = async (url, options = {}) => {

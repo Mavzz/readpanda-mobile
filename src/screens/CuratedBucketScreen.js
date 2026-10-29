@@ -3,9 +3,15 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  FlatList,
   useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -22,6 +28,8 @@ import { bucketMeta } from '../utils/readingTime';
 import { CURATED_GROUND, HERO_FADE } from '../utils/covers';
 import log from '../utils/logger';
 import PressableScale from '../components/PressableScale';
+import useOnReconnect, { OFFLINE_MESSAGE } from '../hooks/useOnReconnect';
+import useConnectivityStore from '../stores/connectivityStore';
 
 // § 9b — a curated bucket, pushed from Discover (or first-run Home) over the
 // tab bar. A full-bleed hero of its covers, the editorial line, a way to keep
@@ -35,6 +43,11 @@ const HERO_HEIGHT = 330;
 const HERO_HEIGHT_LARGE = 292;
 const GUTTER = 24;
 const COLUMN_GAP = 14;
+// The top bar behind the status bar and back button (specs/offline-first
+// R11): down to 14pt below the 38pt back button, and fading in over the last
+// stretch of the hero before the hero is gone.
+const BAR_BELOW_INSET = 14 + 38 + 14;
+const BAR_FADE = 60;
 
 const CuratedBucketScreen = () => {
   const navigation = useNavigation();
@@ -57,15 +70,26 @@ const CuratedBucketScreen = () => {
   const shelf = useReadingProgressStore((s) => s.shelf);
   const loadShelf = useReadingProgressStore((s) => s.loadShelf);
 
-  useEffect(() => {
+  // Offline, the copy from last time comes back instead (R5.2); with none,
+  // `failed` shows the offline line under the header.
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(() => {
     fetchCuratedBucketBooks(bucketId).then(({ status, response }) => {
       if (status === 200) {
         setPage(response);
+        setFailed(false);
       } else {
         log.error('Could not load curated bucket', bucketId);
+        setFailed(true);
       }
     });
   }, [bucketId, fetchCuratedBucketBooks]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+  useOnReconnect(load);
+  const online = useConnectivityStore((s) => s.online);
 
   // Badges follow the reader: coming back from a book has to update them.
   useFocusEffect(
@@ -229,6 +253,22 @@ const CuratedBucketScreen = () => {
     </View>
   );
 
+  // The hero scrolls away under the status bar; once it's almost gone, a
+  // glass bar with the bucket's name takes its place behind the back button,
+  // so nothing runs under either (R11.1–R11.3). Back at the hero it fades out
+  // and the hero is full bleed again (R11.2). Same on iPad's sideways hero.
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const barHeight = insets.top + BAR_BELOW_INSET;
+  const heroBottom = isLarge ? HERO_HEIGHT_LARGE + insets.top : HERO_HEIGHT;
+  const barGone = Math.max(0, heroBottom - barHeight - BAR_FADE);
+  const barShown = Math.max(1, heroBottom - barHeight);
+  const barFade = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [barGone, barShown], [0, 1], Extrapolation.CLAMP),
+  }));
+
   const renderBook = ({ item: book }) => {
     const progress = bucketProgress(book, shelfById[book.book_id]);
     let badge = null;
@@ -272,18 +312,39 @@ const CuratedBucketScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={DS.colors.background} />
-      <FlatList
+      <Animated.FlatList
         data={books}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         keyExtractor={(b) => b.book_id}
         // numColumns can't change on a mounted list; a new layout remounts it.
         key={`grid-${cols}`}
         numColumns={cols}
         renderItem={renderBook}
         ListHeaderComponent={isLarge ? largeHeader : header}
+        ListEmptyComponent={!page && failed ? (
+          <Text style={styles.message}>{online ? 'Couldn\'t load this bucket.' : OFFLINE_MESSAGE}</Text>
+        ) : null}
         columnWrapperStyle={[styles.columns, { paddingHorizontal: gutter, gap }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Behind the back button once the hero has scrolled away. Its title
+          repeats the page's, so VoiceOver skips it. */}
+      <Animated.View
+        style={[styles.topBar, { height: barHeight }, barFade]}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Text
+          style={[styles.topBarTitle, { top: insets.top + 14, left: gutter + 38 + 12, right: gutter }]}
+          numberOfLines={1}
+        >
+          {name}
+        </Text>
+      </Animated.View>
 
       {/* Floats over the hero. */}
       <PressableScale
@@ -299,12 +360,34 @@ const CuratedBucketScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  message: {
+    fontSize: 13,
+    fontFamily: DS.font.medium,
+    color: DS.colors.onSurfaceVariant,
+    textAlign: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: GUTTER,
+  },
   container: {
     flex: 1,
     backgroundColor: DS.colors.background,
   },
   content: {
     paddingBottom: 40,
+  },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: DS.colors.surfaceContainerGlass,
+  },
+  topBarTitle: {
+    ...DS.type.modalNavTitle,
+    position: 'absolute',
+    height: 38,
+    lineHeight: 38,
+    color: DS.colors.onSurface,
   },
   back: {
     position: 'absolute',

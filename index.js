@@ -8,7 +8,9 @@ import 'react-native-get-random-values';
 import {AppRegistry} from 'react-native';
 import App from './App'; // 1. Import your main App component
 import { initSentry } from './src/utils/sentry';
+import { startConnectivity } from './src/stores/connectivityStore';
 
 initSentry();
+startConnectivity();
 // Register the component as 'main' to match the native entry point
 AppRegistry.registerComponent('main', () => App);
