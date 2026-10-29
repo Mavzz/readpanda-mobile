@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import useReadingProgressStore, { roomMembersOf, roomMemberProgress } from '../../stores/readingProgressStore';
 import useCommentsStore from '../../stores/commentsStore';
 import { bookIdOf, sameId } from '../../utils/bookId';
+import useOnReconnect from '../../hooks/useOnReconnect';
 
 // This room's book as the active Room's sections render it (2c / 14i): the
 // reader's own place from their stored position (any room — a position is the
@@ -28,6 +29,14 @@ const useActiveRoomBook = (room) => {
       loadComments(room.id, bookId);
     }
   }, [room?.id, bookId, fetchMemberProgress, loadComments]);
+
+  // Where everyone is shows as last fetched offline (R5.1); fresh once back.
+  useOnReconnect(() => {
+    if (room?.id && bookId) {
+      fetchMemberProgress(room.id);
+      loadComments(room.id, bookId);
+    }
+  });
 
   return useMemo(() => {
     if (!bookId) {

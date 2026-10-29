@@ -23,6 +23,8 @@ import Animated from 'react-native-reanimated';
 import useFilterEntrance from '../hooks/useFilterEntrance';
 import useDiscoverPages from '../hooks/useDiscoverPages';
 import useLayout from '../hooks/useLayout';
+import useOnReconnect, { OFFLINE_MESSAGE } from '../hooks/useOnReconnect';
+import useConnectivityStore from '../stores/connectivityStore';
 
 // § 10c — "See all" for books you're browsing: a 3-column grid of 2:3 covers.
 //
@@ -110,6 +112,10 @@ const BookGridScreen = () => {
       loadCurated();
     }
   }, [source, loadCurated]);
+
+  // Back online, load what couldn't load offline (specs/offline-first R5.6).
+  useOnReconnect(ranked ? discover.reload : loadCurated);
+  const online = useConnectivityStore((s) => s.online);
 
   // Covers follow the reader: coming back from a book has to update them.
   useFocusEffect(
@@ -204,7 +210,7 @@ const BookGridScreen = () => {
       return (
         <View style={styles.message}>
           <Icon name="cloud-offline-outline" size={30} color={DS.colors.onSurfaceVariant} />
-          <Text style={styles.messageText}>Couldn&apos;t load books.</Text>
+          <Text style={styles.messageText}>{online ? 'Couldn\'t load books.' : OFFLINE_MESSAGE}</Text>
         </View>
       );
     }

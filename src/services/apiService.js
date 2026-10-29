@@ -1,7 +1,16 @@
+/* global AbortController */ // provided by React Native, missing from eslint's env
 import { Alert } from 'react-native';
 import { getBackendUrl } from '../utils/Helper';
 import enhancedStorage from '../utils/enhancedStorage';
 import log from '../utils/logger';
+import { OfflineError, isNetworkError } from '../utils/apiError';
+import { isOnline, recheckConnectivity, confirmOnline, takeProbe, reportNoAnswer } from '../stores/connectivityStore';
+import { showOfflineToast } from '../components/Toaster';
+
+// Past this a request is given up on and counts as a network error, so a
+// connection that hangs rather than fails still reaches the retry and the
+// outbox (specs/offline-first R1.3).
+const REQUEST_TIMEOUT = 15000;
 
 // Error types for better handling
 export const AUTH_ERRORS = {
@@ -40,6 +49,7 @@ class ApiService {
     this.failedQueue = [];
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second initial delay
+    this.timeout = REQUEST_TIMEOUT;
     this.authCallback = null; // Callback to handle auth failures
     // Set while the suspended alert is up, so several calls failing at once
     // show it once.
@@ -233,10 +243,39 @@ class ApiService {
     // A caller can ask for fewer retries (maxRetries: 0) when someone is
     // waiting on the answer.
     const maxRetries = requestConfig.maxRetries ?? this.maxRetries;
+
+    // Offline, a request can only fail, so fail now rather than after the
+    // backoff. Checked on every attempt: a connection lost between retries
+    // ends them too. A write the reader made gets the offline toast unless
+    // the caller (the outbox) handles it quietly; a read just falls back to
+    // what the screen has cached.
+    //
+    // "Offline" can be a stale reading (a missed reconnect, or the Simulator
+    // reporting no network that isn't gone), so it's checked again, and every
+    // few seconds a request goes out anyway as a probe: an answer puts the app
+    // back online (connectivityStore). Any request, writes included, or a
+    // screen that only writes (signing in) could never find out; only first
+    // attempts, so the probe is the request's one try. With truly no network
+    // it fails at once and the retry below is refused as offline, toast and
+    // all.
+    if (!isOnline()) {
+      recheckConnectivity();
+      const probe = attempt === 0 && takeProbe();
+      if (!probe) {
+        if (requestConfig.method !== 'GET' && !requestConfig.quiet) {
+          showOfflineToast();
+        }
+        throw new OfflineError(`Offline: ${requestConfig.method} ${requestConfig.url}`);
+      }
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeout);
     try {
       const { url, method, headers = {}, body } = requestConfig;
 
       const fetchOptions = {
+        signal: controller.signal,
         method,
         headers: {
           'Accept': 'application/json',
@@ -255,6 +294,8 @@ class ApiService {
       }
 
       const response = await fetch(url, fetchOptions);
+      // Any answer at all means there's a connection.
+      confirmOnline();
 
       // skipAuthRetry marks requests that never carried one of our own JWTs
       // to begin with (login/signup/Google auth) — a 401/498 there means
@@ -308,9 +349,23 @@ class ApiService {
       const responseData = await response.json();
       return { status: response.status, response: responseData };
 
-    } catch (error) {
-      // Network errors or other non-HTTP errors - retry with exponential backoff
-      if (attempt < maxRetries && !error.message.includes('Client error')) {
+    } catch (caught) {
+      // Named for what happened: "Aborted" said nothing about which request
+      // or why.
+      let error = caught;
+      if (caught?.name === 'AbortError') {
+        error = new Error(`Timed out after ${this.timeout / 1000}s: ${requestConfig.method} ${requestConfig.url}`);
+        error.name = 'TimeoutError';
+        error.timeout = true;
+      }
+      // Sent, and no answer: the network may be up but going nowhere (R1.6).
+      if (isNetworkError(error) && !error.offline) {
+        reportNoAnswer();
+      }
+      // Network errors or other non-HTTP errors - retry with exponential
+      // backoff. Not a timeout: it already waited longer than a retry would,
+      // and four in a row kept a screen waiting a minute (R1.3).
+      if (attempt < maxRetries && !error.offline && !error.timeout && !error.message.includes('Client error')) {
         const delay = this.retryDelay * Math.pow(2, attempt);
         log.warn(`Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries}):`, error);
 
@@ -318,14 +373,22 @@ class ApiService {
         return this.executeRequest(requestConfig, attempt + 1);
       }
 
-      log.error('Request failed after retries:', error);
+      // No answer is expected offline or on a bad network; the caller
+      // decides what it means. A server that answered badly is an error.
+      if (isNetworkError(error)) {
+        log.warn('Request got no answer:', error.message);
+      } else {
+        log.error('Request failed after retries:', error);
+      }
       throw error;
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   /**
      * GET request with retry capabilities.
-     * options: { skipAuthRetry, maxRetries } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries, quiet } — see executeRequest.
      */
   async get(url, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'GET', headers, ...options });
@@ -333,7 +396,7 @@ class ApiService {
 
   /**
      * POST request with retry capabilities.
-     * options: { skipAuthRetry, maxRetries } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries, quiet } — see executeRequest.
      */
   async post(url, body = {}, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'POST', headers, body, ...options });
@@ -341,7 +404,7 @@ class ApiService {
 
   /**
      * PUT request with retry capabilities.
-     * options: { skipAuthRetry, maxRetries } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries, quiet } — see executeRequest.
      */
   async put(url, body = {}, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'PUT', headers, body, ...options });
@@ -349,7 +412,7 @@ class ApiService {
 
   /**
      * DELETE request with retry capabilities.
-     * options: { skipAuthRetry, maxRetries } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries, quiet } — see executeRequest.
      */
   async delete(url, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'DELETE', headers, ...options });
@@ -357,7 +420,7 @@ class ApiService {
 
   /**
      * PATCH request with retry capabilities.
-     * options: { skipAuthRetry, maxRetries } — see executeRequest.
+     * options: { skipAuthRetry, maxRetries, quiet } — see executeRequest.
      */
   async patch(url, body = {}, headers = {}, options = {}) {
     return this.executeRequest({ url, method: 'PATCH', headers, body, ...options });

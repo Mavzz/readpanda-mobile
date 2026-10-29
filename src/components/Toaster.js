@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { DS } from '../styles/global';
+import { isOnline } from '../stores/connectivityStore';
 
 // Nocturnal Sanctuary toast: dark glass surface, full rounding, ambient shadow.
 // Semantic meaning comes from the accent dot + text tint, not a loud background.
@@ -22,14 +23,32 @@ const Toaster = () => {
   return <Toast config={toastConfig} />;
 };
 
+// The offline toast explains every failure that follows it, so for as long
+// as it's up, a screen's own "Couldn't …" error doesn't replace it (only one
+// toast shows at a time). specs/offline-first R1.5.
+const OFFLINE_WINDOW = 3000;
+let offlineShownAt = 0;
+
+export const showOfflineToast = () => {
+  if (Date.now() - offlineShownAt < OFFLINE_WINDOW) {
+    return;
+  }
+  showToast('You\'re offline. Try again when you\'re connected.', 'info', OFFLINE_WINDOW);
+  offlineShownAt = Date.now();
+};
+
 export const showToast = (message, type = 'info', duration = 3000) => {
+  if (type === 'error' && Date.now() - offlineShownAt < OFFLINE_WINDOW) {
+    return;
+  }
   Toast.show({
     type: type,
     text1: message,
     position: 'bottom',
     visibilityTime: duration,
     autoHide: true,
-    bottomOffset: 100,
+    // Above the Offline pill while it's showing, rather than over it.
+    bottomOffset: isOnline() ? 100 : 132,
   });
 };
 

@@ -10,7 +10,9 @@ import {
   unlikeComment,
 } from '../services/commentsService';
 import { deleteComment as deleteCommentRequest } from '../services/safetyService';
-import { statusOfError, bodyOfError } from '../utils/apiError';
+import { statusOfError, bodyOfError, isNetworkError } from '../utils/apiError';
+import useOutboxStore, { registerOutboxHandlers } from './outboxStore';
+import persistSlice from './persistSlice';
 
 // Passage-anchored, room-scoped comments (handoff 6a/6b).
 //
@@ -157,6 +159,123 @@ const failureOf = (error) => (
   statusOfError(error) === 400 && bodyOfError(error).code === 'blocked_words' ? 'blocked_words' : true
 );
 
+// The server's row in place of the one written on the phone: the comment,
+// its thread's anchor key (the server owns it, so a thread the client
+// invented adopts the real one) and its replies' parent id.
+const withSaved = (state, bookId, clientId, response) => {
+  const entry = state.byBook[bookId];
+  if (!entry) {
+    return state;
+  }
+  const saved = { ...toComment(response), clientId, pending: false, failed: false, queued: false };
+  const threads = entry.threads.map((t) => ({
+    ...t,
+    anchorKey: t.anchorKey === `pending:${clientId}` ? response.anchor?.key || t.anchorKey : t.anchorKey,
+    comments: t.comments.map((c) => (
+      c.clientId === clientId && !c.parentId
+        ? { ...saved, replies: (c.replies || []).map((r) => ({ ...r, parentId: saved.id })) }
+        : { ...c, replies: (c.replies || []).map((r) => (r.clientId === clientId ? saved : r)) }
+    )),
+  }));
+  return { byBook: { ...state.byBook, [bookId]: { ...entry, threads } } };
+};
+
+// Set flags on the comment or reply minted with `clientId`.
+const withFlags = (state, bookId, clientId, flags) => {
+  const entry = state.byBook[bookId];
+  if (!entry) {
+    return state;
+  }
+  const mark = (c) => (c.clientId === clientId ? { ...c, ...flags } : c);
+  const threads = entry.threads.map((t) => ({
+    ...t,
+    comments: t.comments.map((c) => ({ ...mark(c), replies: (c.replies || []).map(mark) })),
+  }));
+  return { byBook: { ...state.byBook, [bookId]: { ...entry, threads } } };
+};
+
+// The heart on one comment set to `liked`, its count following.
+const withLike = (state, bookId, commentId, liked) => {
+  const entry = state.byBook[bookId];
+  if (!entry) {
+    return state;
+  }
+  const apply = (c) => (c.id !== commentId || c.likedByMe === liked
+    ? c
+    : { ...c, likedByMe: liked, likes: Math.max(0, c.likes + (liked ? 1 : -1)) });
+  const threads = entry.threads.map((t) => ({
+    ...t,
+    comments: t.comments.map((c) => ({ ...apply(c), replies: (c.replies || []).map(apply) })),
+  }));
+  return { byBook: { ...state.byBook, [bookId]: { ...entry, threads } } };
+};
+
+// Whether the comment with this id (a clientId, until the server has it) is
+// still waiting in the outbox.
+const findComment = (entry, commentId) => {
+  for (const t of entry?.threads || []) {
+    for (const c of t.comments) {
+      if (c.id === commentId) {
+        return c;
+      }
+      const reply = (c.replies || []).find((r) => r.id === commentId);
+      if (reply) {
+        return reply;
+      }
+    }
+  }
+  return null;
+};
+const isQueued = (entry, commentId) => !!findComment(entry, commentId)?.queued;
+
+// Keep a comment that couldn't be sent (specs/offline-first R3.1). It stays
+// `pending`, so the sheet treats it as not yet saved, and `queued`, so it
+// survives a reload and a restart.
+const queueComment = (set, { roomId, bookId, clientId, parentId, page, anchorText, anchorBounds, body, fileHash }) => {
+  useOutboxStore.getState().enqueue({
+    kind: 'comment.add',
+    bookId,
+    roomId,
+    ref: clientId,
+    parentRef: parentId || null,
+    payload: { page: page || 0, anchorText: anchorText || '', anchorBounds: anchorBounds || null, body, fileHash: fileHash || '' },
+  });
+  set((state) => withFlags(state, bookId, clientId, { pending: true, failed: false, queued: true }));
+};
+
+// The server's threads, plus what only this phone knows yet (R3.10): its own
+// comments still being sent, waiting in the outbox, or refused and waiting
+// for Retry, Edit or Discard, which a reload would otherwise wipe (one refused
+// in the outbox is followed at once by the reconnect's reload); and minus
+// comments it deleted offline, which the server still has until the delete
+// gets there.
+const withLocal = (threads, previous, deletes) => {
+  const isLocal = (c) => c.pending || c.queued || c.failed;
+  const known = new Set(threads.flatMap((t) => t.comments.flatMap((c) => [c.clientId, ...c.replies.map((r) => r.clientId)])));
+  let merged = threads;
+
+  previous.forEach((t) => t.comments.forEach((c) => {
+    if (isLocal(c) && !known.has(c.clientId)) {
+      // A new passage keeps its own thread; one on a passage the server
+      // already has joins it.
+      const target = merged.find((m) => m.anchorText && m.anchorText === t.anchorText && m.page === t.page);
+      merged = target
+        ? merged.map((m) => (m === target ? { ...m, comments: [...m.comments, c] } : m))
+        : [...merged, { ...t, comments: [c], unreadCount: 0 }];
+    }
+    c.replies.filter((r) => isLocal(r) && !known.has(r.clientId)).forEach((r) => {
+      merged = merged.map((m) => ({
+        ...m,
+        comments: m.comments.map((root) => (
+          root.id === r.parentId || root.clientId === r.parentId ? { ...root, replies: [...root.replies, r] } : root
+        )),
+      }));
+    });
+  }));
+
+  return deletes.reduce((acc, d) => withoutComment(acc, d.ref, { deleted: 'author' }), merged);
+};
+
 const useCommentsStore = create((set, get) => ({
   byBook: {},
 
@@ -185,7 +304,11 @@ const useCommentsStore = create((set, get) => ({
         throw new Error(`Unexpected comments response: ${status}`);
       }
 
-      const threads = sortThreads((response.threads || []).map(toThread));
+      const threads = sortThreads(withLocal(
+        (response.threads || []).map(toThread),
+        get().byBook[bookId]?.threads || [],
+        useOutboxStore.getState().items.filter((i) => i.kind === 'comment.delete' && i.bookId === bookId),
+      ));
       set((state) => ({
         byBook: {
           ...state.byBook,
@@ -297,6 +420,13 @@ const useCommentsStore = create((set, get) => ({
       };
     });
 
+    // A reply to a comment still waiting to be sent can't go before it: the
+    // server doesn't know the parent yet. It waits behind it (R3.5).
+    if (parentId && isQueued(get().byBook[bookId], parentId)) {
+      queueComment(set, { roomId, bookId, clientId, parentId, page, anchorText, anchorBounds, body: optimistic.body, fileHash });
+      return { ...optimistic, queued: true };
+    }
+
     try {
       const { status, response } = await createComment(roomId, bookId, {
         page,
@@ -306,47 +436,20 @@ const useCommentsStore = create((set, get) => ({
         body: body.trim(),
         clientId,
         fileHash,
-      });
+      }, { quiet: true });
       if (status !== 201 || !response) {
         throw new Error(`Unexpected create-comment response: ${status}`);
       }
-
-      const saved = { ...toComment(response), clientId, pending: false, failed: false };
-      set((state) => {
-        const entry = state.byBook[bookId];
-        if (!entry) {
-          return state;
-        }
-        const threads = entry.threads.map((t) => ({
-          ...t,
-          // The server owns the anchor key, so a thread the client invented
-          // for an optimistic row adopts the real one on the way back.
-          anchorKey: t.anchorKey === anchorKey ? response.anchor?.key || t.anchorKey : t.anchorKey,
-          comments: t.comments.map((c) =>
-            c.clientId === clientId && !c.parentId
-              ? { ...saved, replies: c.replies }
-              : { ...c, replies: c.replies.map((r) => (r.clientId === clientId ? saved : r)) },
-          ),
-        }));
-        return { byBook: { ...state.byBook, [bookId]: { ...entry, threads } } };
-      });
-      return saved;
+      set((state) => withSaved(state, bookId, clientId, response));
+      return { ...toComment(response), clientId, pending: false, failed: false };
     } catch (e) {
+      // No connection, or no answer: it's kept and sent later, not failed.
+      if (isNetworkError(e)) {
+        queueComment(set, { roomId, bookId, clientId, parentId, page, anchorText, anchorBounds, body: optimistic.body, fileHash });
+        return { ...optimistic, queued: true };
+      }
       log.error('Failed to post comment:', e);
-      const failed = failureOf(e);
-      set((state) => {
-        const entry = state.byBook[bookId];
-        if (!entry) {
-          return state;
-        }
-        const flag = (c) =>
-          c.clientId === clientId ? { ...c, pending: false, failed } : c;
-        const threads = entry.threads.map((t) => ({
-          ...t,
-          comments: t.comments.map((c) => ({ ...flag(c), replies: c.replies.map(flag) })),
-        }));
-        return { byBook: { ...state.byBook, [bookId]: { ...entry, threads } } };
-      });
+      set((state) => withFlags(state, bookId, clientId, { pending: false, failed: failureOf(e) }));
       throw e;
     }
   },
@@ -380,111 +483,63 @@ const useCommentsStore = create((set, get) => ({
       return;
     }
 
-    set((state) => {
-      const current = state.byBook[bookId];
-      const mark = (c) => (c.clientId === clientId ? { ...c, pending: true, failed: false } : c);
-      const threads = current.threads.map((t) => ({
-        ...t,
-        comments: t.comments.map((c) => ({ ...mark(c), replies: c.replies.map(mark) })),
-      }));
-      return { byBook: { ...state.byBook, [bookId]: { ...current, threads } } };
-    });
+    set((state) => withFlags(state, bookId, clientId, { pending: true, failed: false }));
 
+    const comment = {
+      roomId: entry.roomId,
+      bookId,
+      clientId,
+      parentId: target.parentId,
+      page: target.page,
+      anchorText: thread?.anchorText,
+      anchorBounds: thread?.anchorBounds,
+      body: target.body,
+      fileHash: thread?.fileHash,
+    };
     try {
-      const { status, response } = await createComment(entry.roomId, bookId, {
-        page: target.page,
-        anchorText: thread?.anchorText,
-        anchorBounds: thread?.anchorBounds,
-        parentId: target.parentId,
-        body: target.body,
-        clientId,
-        fileHash: thread?.fileHash,
-      });
+      const { status, response } = await createComment(entry.roomId, bookId, comment, { quiet: true });
       if (status !== 201 || !response) {
         throw new Error(`Unexpected create-comment response: ${status}`);
       }
-      const saved = { ...toComment(response), clientId, pending: false, failed: false };
-      set((state) => {
-        const current = state.byBook[bookId];
-        const swap = (c) => (c.clientId === clientId ? { ...saved, replies: c.replies || [] } : c);
-        const threads = current.threads.map((t) => ({
-          ...t,
-          comments: t.comments.map((c) => ({ ...swap(c), replies: (c.replies || []).map(swap) })),
-        }));
-        return { byBook: { ...state.byBook, [bookId]: { ...current, threads } } };
-      });
+      set((state) => withSaved(state, bookId, clientId, response));
     } catch (e) {
+      if (isNetworkError(e)) {
+        queueComment(set, comment);
+        return;
+      }
       log.error('Failed to retry comment:', e);
-      const failed = failureOf(e);
-      set((state) => {
-        const current = state.byBook[bookId];
-        const mark = (c) => (c.clientId === clientId ? { ...c, pending: false, failed } : c);
-        const threads = current.threads.map((t) => ({
-          ...t,
-          comments: t.comments.map((c) => ({ ...mark(c), replies: c.replies.map(mark) })),
-        }));
-        return { byBook: { ...state.byBook, [bookId]: { ...current, threads } } };
-      });
+      set((state) => withFlags(state, bookId, clientId, { pending: false, failed: failureOf(e) }));
     }
   },
 
   // The heart. Flips locally first so the tap registers instantly, and rolls
   // back if the write is refused.
+  //
+  // Every like goes through the outbox, online or not: it keeps them in
+  // order and only the last per comment, so a like queued offline can't be
+  // sent after an unlike made once back online (specs/offline-first R3.4).
   toggleLike: async (bookId, commentId) => {
     const entry = get().byBook[bookId];
-    if (!entry) {
+    const comment = findComment(entry, commentId);
+    // Not saved yet: there's nothing on the server to like.
+    if (!comment || comment.pending) {
       return;
     }
+    const liked = !comment.likedByMe;
+    // What the server has, for putting it back if the like is refused: the
+    // state before the first change still waiting to be sent.
+    const waiting = useOutboxStore.getState().items.find((i) => i.kind === 'comment.like' && i.ref === commentId);
+    const before = waiting ? waiting.payload.before : comment.likedByMe;
 
-    let wasLiked = false;
-    const apply = (liked) => (c) => {
-      if (c.id !== commentId) {
-        return c;
-      }
-      return { ...c, likedByMe: liked, likes: Math.max(0, c.likes + (liked ? 1 : -1)) };
-    };
-
-    entry.threads.forEach((t) =>
-      t.comments.forEach((c) => {
-        if (c.id === commentId) {
-          wasLiked = c.likedByMe;
-        }
-        c.replies.forEach((r) => {
-          if (r.id === commentId) {
-            wasLiked = r.likedByMe;
-          }
-        });
-      }),
-    );
-
-    const write = (liked) =>
-      set((state) => {
-        const current = state.byBook[bookId];
-        if (!current) {
-          return state;
-        }
-        const fn = apply(liked);
-        const threads = current.threads.map((t) => ({
-          ...t,
-          comments: t.comments.map((c) => ({ ...fn(c), replies: c.replies.map(fn) })),
-        }));
-        return { byBook: { ...state.byBook, [bookId]: { ...current, threads } } };
-      });
-
-    write(!wasLiked);
-    try {
-      const { status } = wasLiked ? await unlikeComment(commentId) : await likeComment(commentId);
-      if (status !== 204 && status !== 200) {
-        throw new Error(`Unexpected like response: ${status}`);
-      }
-    } catch (e) {
-      log.error('Failed to update like:', e);
-      write(wasLiked);
-    }
+    set((state) => withLike(state, bookId, commentId, liked));
+    const outbox = useOutboxStore.getState();
+    outbox.enqueue({ kind: 'comment.like', bookId, roomId: entry.roomId, ref: commentId, payload: { liked, before } });
+    await outbox.flush();
   },
 
   // Opening a thread clears its dots, its scrubber tick and its share of both
   // counters. Applied locally first — the reader has demonstrably seen them.
+  // The receipt goes through the outbox, merged per book (R3.4).
   markThreadRead: async (bookId, anchorKey) => {
     const entry = get().byBook[bookId];
     const thread = entry?.threads.find((t) => t.anchorKey === anchorKey);
@@ -511,13 +566,9 @@ const useCommentsStore = create((set, get) => ({
     if (ids.length === 0) {
       return;
     }
-    try {
-      await markCommentsRead(entry.roomId, bookId, ids);
-    } catch (e) {
-      // The dots are already cleared locally. Losing the receipt costs a
-      // reappearing dot on the next fetch, not correctness.
-      log.error('Failed to mark comments read:', e);
-    }
+    const outbox = useOutboxStore.getState();
+    outbox.enqueue({ kind: 'comment.read', bookId, roomId: entry.roomId, payload: { commentIds: ids } });
+    await outbox.flush();
   },
 
   // Take a refused comment out so its text can go back in the composer
@@ -545,6 +596,25 @@ const useCommentsStore = create((set, get) => ({
     if (!before) {
       return { ok: false };
     }
+
+    // Never sent: it goes, with anything written under it, and the outbox
+    // drops it rather than sending a post and then a delete (R3.4).
+    const queued = findComment(before, commentId);
+    if (queued?.queued) {
+      useOutboxStore.getState().enqueue({
+        kind: 'comment.delete', bookId, roomId: before.roomId, ref: queued.clientId,
+      });
+      set((state) => {
+        const entry = state.byBook[bookId];
+        const keep = (c) => c.clientId !== queued.clientId;
+        const threads = tidy(entry.threads.map((t) => ({
+          ...t,
+          comments: t.comments.filter(keep).map((c) => ({ ...c, replies: c.replies.filter(keep) })),
+        })));
+        return { byBook: { ...state.byBook, [bookId]: { ...entry, threads, unreadCount: countUnread(threads) } } };
+      });
+      return { ok: true };
+    }
     const restore = () => set((state) => ({
       byBook: { ...state.byBook, [bookId]: { ...(state.byBook[bookId] || before), threads: before.threads, unreadCount: before.unreadCount } },
     }));
@@ -556,7 +626,7 @@ const useCommentsStore = create((set, get) => ({
     });
 
     try {
-      const { status } = await deleteCommentRequest(commentId);
+      const { status } = await deleteCommentRequest(commentId, { quiet: true });
       // 404: already gone, which is what was asked for.
       if (status === 204 || status === 200 || status === 404) {
         return { ok: true };
@@ -564,6 +634,11 @@ const useCommentsStore = create((set, get) => ({
       restore();
       return { ok: false };
     } catch (e) {
+      // No connection: it stays deleted here and the outbox sends it.
+      if (isNetworkError(e)) {
+        useOutboxStore.getState().enqueue({ kind: 'comment.delete', bookId, roomId: before.roomId, ref: commentId });
+        return { ok: true };
+      }
       log.error('Failed to delete comment:', e);
       restore();
       return { ok: false };
@@ -623,5 +698,101 @@ const useCommentsStore = create((set, get) => ({
     set({ byBook: {} });
   },
 }));
+
+// Sending what the outbox kept (specs/offline-first R3).
+registerOutboxHandlers('comment.add', {
+  send: (item) => createComment(item.roomId, item.bookId, {
+    ...item.payload,
+    parentId: item.parentRef,
+    clientId: item.ref,
+  }, { quiet: true }),
+  onAccepted: (item, result) => {
+    if (result?.response) {
+      useCommentsStore.setState((state) => withSaved(state, item.bookId, item.ref, result.response));
+    }
+  },
+  // Refused, or its parent was: it flips to failed, with Retry or (for its
+  // words) Edit, as a comment refused online does (R3.6).
+  onRejected: (item, error) => {
+    useCommentsStore.setState((state) => withFlags(state, item.bookId, item.ref, {
+      pending: false, queued: false, failed: failureOf(error),
+    }));
+  },
+});
+
+registerOutboxHandlers('comment.delete', {
+  // deleteCommentRequest answers a 4xx rather than throwing it; the outbox
+  // needs the throw to tell a refusal (or a 404, done) from a success.
+  send: async (item) => {
+    const result = await deleteCommentRequest(item.ref, { quiet: true });
+    if (result.status >= 400) {
+      throw new Error(`Client error ${result.status}: {}`);
+    }
+    return result;
+  },
+  // Not ours to delete after all (403): the server's copy is the truth.
+  onRejected: (item) => {
+    if (item.roomId) {
+      useCommentsStore.getState().loadComments(item.roomId, item.bookId);
+    }
+  },
+});
+
+registerOutboxHandlers('comment.like', {
+  send: (item) => (item.payload.liked
+    ? likeComment(item.ref, { quiet: true })
+    : unlikeComment(item.ref, { quiet: true })),
+  // Refused (a deleted comment, say): back to what the server has (R3.6).
+  onRejected: (item) => {
+    useCommentsStore.setState((state) => withLike(state, item.bookId, item.ref, item.payload.before));
+  },
+});
+
+registerOutboxHandlers('comment.read', {
+  send: (item) => markCommentsRead(item.roomId, item.bookId, item.payload.commentIds, { quiet: true }),
+  // Refused: the server's idea of what's unread wins, so ask it again (R3.6).
+  onRejected: (item) => {
+    if (item.roomId) {
+      useCommentsStore.getState().loadComments(item.roomId, item.bookId);
+    }
+  },
+});
+
+// How many books' comments are kept on the device (R4.2).
+const KEEP_BOOKS = 30;
+
+// The books loaded most recently, plus any with a comment still to send,
+// which can't be dropped.
+const keptBooks = (byBook) => {
+  const hasLocal = (entry) => entry.threads.some((t) => t.comments.some(
+    (c) => c.queued || c.replies.some((r) => r.queued),
+  ));
+  const recent = Object.entries(byBook)
+    .sort(([, a], [, b]) => (b.loadedAt || 0) - (a.loadedAt || 0))
+    .slice(0, KEEP_BOOKS)
+    .map(([id]) => id);
+  return Object.fromEntries(Object.entries(byBook)
+    .filter(([id, entry]) => recent.includes(id) || hasLocal(entry))
+    .map(([id, entry]) => [id, { ...entry, loading: false }]));
+};
+
+// A comment that was mid-request when the app was killed may never have
+// landed: it comes back failed, with Retry, rather than spinning forever or
+// losing what was typed. Retrying can't post it twice (client_id).
+const unstick = (c) => (c.pending && !c.queued ? { ...c, pending: false, failed: true } : c);
+
+// The comment layer from last time, offline too (R4.1).
+export const hydrateComments = persistSlice(useCommentsStore, 'comments', {
+  pick: (s) => ({ byBook: keptBooks(s.byBook) }),
+  restore: ({ byBook }) => ({
+    byBook: Object.fromEntries(Object.entries(byBook || {}).map(([id, entry]) => [id, {
+      ...entry,
+      threads: entry.threads.map((t) => ({
+        ...t,
+        comments: t.comments.map((c) => ({ ...unstick(c), replies: c.replies.map(unstick) })),
+      })),
+    }])),
+  }),
+});
 
 export default useCommentsStore;

@@ -14,6 +14,7 @@
 //
 
 import CryptoKit
+import Network
 import PDFKit
 import React
 import UIKit
@@ -145,6 +146,8 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     @objc var onSubmitComment: RCTDirectEventBlock?
     @objc var onLikeComment: RCTDirectEventBlock?
     @objc var onRetryComment: RCTDirectEventBlock?
+    /// { open } whenever the comment sheet appears or goes.
+    @objc var onCommentSheetChange: RCTDirectEventBlock?
     @objc var onManageComment: RCTDirectEventBlock?
     @objc var onRoomPickerRequested: RCTDirectEventBlock?
     @objc var onCreateHighlight: RCTDirectEventBlock?
@@ -167,6 +170,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private var scrollObserver: NSKeyValueObservation?
     private var overlayWork: DispatchWorkItem?
     private var lastLoadedURL: URL?
+    /// Waits for a connection while the offline state shows, then downloads
+    /// without waiting for Retry (specs/offline-first R7.2).
+    private var reconnectMonitor: NWPathMonitor?
     /// Page mode (Settings → Page turning) as last applied to the PDFView.
     private var isPaged = false
     /// Settings → Page turning, as set; `isPaged` is what's applied.
@@ -270,6 +276,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         addSubview(scrubber)
 
         sheet.delegate = self
+        sheet.onVisibilityChange = { [weak self] open in
+            self?.onCommentSheetChange?(["open": open])
+        }
         addSubview(sheet)
 
         registerLegacyMenuItems()
@@ -328,6 +337,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     deinit {
         NotificationCenter.default.removeObserver(self)
         scrollObserver?.invalidate()
+        reconnectMonitor?.cancel()
     }
 
     override func safeAreaInsetsDidChange() {
@@ -1310,6 +1320,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     private func loadPdf(from url: URL) {
         lastLoadedURL = url
+        stopWaitingForConnection()
         status.show(.loading)
 
         if url.isFileURL {
@@ -1322,41 +1333,89 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             return
         }
 
+        // A book read before opens from disk: no download, and it works
+        // offline. Data(contentsOf:) skips URLCache entirely, so without this
+        // every open fetched the whole file again.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                // A book read before opens from disk: no download, and it
-                // works offline. Data(contentsOf:) skips URLCache entirely,
-                // so without this every open fetched the whole file again.
-                let cached = ManuscriptCache.read(url)
-                let data = try cached ?? Data(contentsOf: url)
-                guard let document = PDFDocument(data: data) else {
-                    if cached != nil {
-                        ManuscriptCache.remove(url)
-                    }
-                    DispatchQueue.main.async { self?.fail("Failed to parse PDF data.") }
+            if let cached = ManuscriptCache.read(url) {
+                if let document = PDFDocument(data: cached) {
+                    DispatchQueue.main.async { self?.open(document, data: cached) }
                     return
                 }
-                if cached == nil {
-                    ManuscriptCache.write(data, for: url)
-                }
-                DispatchQueue.main.async {
-                    guard let self = self else {
-                        return
-                    }
-                    self.showDocument(document)
-                    self.notifyLoadComplete(document: document, data: data)
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self?.fail("Failed to download PDF: \(error.localizedDescription)")
-                }
+                ManuscriptCache.remove(url)
             }
+            DispatchQueue.main.async { self?.download(url) }
         }
     }
 
+    /// Fetches a book that isn't on the device. Through URLSession rather
+    /// than Data(contentsOf:), so a failure arrives as a URLError and "no
+    /// connection" can be told apart from everything else (R7.1, R7.3).
+    private func download(_ url: URL) {
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 200
+            let document = data.flatMap { PDFDocument(data: $0) }
+            DispatchQueue.main.async {
+                guard let self = self, url == self.lastLoadedURL else {
+                    return
+                }
+                if let error = error as? URLError, ManuscriptCache.isOffline(error) {
+                    self.failOffline("Failed to download PDF: \(error.localizedDescription)")
+                } else if let error = error {
+                    self.fail("Failed to download PDF: \(error.localizedDescription)")
+                } else if !(200..<300).contains(code) {
+                    self.fail("Failed to download PDF: HTTP \(code)")
+                } else if let data = data, let document = document {
+                    ManuscriptCache.write(data, for: url)
+                    self.open(document, data: data)
+                } else {
+                    self.fail("Failed to parse PDF data.")
+                }
+            }
+        }.resume()
+    }
+
+    private func open(_ document: PDFDocument, data: Data) {
+        showDocument(document)
+        notifyLoadComplete(document: document, data: data)
+    }
+
+    /// Whatever went wrong, the reader sees "Couldn't open this book"; the
+    /// detail goes to JS for the log, not the screen (R7.3).
     private func fail(_ message: String) {
-        status.show(.failed(message))
+        status.show(.failed)
         onError?(["message": message])
+    }
+
+    /// Not on the device, and no connection to fetch it (R7.1). Tries again
+    /// by itself as soon as there is one (R7.2).
+    private func failOffline(_ message: String) {
+        status.show(.offline)
+        onError?(["message": message, "offline": true])
+        waitForConnection()
+    }
+
+    private func waitForConnection() {
+        stopWaitingForConnection()
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else {
+                return
+            }
+            DispatchQueue.main.async {
+                guard let self = self, self.reconnectMonitor === monitor else {
+                    return
+                }
+                self.reload()
+            }
+        }
+        reconnectMonitor = monitor
+        monitor.start(queue: DispatchQueue.global(qos: .utility))
+    }
+
+    private func stopWaitingForConnection() {
+        reconnectMonitor?.cancel()
+        reconnectMonitor = nil
     }
 
     /// The fingerprint of the file actually opened. Comment anchors are stored
@@ -1432,7 +1491,9 @@ private class ReaderStatusView: UIView {
     enum State {
         case loading
         case ready
-        case failed(String)
+        case failed
+        /// Not downloaded yet and no connection (specs/offline-first R7.1).
+        case offline
         case empty
     }
 
@@ -1522,16 +1583,30 @@ private class ReaderStatusView: UIView {
         case .ready:
             isHidden = true
             spinner.stopAnimating()
-        case .failed(let message):
+        case .failed:
+            // No system error or file name: that's for the log (R7.3).
             isHidden = false
             backgroundColor = DS.Colors.background
             spinner.stopAnimating()
             spinner.isHidden = true
-            icon.isHidden = true
-            title.isHidden = true
+            icon.isHidden = false
+            icon.image = readerIcon("exclamationmark.triangle", size: 44, weight: .regular)
+            title.isHidden = false
+            title.text = "Couldn't open this book"
+            subtitle.isHidden = true
+            retry.isHidden = false
+        case .offline:
+            isHidden = false
+            backgroundColor = DS.Colors.background
+            spinner.stopAnimating()
+            spinner.isHidden = true
+            icon.isHidden = false
+            icon.image = readerIcon("icloud.slash", size: 44, weight: .regular)
+            title.isHidden = false
+            title.text = "This book isn't downloaded yet"
             subtitle.isHidden = false
-            subtitle.text = message
-            subtitle.textColor = DS.Colors.error
+            subtitle.text = "Connect to the internet to open it. After that it stays on this phone."
+            subtitle.textColor = DS.Colors.onSurfaceVariant
             retry.isHidden = false
         case .empty:
             isHidden = false
@@ -1551,6 +1626,61 @@ private class ReaderStatusView: UIView {
 
     @objc private func tapRetry() {
         onRetry?()
+    }
+}
+
+
+// MARK: - Shelf prefetch
+
+/// The manuscript cache as JS sees it: the Reading shelf's books are fetched
+/// on Wi-Fi so they open offline (specs/offline-first R6). The JS side
+/// (useShelfPrefetch) decides which books and when; this only knows whether
+/// one is already here and how to fetch one.
+@objc(ManuscriptStore)
+class ManuscriptStore: NSObject {
+
+    @objc static func requiresMainQueueSetup() -> Bool {
+        return false
+    }
+
+    @objc(isCached:resolve:reject:)
+    func isCached(_ urlString: String, resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        guard let url = URL(string: urlString) else {
+            resolve(false)
+            return
+        }
+        resolve(ManuscriptCache.contains(url))
+    }
+
+    /// Resolves true once it's on the device, false if it wasn't fetched.
+    /// NetInfo can't see Low Data Mode, so the request itself refuses
+    /// constrained and expensive (cellular) networks: iOS turns it down
+    /// rather than spend the reader's data on a book they haven't opened
+    /// (R6.2).
+    @objc(prefetch:resolve:reject:)
+    func prefetch(_ urlString: String, resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        guard let url = URL(string: urlString), !url.isFileURL else {
+            resolve(false)
+            return
+        }
+        if ManuscriptCache.contains(url) {
+            resolve(true)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.allowsConstrainedNetworkAccess = false
+        request.allowsExpensiveNetworkAccess = false
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            // Only a real PDF goes in the cache: an expired link's error page
+            // would otherwise be served as the book.
+            guard error == nil, (200..<300).contains(code), let data = data, PDFDocument(data: data) != nil else {
+                resolve(false)
+                return
+            }
+            ManuscriptCache.write(data, for: url)
+            resolve(true)
+        }.resume()
     }
 }
 
@@ -1577,6 +1707,25 @@ private enum ManuscriptCache {
         let key = "\(url.host ?? "")\(url.path)"
         let name = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
         return directory?.appendingPathComponent(name).appendingPathExtension("pdf")
+    }
+
+    /// The failures that mean "no connection", as opposed to a bad URL or
+    /// server: these get the offline state and a retry on reconnect.
+    static func isOffline(_ error: URLError) -> Bool {
+        switch error.code {
+        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
+             .cannotFindHost, .cannotConnectToHost, .timedOut, .internationalRoamingOff:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func contains(_ url: URL) -> Bool {
+        guard let file = file(for: url) else {
+            return false
+        }
+        return FileManager.default.fileExists(atPath: file.path)
     }
 
     static func read(_ url: URL) -> Data? {

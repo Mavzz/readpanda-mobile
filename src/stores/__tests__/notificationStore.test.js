@@ -8,12 +8,21 @@ jest.mock('../../services/authenticatedRequests', () => ({
   makeAuthenticatedDeleteRequest: jest.fn(),
 }));
 
+// The inbox is kept on the device (persistSlice); here it goes nowhere.
+jest.mock('../../utils/enhancedStorage', () => ({
+  __esModule: true,
+  default: { getUserProfile: () => ({ username: 'me' }), readCache: () => null, writeCache: jest.fn() },
+}));
+
 import {
   makeAuthenticatedGetRequest,
   makeAuthenticatedPutRequest,
 } from '../../services/authenticatedRequests';
 import { NotificationService } from '../../services/notificationService';
 import useNotificationStore from '../notificationStore';
+import useConnectivityStore from '../connectivityStore';
+import useOutboxStore from '../outboxStore';
+import { OfflineError } from '../../utils/apiError';
 
 const store = () => useNotificationStore.getState();
 const allOn = { replies: true, room_comments: true, room_joins: true, room_book: true, new_books: true };
@@ -22,6 +31,8 @@ const initial = useNotificationStore.getState();
 beforeEach(() => {
   jest.clearAllMocks();
   useNotificationStore.setState(initial, true);
+  useConnectivityStore.setState({ online: true });
+  useOutboxStore.setState({ items: [], idMap: {}, syncing: false, catchingUp: false });
 });
 
 describe('fetchSettings', () => {
@@ -125,5 +136,52 @@ describe('toNotification', () => {
     expect(n.count).toBe(1);
     expect(n.roomId).toBeNull();
     expect(n.timestamp).toBe('2026-10-01T00:00:00Z');
+  });
+});
+
+// specs/offline-first R3.1, R3.6, R3.10, R5.3, R5.4
+describe('offline', () => {
+  const row = (id, read = false) => ({ id, type: 'REPLY', message: 'hi', is_read: read, created_at: '2026-10-01T00:00:00Z' });
+  const loadTwo = async () => {
+    makeAuthenticatedGetRequest.mockResolvedValueOnce({ response: [row(1), row(2)] });
+    await store().fetchNotifications();
+  };
+
+  it('keeps the list when it can\'t be fetched', async () => {
+    await loadTwo();
+    makeAuthenticatedGetRequest.mockRejectedValueOnce(new OfflineError());
+    await store().fetchNotifications();
+    expect(store().notifications.map((n) => n.id)).toEqual([1, 2]);
+    expect(store().unreadCount).toBe(2);
+  });
+
+  it('a read offline sticks, survives a refetch, and is sent when back', async () => {
+    await loadTwo();
+    useConnectivityStore.setState({ online: false });
+    await store().markAsRead(1);
+    expect(store().unreadCount).toBe(1);
+    expect(makeAuthenticatedPutRequest).not.toHaveBeenCalled();
+
+    useConnectivityStore.setState({ online: true });
+    // A refetch before it's sent still shows it read.
+    makeAuthenticatedPutRequest.mockImplementationOnce(() => Promise.reject(new TypeError('Network request failed')));
+    await useOutboxStore.getState().flush();
+    makeAuthenticatedGetRequest.mockResolvedValueOnce({ response: [row(1), row(2)] });
+    await store().fetchNotifications();
+    expect(store().notifications.find((n) => n.id === 1).read).toBe(true);
+
+    makeAuthenticatedPutRequest.mockResolvedValueOnce({ status: 204 });
+    await useOutboxStore.getState().flush();
+    expect(makeAuthenticatedPutRequest.mock.calls.at(-1)[0]).toMatch(/\/notifications\/1\/read$/);
+    expect(makeAuthenticatedPutRequest.mock.calls.at(-1)[2]).toEqual({ quiet: true });
+    expect(useOutboxStore.getState().items).toEqual([]);
+  });
+
+  it('a refused read puts the dot back', async () => {
+    await loadTwo();
+    makeAuthenticatedPutRequest.mockRejectedValueOnce(new Error('Client error 404: {}'));
+    await store().markAsRead(2);
+    expect(store().notifications.find((n) => n.id === 2).read).toBe(false);
+    expect(store().unreadCount).toBe(2);
   });
 });

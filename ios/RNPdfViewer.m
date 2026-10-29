@@ -38,6 +38,7 @@ RCT_EXPORT_VIEW_PROPERTY(onThreadOpened, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onSubmitComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLikeComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRetryComment, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onCommentSheetChange, RCTDirectEventBlock)
 // Delete, report, block, or take a refused comment back to edit.
 RCT_EXPORT_VIEW_PROPERTY(onManageComment, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRoomPickerRequested, RCTDirectEventBlock)
@@ -46,5 +47,13 @@ RCT_EXPORT_VIEW_PROPERTY(onRoomPickerRequested, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(highlights, NSArray)
 RCT_EXPORT_VIEW_PROPERTY(onCreateHighlight, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRemoveHighlight, RCTDirectEventBlock)
+
+@end
+
+// Shelf prefetch (specs/offline-first R6): exposed as NativeModules.ManuscriptStore.
+@interface RCT_EXTERN_MODULE (ManuscriptStore, NSObject)
+
+RCT_EXTERN_METHOD(isCached : (NSString *)url resolve : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(prefetch : (NSString *)url resolve : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject)
 
 @end

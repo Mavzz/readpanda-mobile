@@ -29,6 +29,8 @@ import log from '../utils/logger';
 import PressableScale from '../components/PressableScale';
 import ProgressFill from '../components/ProgressFill';
 import useLayout from '../hooks/useLayout';
+import useOnReconnect, { OFFLINE_MESSAGE } from '../hooks/useOnReconnect';
+import useConnectivityStore from '../stores/connectivityStore';
 
 // § 9a — one of your buckets, pushed from My Books (tab bar stays). A list,
 // not a grid: each row says where you are in that book, sorted so what you're
@@ -160,16 +162,24 @@ const MyBucketScreen = () => {
   const { isLarge, pagePad } = useLayout();
   const name = bucket?.name || route.params?.name || '';
 
-  useFocusEffect(
-    useCallback(() => {
-      loadShelf();
-      fetchBucketBooks(bucketId).then(({ status, response }) => {
-        if (status === 200) {
-          setBooks(response.books);
-        }
-      });
-    }, [bucketId, fetchBucketBooks, loadShelf]),
-  );
+  // Offline, the copy from last time comes back instead (R5.2); with none,
+  // `failed` shows the offline line in place of the list.
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(() => {
+    loadShelf();
+    fetchBucketBooks(bucketId).then(({ status, response }) => {
+      if (status === 200) {
+        setBooks(response.books);
+        setFailed(false);
+      } else {
+        setFailed(true);
+      }
+    });
+  }, [bucketId, fetchBucketBooks, loadShelf]);
+
+  useFocusEffect(load);
+  useOnReconnect(load);
+  const online = useConnectivityStore((s) => s.online);
 
   const progressById = useMemo(() => {
     const byId = Object.fromEntries(shelf.map((b) => [b.id, b]));
@@ -329,9 +339,12 @@ const MyBucketScreen = () => {
     onRemove: removeBook,
   });
 
-  const empty = books && books.length === 0 ? (
-    <Text style={styles.empty}>Nothing in this bucket yet.</Text>
-  ) : null;
+  let empty = null;
+  if (books && books.length === 0) {
+    empty = <Text style={styles.empty}>Nothing in this bucket yet.</Text>;
+  } else if (!books && failed) {
+    empty = <Text style={styles.empty}>{online ? 'Couldn\'t load this bucket.' : OFFLINE_MESSAGE}</Text>;
+  }
 
   // The same list either way; on the phone the header scrolls with it.
   const renderList = (listHeader) => (editing ? (

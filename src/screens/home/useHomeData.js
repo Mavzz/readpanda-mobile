@@ -8,6 +8,7 @@ import useReadingProgressStore from '../../stores/readingProgressStore';
 import useCommentsStore from '../../stores/commentsStore';
 import useNotificationStore from '../../stores/notificationStore';
 import useAuthStore from '../../stores/authStore';
+import useOnReconnect from '../../hooks/useOnReconnect';
 
 // Everything Home fetches: the first load after sign-in, the re-read on every
 // focus, and pull-to-refresh. Sections read the results from their stores.
@@ -124,6 +125,10 @@ const useHomeData = ({ user, navigation }) => {
   const onRefresh = useCallback(() => {
     loadHome(true);
   }, [loadHome]);
+
+  // Back online, Home loads what it couldn't while offline, without another
+  // pull (specs/offline-first R5.6). It shows last time's copy meanwhile.
+  useOnReconnect(loadHome);
 
   return { refreshing, onRefresh };
 };

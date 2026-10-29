@@ -7,11 +7,14 @@ import AuthStackNavigator from './AuthStackNavigator';
 import MainStackNavigator from './MainStackNavigator';
 import { Text } from 'react-native';
 import Toaster from '../components/Toaster';
+import OfflinePill from '../components/OfflinePill';
 import SafetySheetHost from '../components/SafetySheetHost';
 import useInviteDeepLink from '../hooks/useInviteDeepLink';
 import usePushNotifications from '../hooks/usePushNotifications';
 import useWidgetDeepLink from '../hooks/useWidgetDeepLink';
 import useWidgetSync from '../widget/useWidgetSync';
+import useOutboxTriggers from '../hooks/useOutboxTriggers';
+import useShelfPrefetch from '../hooks/useShelfPrefetch';
 import { navigationIntegration } from '../utils/sentry';
 
 const Stack = createNativeStackNavigator();
@@ -62,23 +65,31 @@ const AppContent = () => {
   // Home-screen widget: taps on it, and keeping what it shows current.
   useWidgetDeepLink({ isAuthenticated, navigationRef });
   useWidgetSync({ isAuthenticated });
+  // Sending what was done offline once there's a connection again.
+  useOutboxTriggers({ isAuthenticated });
+  // The shelf's books, downloaded on Wi-Fi so they open offline.
+  useShelfPrefetch({ isAuthenticated });
 
   return (
-    <NavigationContainer
-      ref={navigationRef}
-      onReady={() => navigationIntegration.registerNavigationContainer(navigationRef)}
-      theme={MyTheme}
-      linking={linking}
-      fallback={<Text>Loading...</Text>}
-    >
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainStackNavigator} />
-        ) : (
-          <Stack.Screen name="Auth" component={AuthStackNavigator} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={() => navigationIntegration.registerNavigationContainer(navigationRef)}
+        theme={MyTheme}
+        linking={linking}
+        fallback={<Text>Loading...</Text>}
+      >
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {isAuthenticated ? (
+            <Stack.Screen name="Main" component={MainStackNavigator} />
+          ) : (
+            <Stack.Screen name="Auth" component={AuthStackNavigator} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+      {/* Signed-in screens only: the Auth stack stays online-only. */}
+      {isAuthenticated ? <OfflinePill /> : null}
+    </>
   );
 };
 
