@@ -75,6 +75,20 @@ class EnhancedStorage {
     return username ? `${key}::${username}` : key;
   }
 
+  // Every key stored for one account on this device. Signing out keeps them,
+  // so a reader who comes back picks up where they were; a deleted account
+  // must not, or whoever next signs in with the same username inherits its
+  // books (account-deletion R3.1).
+  clearAccountData(username) {
+    if (!username) {
+      return;
+    }
+    const suffix = `::${username}`;
+    getStore().getAllKeys()
+      .filter((key) => key.endsWith(suffix))
+      .forEach((key) => getStore().delete(key));
+  }
+
   // App preferences (MMKV)
   storeUserPreference(key, value) {
     StorageService.setItem(this.scopedKey(`pref_${key}`), value);

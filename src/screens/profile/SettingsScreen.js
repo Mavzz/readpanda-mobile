@@ -114,7 +114,9 @@ const SettingsScreen = () => {
     // The same local cleanup as Sign out — session, stores, cached data,
     // RevenueCat — which also returns to Login (R3.1). Not the server logout
     // or the push unregister: the account and its tokens are already gone.
+    // Unlike signing out, what the account stored on this device goes too.
     log.info('Account deleted; signing out locally');
+    enhancedStorage.clearAccountData(user?.username);
     signOut();
     showToast('Your account has been deleted.', 'success');
   };
