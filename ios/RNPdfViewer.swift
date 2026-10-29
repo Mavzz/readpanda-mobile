@@ -196,6 +196,11 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// only has to move frames rather than rebuild the overlay.
     private var gutterDots: [(button: UIButton, page: PDFPage, rect: CGRect)] = []
     private var scrollObserver: NSKeyValueObservation?
+    /// Every scroll view in the PDF view, for `paintBlankPages()`. Page
+    /// turning swipes in the page view controller's own scroll view, not the
+    /// one `scrollObserver` follows, so a page sliding in on iPad (where it
+    /// takes longest to draw) kept PDFKit's white.
+    private var paintObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
     private var overlayWork: DispatchWorkItem?
     private var lastLoadedURL: URL?
     /// Waits for a connection while the offline state shows, then downloads
@@ -227,6 +232,18 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private var needsFit = false
     /// Whether the iPad scroll layout is what's on screen.
     private var appliedLargeScroll = false
+    /// The book's trim (specs/reader-fit), as fractions of a page's crop box;
+    /// nil while the book is shown whole.
+    private var trim: CGRect?
+    /// Stops the background search for a trim that's no longer wanted: a
+    /// new book, a reload, the reader going away (R2.3).
+    private final class Cancellation {
+        var isCancelled = false
+    }
+    private var trimSearch: Cancellation?
+    /// The text's distance from the page card's edge when trimmed, the same
+    /// in every mode and orientation (R3.1).
+    private var textGap: CGFloat { isLarge ? 40 : 20 }
 
     /// PDFKit's own page gaps, for going back to the phone layout.
     private var defaultPageBreakMargins = UIEdgeInsets.zero
@@ -350,6 +367,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             name: .PDFViewVisiblePagesChanged,
             object: pdfView
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVisiblePagesChanged),
+            name: .PDFViewVisiblePagesChanged,
+            object: pdfView
+        )
     }
 
     /// iOS 15 only. On 16+ the actions come from `buildMenu(with:)`, and
@@ -370,6 +393,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     }
 
     deinit {
+        trimSearch?.isCancelled = true
         NotificationCenter.default.removeObserver(self)
         scrollObserver?.invalidate()
         reconnectMonitor?.cancel()
@@ -428,11 +452,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             height: max(0, insetBottom - insetTop)
         )
         let resized = pageContainer.bounds.size != previousContainerSize
-        pdfView.frame = pageContainer.bounds
+        let side = trimInset(across: pageContainer.bounds.width)
+        pdfView.frame = pageContainer.bounds.insetBy(dx: side, dy: 0)
         if isPaged {
             // The page view controller doesn't refit on resize the way the
-            // continuous view does.
-            pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+            // continuous view does. The floor goes first: set after, a fit
+            // smaller than the last one (portrait to landscape) was held up at
+            // the old floor and the page stayed zoomed in.
+            let fit = pdfView.scaleFactorForSizeToFit
+            if fit > 0 {
+                pdfView.minScaleFactor = fit
+                pdfView.maxScaleFactor = fit * 3
+                pdfView.scaleFactor = fit
+            }
         }
         if usesLargeScroll, needsFit || resized {
             needsFit = false
@@ -442,6 +474,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
                 pdfView.minScaleFactor = fit
                 pdfView.maxScaleFactor = fit * 3
                 pdfView.scaleFactor = fit
+            }
+        } else if !usesLargeScroll, !isPaged {
+            // PDFKit's own floor lets a page shrink to a speck in the middle
+            // of the card. No zooming out past the fit, as on iPad; a resize
+            // (rotation) goes back to the fit, which the old floor would
+            // otherwise hold it above.
+            let fit = pdfView.scaleFactorForSizeToFit
+            if fit > 0 {
+                pdfView.minScaleFactor = fit
+                pdfView.maxScaleFactor = fit * 3
+                if resized {
+                    pdfView.scaleFactor = fit
+                }
             }
         }
         hideScrollIndicators(in: pdfView)
@@ -570,11 +615,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     @objc var pageTheme: NSString? {
         didSet {
             theme = PageTheme(pageTheme as String?)
-            // iPad scrolling keeps the app's ground between pages; everywhere
-            // else the space round the page is the page's own colour.
-            if !appliedLargeScroll {
-                pdfView.backgroundColor = theme.paperColor
-            }
+            applySheet()
             // Normally set before the book loads. If it ever comes after, the
             // pages already drawn have to be drawn again.
             if let document = pdfView.document as? ThemedPdfDocument, document.theme != theme {
@@ -626,22 +667,27 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         // follow that one, not the old.
         resetScrollObserver()
         guard usesLargeScroll else {
-            pdfView.backgroundColor = theme.paperColor
-            pdfView.pageBreakMargins = defaultPageBreakMargins
+            var margins = defaultPageBreakMargins
+            if trim != nil {
+                // The gap beside the text is the PDF view's inset, in screen
+                // points; a page margin would add to it at every zoom.
+                margins.left = 0
+                margins.right = 0
+            }
+            pdfView.pageBreakMargins = margins
             pdfView.minScaleFactor = defaultScaleRange.min
             pdfView.maxScaleFactor = defaultScaleRange.max
             applyPageMode(pagedSetting)
+            applySheet()
             return
         }
         isPaged = false
         pdfView.usePageViewController(false, withViewOptions: nil)
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
-        // The pages sit on the app's own ground, not on PDFKit's white.
-        pdfView.backgroundColor = DS.Colors.background
         pdfView.displaysPageBreaks = true
-        pdfView.pageShadowsEnabled = false
         pdfView.autoScales = true
+        applySheet()
         // Fit and gaps are worked out on the next layout, even at an
         // unchanged size.
         needsFit = true
@@ -658,11 +704,41 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         var fit = pdfView.scaleFactorForSizeToFit
         for _ in 0..<4 where fit > 0 {
             let margin = half / fit
-            pdfView.pageBreakMargins = UIEdgeInsets(top: margin, left: margin, bottom: margin, right: margin)
+            let side = trim == nil ? margin : 0
+            pdfView.pageBreakMargins = UIEdgeInsets(top: margin, left: side, bottom: margin, right: side)
             pdfView.layoutDocumentView()
             fit = pdfView.scaleFactorForSizeToFit
         }
         return fit
+    }
+
+    /// The page's surroundings. Untrimmed, as before trims: the phone's pages
+    /// sit on their paper colour with a shadow when scrolling, the iPad's on
+    /// the app's navy. Trimmed, the card is one sheet of the theme's paper,
+    /// with no page edges or shadows in it (R4.1).
+    private func applySheet() {
+        let sheet = trim != nil
+        pageContainer.backgroundColor = sheet ? theme.paperColor : .clear
+        // The pages sit on the app's own ground on iPad, not on PDFKit's white.
+        pdfView.backgroundColor = sheet || !appliedLargeScroll ? theme.paperColor : DS.Colors.background
+        pdfView.pageShadowsEnabled = !sheet && !isPaged && !appliedLargeScroll
+    }
+
+    /// How far in from each side of the card the PDF view sits when trimmed,
+    /// so a page fitted to the view's width puts its text `textGap` from the
+    /// card's edge (R3.1). The shown page is the text plus `PageTrim.padding`
+    /// on each side, which is in page points and so scales with the fit.
+    private func trimInset(across width: CGFloat) -> CGFloat {
+        guard trim != nil, let page = pdfView.currentPage ?? pdfView.document?.page(at: 0) else {
+            return 0
+        }
+        let shown = page.bounds(for: .artBox).width
+        let text = shown - PageTrim.padding * 2
+        guard text > 0, width > textGap * 2 else {
+            return 0
+        }
+        let scale = (width - textGap * 2) / text
+        return max(0, (width - shown * scale) / 2)
     }
 
     /// A rect on a page in the gutter layer's space, which sits over the page
@@ -680,7 +756,6 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         // A page at a time should be the whole card, not a sheet floating on
         // it with a shadow and a break margin around it.
         pdfView.displaysPageBreaks = !paged
-        pdfView.pageShadowsEnabled = !paged
         pdfView.autoScales = true
         setNeedsLayout()
     }
@@ -720,8 +795,106 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     // MARK: - Page events
 
+    @objc private func handleVisiblePagesChanged() {
+        observeScrollingForPaint(in: pdfView)
+        paintBlankPages()
+    }
+
     @objc private func handlePageChanged() {
         reportPage(force: false)
+        paintBlankPages()
+    }
+
+    /// PDFKit backs each piece of a page with a white layer until the piece
+    /// is drawn, so a fast scroll in Sepia or Night showed white pages before
+    /// the theme came in (worse once trimmed pages were drawn larger,
+    /// specs/reader-fit). Those layers are painted the paper colour as pages
+    /// come into view. Nothing public sets that colour: this only reads and
+    /// sets layer colours, and if PDFKit's layers change shape it finds
+    /// nothing and the pieces are white as before.
+    ///
+    /// Page turning shows something else first: a small picture of the page
+    /// that PDFKit draws without the theme (black on white) while the sharp
+    /// page is drawn, about a second on iPad. That picture is re-tinted the
+    /// same way the page is, so it shows in the theme, only blurred.
+    private func paintBlankPages() {
+        guard theme != .paper else {
+            return
+        }
+        paint(whiteIn: pdfView.layer, depth: 0)
+    }
+
+    private func paint(whiteIn layer: CALayer, depth: Int) {
+        guard depth < 14 else {
+            return
+        }
+        for sublayer in layer.sublayers ?? [] {
+            if let color = sublayer.backgroundColor, Self.isPureWhite(color) {
+                sublayer.backgroundColor = theme.paperColor.cgColor
+            }
+            if sublayer.name == Self.previewLayerName {
+                tintPreview(in: sublayer)
+            }
+            paint(whiteIn: sublayer, depth: depth + 1)
+        }
+    }
+
+    /// What PDFKit calls the layer holding a page's quick preview.
+    private static let previewLayerName = "backgroundLayer"
+    /// Set on a preview layer to the image this reader tinted, so it's only
+    /// done again when PDFKit puts in a new one.
+    private static let tintedKey = "readpandaTintedPreview"
+
+    private func tintPreview(in layer: CALayer) {
+        guard let contents = layer.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID else {
+            return
+        }
+        let image = contents as! CGImage
+        if let tinted = layer.value(forKey: Self.tintedKey), tinted as AnyObject === image {
+            return
+        }
+        guard let themed = Self.tint(image, theme) else {
+            return
+        }
+        layer.contents = themed
+        layer.setValue(themed, forKey: Self.tintedKey)
+    }
+
+    /// The page theme over a whole preview, pictures included: it's on
+    /// screen for a moment, blurred, until the page itself is drawn.
+    private static func tint(_ image: CGImage, _ theme: PageTheme) -> CGImage? {
+        guard let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        let area = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        context.draw(image, in: area)
+        switch theme {
+        case .sepia:
+            context.setBlendMode(.multiply)
+            context.setFillColor(DS.Colors.readerSepia.cgColor)
+        case .night:
+            // As on the page: the difference from white inverts.
+            context.setBlendMode(.difference)
+            context.setFillColor(UIColor.white.cgColor)
+        case .paper:
+            return nil
+        }
+        context.fill(area)
+        return context.makeImage()
+    }
+
+    private static func isPureWhite(_ color: CGColor) -> Bool {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(cgColor: color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return red > 0.99 && green > 0.99 && blue > 0.99 && alpha > 0.99
     }
 
     private func reportPage(force: Bool) {
@@ -979,6 +1152,20 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private func resetScrollObserver() {
         scrollObserver?.invalidate()
         scrollObserver = nil
+        paintObservers.values.forEach { $0.invalidate() }
+        paintObservers.removeAll()
+    }
+
+    /// Follows any scroll view not followed yet; page turning makes new ones.
+    private func observeScrollingForPaint(in view: UIView) {
+        for subview in view.subviews {
+            if let scrollView = subview as? UIScrollView, paintObservers[ObjectIdentifier(scrollView)] == nil {
+                paintObservers[ObjectIdentifier(scrollView)] = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
+                    self?.paintBlankPages()
+                }
+            }
+            observeScrollingForPaint(in: subview)
+        }
     }
 
     /// The page scrolls continuously, so the dots have to follow it. PDFKit
@@ -986,6 +1173,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// frame would be wasteful — so scrolling only moves the frames that are
     /// already there, and a rebuild happens when the threads themselves change.
     private func observeScrolling() {
+        observeScrollingForPaint(in: pdfView)
         guard scrollObserver == nil, let scrollView = findScrollView(in: pdfView) else {
             return
         }
@@ -1025,10 +1213,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         let field = pageContainer.bounds
         for dot in gutterDots {
             let lineInView = gutterRect(dot.rect, on: dot.page)
-            let pageInView = gutterRect(dot.page.bounds(for: .cropBox), on: dot.page)
             let size = dot.button.frame.width
             dot.button.frame = CGRect(
-                x: min(field.width - dotInset - size, pageInView.maxX + 6),
+                x: dotX(size: size, on: dot.page, in: field),
                 y: lineInView.midY - size / 2,
                 width: size,
                 height: size
@@ -1182,16 +1369,28 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         drawnMarks = nil
     }
 
+    /// Where a dot of `size` goes across. Whole pages: beside the page, never
+    /// past the card's edge. Trimmed: just past the text, in the gap (R5.3);
+    /// the 22pt unread dot is wider than the phone's 20pt gap and reaches a
+    /// few points past the card rather than over the words.
+    private func dotX(size: CGFloat, on page: PDFPage, in field: CGRect) -> CGFloat {
+        let pageInView = gutterRect(page.bounds(for: pdfView.displayBox), on: page)
+        guard trim != nil else {
+            return min(field.width - dotInset - size, pageInView.maxX + 6)
+        }
+        let textRight = pageInView.maxX - PageTrim.padding * pdfView.scaleFactor
+        return textRight + 4
+    }
+
     private func drawGutterDot(for thread: ReaderThread, firstLine: CGRect, on page: PDFPage) {
         let unread = thread.unreadCount
         let field = pageContainer.bounds
         let lineInView = gutterRect(firstLine, on: page)
-        let pageInView = gutterRect(page.bounds(for: .cropBox), on: page)
 
         let size: CGFloat = unread > 0 ? 22 : 12
         let dot = UIButton(type: .custom)
         dot.frame = CGRect(
-            x: min(field.width - dotInset - size, pageInView.maxX + 6),
+            x: dotX(size: size, on: page, in: field),
             y: lineInView.midY - size / 2,
             width: size,
             height: size
@@ -1436,6 +1635,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
         if url.isFileURL {
             if let data = try? Data(contentsOf: url), let document = ThemedPdfDocument(data: data) {
+                prepareTrim(for: document, data: data)
                 showDocument(document)
                 notifyLoadComplete(document: document, data: data)
             } else {
@@ -1487,8 +1687,93 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     }
 
     private func open(_ document: PDFDocument, data: Data) {
+        prepareTrim(for: document, data: data)
         showDocument(document)
         notifyLoadComplete(document: document, data: data)
+    }
+
+    // MARK: - Trimming the margins (specs/reader-fit)
+
+    /// Before a book goes on screen: the trim remembered for this file, so the
+    /// first frame is already trimmed (R2.2), or the book whole while a trim
+    /// is looked for in the background (R2.1).
+    private func prepareTrim(for document: PDFDocument, data: Data) {
+        trimSearch?.isCancelled = true
+        trimSearch = nil
+        documentHash = Self.hash(of: data)
+        switch PageTrim.remembered(for: documentHash) {
+        case .trim(let box)?:
+            setTrim(box, on: document)
+        case .untrimmed?:
+            setTrim(nil, on: document)
+        case nil:
+            setTrim(nil, on: document)
+            searchForTrim(in: data, for: document)
+        }
+    }
+
+    /// Shows `box` (nil: the whole page) on the document's pages and lays the
+    /// reader out for it.
+    private func setTrim(_ box: CGRect?, on document: PDFDocument) {
+        trim = box
+        PageTrim.apply(box, to: document)
+        pdfView.displayBox = box == nil ? .cropBox : .artBox
+        applyLayout()
+        if pdfView.document === document {
+            pdfView.layoutDocumentView()
+        }
+    }
+
+    /// Looks for the trim off the main thread, at a priority below the
+    /// reader's own work (R2.4), and switches to it if the same book is still
+    /// open (R2.3). Found or not, the answer is remembered for next time.
+    private func searchForTrim(in data: Data, for document: PDFDocument) {
+        let search = Cancellation()
+        trimSearch = search
+        let hash = documentHash
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            // Its own copy: a PDFDocument isn't safe to share across threads,
+            // and the one on screen belongs to the main thread.
+            guard let copy = PDFDocument(data: data) else {
+                return
+            }
+            let box = PageTrim.find(in: copy) { search.isCancelled }
+            guard !search.isCancelled else {
+                return
+            }
+            PageTrim.remember(box, for: hash)
+            DispatchQueue.main.async {
+                guard let self = self, !search.isCancelled, self.pdfView.document === document else {
+                    return
+                }
+                self.trimSearch = nil
+                self.switchTrim(to: box, on: document)
+            }
+        }
+    }
+
+    /// The switch from whole pages to trimmed ones, with the passage being
+    /// read still on screen (R6.2) — the same way a rotation keeps its place.
+    private func switchTrim(to box: CGRect?, on document: PDFDocument) {
+        guard let box = box else {
+            return
+        }
+        // Before the jump to the saved page, the jump itself lands right.
+        let anchor = needsInitialJump ? nil : pdfView.currentDestination
+        if anchor != nil {
+            isRepositioning = true
+        }
+        setTrim(box, on: document)
+        setNeedsLayout()
+        layoutIfNeeded()
+        if let anchor = anchor {
+            restore(anchor)
+        }
+        scheduleOverlayRefresh()
+    }
+
+    private static func hash(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     /// Whatever went wrong, the reader sees "Couldn't open this book"; the
@@ -1533,7 +1818,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// against it, so a different edition under the same book id can be told
     /// apart and left undrawn.
     private func notifyLoadComplete(document: PDFDocument, data: Data) {
-        documentHash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        documentHash = Self.hash(of: data)
         anchorRectCache.removeAll()
         status.show(.ready)
         scrubber.totalPages = document.pageCount
