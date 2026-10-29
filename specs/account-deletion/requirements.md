@@ -23,7 +23,7 @@ Anyone who can create an account must be able to delete it from inside the app (
 2. Deleting SHALL NOT be blocked by an active subscription.
 
 ### R3. Outcome in the app
-1. WHEN deletion succeeds THE app SHALL sign out locally (clear the session, stores and cached data, log out of RevenueCat), return to Login, and show "Your account has been deleted."
+1. WHEN deletion succeeds THE app SHALL sign out locally (clear the session, stores and cached data, log out of RevenueCat), return to Login, and show "Your account has been deleted." Unlike Sign out, everything the account stored on the device (reading positions, reading days, caches, preferences: every key scoped to its username) SHALL be removed, so an account signed into later with the same username starts empty.
 2. WHEN deletion fails THE app SHALL stay signed in and show "Couldn't delete your account. Try again." Nothing local is cleared.
 3. WHILE the request is in flight THE confirm button SHALL show progress and not accept a second tap.
 
