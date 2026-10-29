@@ -30,7 +30,6 @@ import useOutboxStore from '../../stores/outboxStore';
 const CHOICE_TITLES = {
   pageMode: 'Page turning',
   pageTheme: 'Page theme',
-  progressVisibility: 'Who sees my progress',
 };
 
 // Interests come back as { category: [{ preference_value, ... }] }.
@@ -64,8 +63,6 @@ const SettingsScreen = () => {
 
   const [pageMode, setPageMode] = useReaderSetting('pageMode');
   const [pageTheme, setPageTheme] = useReaderSetting('pageTheme');
-  const [progressVisibility, setProgressVisibility] = useReaderSetting('progressVisibility');
-  const [spoilerProtection, setSpoilerProtection] = useReaderSetting('spoilerProtection');
 
   // Which ChoiceSheet / ConfirmSheet is open, if any.
   const [choice, setChoice] = useState(null);
@@ -80,7 +77,6 @@ const SettingsScreen = () => {
   const choiceState = {
     pageMode: [pageMode, setPageMode],
     pageTheme: [pageTheme, setPageTheme],
-    progressVisibility: [progressVisibility, setProgressVisibility],
   };
 
   const genres = pickedGenreCount(user?.preferences);
@@ -159,6 +155,9 @@ const SettingsScreen = () => {
     </SettingsGroup>
   );
 
+  // No "Who sees my progress" or "Spoiler protection": seeing each other's
+  // progress is what a room is for, and the server always holds back comments
+  // you haven't reached, so neither had anything to switch off.
   const roomsGroup = (
     <SettingsGroup title="Rooms & privacy">
       <SettingsRow
@@ -168,22 +167,10 @@ const SettingsScreen = () => {
         onPress={() => navigation.navigate('NotificationSettings')}
       />
       <SettingsRow
-        icon="eye-outline"
-        label="Who sees my progress"
-        value={labelForSetting('progressVisibility', progressVisibility)}
-        onPress={() => setChoice('progressVisibility')}
-      />
-      <SettingsRow
         icon="hand-left-outline"
         label="Blocked readers"
         value={blockedCount === null ? undefined : blockedCount === 0 ? 'None' : String(blockedCount)}
         onPress={() => navigation.navigate('BlockedReaders')}
-      />
-      <SettingsRow
-        icon="shield-checkmark-outline"
-        label="Spoiler protection"
-        switchValue={spoilerProtection === 'on'}
-        onSwitchChange={(on) => setSpoilerProtection(on ? 'on' : 'off')}
       />
     </SettingsGroup>
   );

@@ -19,6 +19,7 @@ const PdfViewer = ({
   bookTitle,
   initialPage,
   pageMode,
+  pageTheme,
   largeLayout,
   threads,
   highlights,
@@ -132,6 +133,7 @@ const PdfViewer = ({
       bookTitle={bookTitle || ''}
       initialPage={initialPage || 0}
       pageMode={pageMode || 'scroll'}
+      pageTheme={pageTheme || 'paper'}
       largeLayout={!!largeLayout}
       threads={threads || []}
       highlights={highlights || []}

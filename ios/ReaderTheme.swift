@@ -44,6 +44,12 @@ enum DS {
         static let onSurface = UIColor(rgb: 0xdae2fd)
         static let onSurfaceVariant = UIColor(rgb: 0xd6c3b2)
 
+        // The reader's page, one per Settings → Page theme (specs/page-theme).
+        // Page colours, not app surfaces: the chrome around the page stays navy.
+        static let readerPaper = UIColor(rgb: 0xffffff)
+        static let readerSepia = UIColor(rgb: 0xf4ecd8)
+        static let readerNight = UIColor(rgb: 0x000000)
+
         // Error / notification
         static let error = UIColor(rgb: 0xffb4ab)
 
@@ -108,4 +114,31 @@ func readerIcon(_ name: String, size: CGFloat, weight: UIImage.SymbolWeight = .s
     let config = UIImage.SymbolConfiguration(pointSize: size, weight: weight)
     return UIImage(systemName: name, withConfiguration: config)?
         .withRenderingMode(.alwaysTemplate)
+}
+
+/// Settings → Page theme, as the reader draws it.
+enum PageTheme {
+    case paper
+    case sepia
+    case night
+
+    /// Anything other than "sepia" or "night" (nothing saved, or a value from
+    /// a later version) reads as Paper, which is how the reader looked before
+    /// themes existed (R1.3).
+    init(_ raw: String?) {
+        switch raw {
+        case "sepia": self = .sepia
+        case "night": self = .night
+        default: self = .paper
+        }
+    }
+
+    /// The page's white, and whatever is white around it in this theme.
+    var paperColor: UIColor {
+        switch self {
+        case .paper: return DS.Colors.readerPaper
+        case .sepia: return DS.Colors.readerSepia
+        case .night: return DS.Colors.readerNight
+        }
+    }
 }
