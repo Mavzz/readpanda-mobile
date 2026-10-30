@@ -35,3 +35,10 @@ jest.mock('react-native-linear-gradient', () => {
   const LinearGradient = (props) => <View {...props} />;
   return { __esModule: true, default: LinearGradient, LinearGradient };
 });
+
+// react-native loads Modal and Text on first use. With a cold transform cache,
+// as on every CI run, that first use takes several seconds, and it landed in
+// whichever test rendered a sheet first, past Jest's 5 s limit. Setup has no
+// limit, and the test file shares this module registry, so load them here.
+require('react-native').Modal;
+require('react-native').Text;

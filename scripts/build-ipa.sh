@@ -4,11 +4,14 @@
 #
 #   yarn ipa                  development-signed (devices registered to the team)
 #   yarn ipa --adhoc          Ad Hoc, e.g. for Firebase App Distribution
+#   yarn ipa --appstore       App Store, for TestFlight and review
 #   yarn ipa --install        also install it on the connected iPhone
 #   yarn release              Ad Hoc, uploaded to Firebase (fastlane/Fastfile)
+#   yarn testflight           App Store, uploaded to TestFlight (fastlane/Fastfile)
 #
-# Either way it only installs on devices in the team's provisioning profile;
-# anyone else needs TestFlight. Output: ios/build/ipa/ReadPanda.ipa.
+# Development and Ad Hoc builds only install on devices in the team's
+# provisioning profile; anyone else needs TestFlight. Output:
+# ios/build/ipa/ReadPanda.ipa.
 set -e
 
 method=debugging
@@ -16,10 +19,16 @@ install=
 for arg in "$@"; do
   case "$arg" in
     --adhoc) method=release-testing ;;
+    --appstore) method=app-store-connect ;;
     --install) install=1 ;;
-    *) echo "usage: yarn ipa [--adhoc] [--install]" >&2; exit 1 ;;
+    *) echo "usage: yarn ipa [--adhoc | --appstore] [--install]" >&2; exit 1 ;;
   esac
 done
+if [ "$method" = app-store-connect ] && [ -n "$install" ]; then
+  # An App Store build only installs through TestFlight or the App Store.
+  echo "--install doesn't work with --appstore; install it from TestFlight" >&2
+  exit 1
+fi
 
 # The backend URL is compiled in, so pin production before bundling.
 sh scripts/use-env.sh prod
@@ -29,15 +38,15 @@ mkdir -p build
 archive=build/ReadPanda.xcarchive
 rm -rf "$archive" build/ipa
 
-# yarn release passes the Ad Hoc profiles it just made ("bundle id=profile
-# name", one per line), so the export signs with exactly those. Otherwise
-# Xcode picks the certificate and profiles itself.
-if [ -n "$ADHOC_PROFILES" ]; then
+# yarn release and yarn testflight pass the profiles they just made ("bundle
+# id=profile name", one per line), so the export signs with exactly those.
+# Otherwise Xcode picks the certificate and profiles itself.
+if [ -n "$EXPORT_PROFILES" ]; then
   signing="<key>signingStyle</key><string>manual</string>
   <key>signingCertificate</key><string>Apple Distribution</string>
   <key>provisioningProfiles</key>
   <dict>
-$(printf '%s\n' "$ADHOC_PROFILES" | sed 's|^\([^=]*\)=\(.*\)$|    <key>\1</key><string>\2</string>|')
+$(printf '%s\n' "$EXPORT_PROFILES" | sed 's|^\([^=]*\)=\(.*\)$|    <key>\1</key><string>\2</string>|')
   </dict>"
 else
   signing="<key>signingStyle</key><string>automatic</string>"
@@ -51,6 +60,9 @@ cat > build/ExportOptions.plist <<EOF
   <key>method</key><string>$method</string>
   <key>teamID</key><string>6F6H5A6JCC</string>
   $signing
+  <!-- Xcode would otherwise renumber an App Store build on export; the
+       build number is set at archive time, below. -->
+  <key>manageAppVersionAndBuildNumber</key><false/>
 </dict>
 </plist>
 EOF
@@ -63,7 +75,7 @@ if [ -n "$ASC_KEY_PATH" ]; then
     -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 fi
 
-# yarn release passes the next build number. Overriding it here sets the app
+# yarn release and yarn testflight pass the next build number. Overriding it here sets the app
 # and the widget together (they must match) without touching the project file.
 build_number=
 if [ -n "$BUILD_NUMBER" ]; then
