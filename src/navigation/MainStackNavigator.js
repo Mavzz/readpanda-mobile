@@ -3,6 +3,7 @@ import TabNavigator from './TabNavigator';
 import ManuscriptScreen from '../screens/ManuscriptScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 import BlockedReadersScreen from '../screens/profile/BlockedReadersScreen';
 import HelpScreen from '../screens/profile/HelpScreen';
@@ -80,6 +81,7 @@ const MainStackNavigator = () => {
           38pt back button. */}
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="BlockedReaders" component={BlockedReadersScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />

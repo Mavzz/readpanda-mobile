@@ -6,6 +6,7 @@ import {
   StatusBar,
   Pressable,
   RefreshControl,
+  TextInput,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,17 +18,19 @@ import BookCoverGradient from '../components/BookCoverGradient';
 import BucketTile from '../components/BucketTile';
 import GenreChips from '../components/GenreChips';
 import { curatedMeta } from '../utils/readingTime';
-import { showToast } from '../components/Toaster';
 import PressableScale from '../components/PressableScale';
 import { Bone, CoverBone, EyebrowBone, useSkeletonDelay } from '../components/Skeleton';
 import Animated from 'react-native-reanimated';
 import useFilterEntrance from '../hooks/useFilterEntrance';
 import useDiscoverPages from '../hooks/useDiscoverPages';
 import useLayout from '../hooks/useLayout';
+import useBookSearch, { SEARCH_MIN_LENGTH } from '../hooks/useBookSearch';
 
 // § 8a — Discover: finding books, and only that. Search first (people who
 // arrive with a title in mind are the fastest path), then genre chips, then
 // curated buckets and a Popular row. No room chrome anywhere on this tab.
+// While a search is typed, its results take the place of everything below
+// the field; clearing it brings the page back as it was (specs/coming-soon R1).
 //
 // "For you" is not a filter: it's the server's ranked mix of the reader's
 // genres, books their room-mates have read, and what's popular. A genre chip
@@ -60,6 +63,11 @@ const DiscoverScreen = () => {
   const popularWidth = (width - gutter * 2 - popularGap * (popularCols - 1)) / popularCols;
 
   const [genre, setGenre] = useState(null);
+  const [query, setQuery] = useState('');
+  const found = useBookSearch(query);
+  const searching = query.trim().length >= SEARCH_MIN_LENGTH;
+  const resultCols = isLarge ? popularCols : POPULAR_SLOTS;
+  const resultWidth = (width - gutter * 2 - popularGap * (resultCols - 1)) / resultCols;
   const { page, genres, genreLabel, failed, reload } = useDiscoverPages(genre);
   const enteringFor = useFilterEntrance(genre);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,16 +127,83 @@ const DiscoverScreen = () => {
   };
 
   const search = (
-    // The search results screen isn't built yet.
-    <PressableScale
-      onPress={() => showToast('Search is coming soon', 'info')}
-      style={[styles.search, isLarge ? styles.searchLarge : { marginHorizontal: gutter }]}
-      accessibilityRole="search"
-    >
+    <View style={[styles.search, isLarge ? styles.searchLarge : { marginHorizontal: gutter }]}>
       <Icon name="search" size={17} color={DS.colors.onSurfaceVariant} />
-      <Text style={styles.searchPlaceholder}>Title, author, or topic</Text>
-    </PressableScale>
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Title or author"
+        placeholderTextColor={DS.colors.onSurfaceVariant}
+        style={styles.searchInput}
+        returnKeyType="search"
+        autoCorrect={false}
+        autoCapitalize="none"
+        accessibilityRole="search"
+        accessibilityLabel="Search books"
+      />
+      {query ? (
+        <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
+          <Icon name="close-circle" size={17} color={DS.colors.onSurfaceVariant} />
+        </Pressable>
+      ) : null}
+    </View>
   );
+
+  const renderResults = () => {
+    if (found.status === 'failed') {
+      return (
+        <View style={styles.message}>
+          <Icon name="cloud-offline-outline" size={30} color={DS.colors.onSurfaceVariant} />
+          <Text style={styles.messageText}>Search needs a connection.</Text>
+        </View>
+      );
+    }
+    if (found.status === 'done' && found.books.length === 0) {
+      return (
+        <View style={styles.message}>
+          <Icon name="search" size={30} color={DS.colors.onSurfaceVariant} />
+          <Text style={styles.messageText}>{`Nothing matches "${query.trim()}".`}</Text>
+        </View>
+      );
+    }
+    if (found.books.length === 0) {
+      // The first answer is on its way: covers in the shape it'll take.
+      return (
+        <View style={[styles.popularGrid, styles.results, pad, { columnGap: popularGap }]}>
+          {Array.from({ length: resultCols }, (_, i) => <CoverBone key={i} width={resultWidth} />)}
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.popularGrid, styles.results, pad, { columnGap: popularGap }]}>
+        {found.books.map((book) => (
+          <PressableScale
+            key={book.book_id}
+            cover
+            onPress={() => openBook(book)}
+            style={{ width: resultWidth }}
+            accessibilityRole="button"
+          >
+            <BookCoverGradient
+              coverUrl={book.cover_image_url}
+              title={book.title}
+              width={resultWidth}
+              height={Math.round(resultWidth * 1.5)}
+              borderRadius={12}
+              titleFontSize={11}
+              elevated
+            />
+            <Text style={[styles.popularTitle, isLarge && styles.popularTitleLarge]} numberOfLines={1}>
+              {book.title}
+            </Text>
+            {book.author_name ? (
+              <Text style={styles.popularAuthor} numberOfLines={1}>{book.author_name}</Text>
+            ) : null}
+          </PressableScale>
+        ))}
+      </View>
+    );
+  };
 
   const renderBody = () => {
     if (!page) {
@@ -248,6 +323,8 @@ const DiscoverScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={(
           <RefreshControl
             refreshing={refreshing}
@@ -259,9 +336,12 @@ const DiscoverScreen = () => {
       >
         {isLarge ? null : search}
 
-        <GenreChips genres={genres} value={genre} onChange={setGenre} gutter={gutter} />
-
-        {renderBody()}
+        {searching ? renderResults() : (
+          <>
+            <GenreChips genres={genres} value={genre} onChange={setGenre} gutter={gutter} />
+            {renderBody()}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -313,10 +393,15 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 16,
   },
-  searchPlaceholder: {
+  searchInput: {
+    flex: 1,
+    padding: 0,
     fontSize: 13,
     fontFamily: DS.font.medium,
-    color: DS.colors.onSurfaceVariant,
+    color: DS.colors.onSurface,
+  },
+  results: {
+    marginTop: 20,
   },
 
   // Sections

@@ -6,6 +6,7 @@ import log from '../utils/logger';
 import { OfflineError, isNetworkError } from '../utils/apiError';
 import { isOnline, recheckConnectivity, confirmOnline, takeProbe, reportNoAnswer } from '../stores/connectivityStore';
 import { showOfflineToast } from '../components/Toaster';
+import { accountFrom } from '../utils/account';
 
 // Past this a request is given up on and counts as a network error, so a
 // connection that hangs rather than fails still reaches the retry and the
@@ -174,8 +175,12 @@ class ApiService {
       });
 
       if (tokenResponse.status === 200) {
-        const { accessToken, refreshToken: rotatedRefreshToken } = await tokenResponse.json();
+        const refreshed = await tokenResponse.json();
+        const { accessToken, refreshToken: rotatedRefreshToken } = refreshed;
         enhancedStorage.updateAuthToken(accessToken);
+        // Required here, not imported: the auth store imports services that
+        // import this one.
+        require('../stores/authStore').default.getState().adoptAccount(accountFrom(refreshed));
         // The backend rotates the refresh token on every use — persist the
         // new one so the next refresh doesn't fail against a stale value.
         if (rotatedRefreshToken) {

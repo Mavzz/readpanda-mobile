@@ -18,7 +18,6 @@ import BucketTile, { NewBucketTile } from '../components/BucketTile';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useBucketsStore from '../stores/bucketsStore';
 import useCommentsStore from '../stores/commentsStore';
-import { showToast } from '../components/Toaster';
 import usePlusGate from '../hooks/usePlusGate';
 import openShelfBook from '../utils/openShelfBook';
 import PressableScale from '../components/PressableScale';
@@ -222,7 +221,7 @@ const MyBooksScreen = () => {
         {/* ── Finished ───────────────────────────────────────── */}
         {finishedCount > 0 && (
           <PressableScale
-            onPress={() => showToast('Your finished books are coming soon', 'info')}
+            onPress={() => navigation.navigate('BookGrid', { source: 'finished' })}
             style={styles.finishedLink}
             accessibilityRole="button"
           >

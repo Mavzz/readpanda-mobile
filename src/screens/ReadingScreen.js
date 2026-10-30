@@ -10,7 +10,6 @@ import useRoomStore from '../stores/roomStore';
 import FirstRunShelf from '../components/FirstRunShelf';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import useCommentsStore from '../stores/commentsStore';
-import { showToast } from '../components/Toaster';
 import openShelfBook from '../utils/openShelfBook';
 import PressableScale from '../components/PressableScale';
 import useLayout from '../hooks/useLayout';
@@ -206,7 +205,7 @@ const ReadingScreen = () => {
         contentContainerStyle={[styles.content, isLarge && { paddingHorizontal: pagePad }]}
         ListFooterComponent={finishedCount > 0 ? (
           <PressableScale
-            onPress={() => showToast('Your finished books are coming soon', 'info')}
+            onPress={() => navigation.navigate('BookGrid', { source: 'finished' })}
             style={styles.finishedLink}
             accessibilityRole="button"
           >

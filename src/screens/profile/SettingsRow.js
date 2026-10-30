@@ -29,9 +29,9 @@ export const SettingsRow = ({ icon, label, value, onPress, switchValue, onSwitch
           thumbColor={DS.colors.onSurface}
           ios_backgroundColor={DS.colors.surfaceContainerHighest}
         />
-      ) : (
+      ) : onPress ? (
         <Icon name="chevron-forward" size={15} color={DS.colors.onSurfaceVariant} />
-      )}
+      ) : null}
     </Pressable>
   );
 };

@@ -2,7 +2,10 @@ import { Platform, NativeModules } from 'react-native';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import apiService from './apiService';
 import { postRequest } from './usePost';
-import { makeAuthenticatedDeleteRequest } from './authenticatedRequests';
+import {
+  makeAuthenticatedDeleteRequest, makeAuthenticatedGetRequest, makeAuthenticatedPatchRequest,
+  makeAuthenticatedPutRequest,
+} from './authenticatedRequests';
 import { GoogleAuthService } from './GoogleAuthService';
 import { getBackendUrl } from '../utils/Helper';
 import log from '../utils/logger';
@@ -223,4 +226,45 @@ const deleteAccount = async () => {
   }
 };
 
-export { googleSignUpLogin, appleSignUpLogin, emailLogin, emailSignUp, checkUsername, logout, deleteAccount };
+// Edit profile (specs/coming-soon R5.8). Each answers { ok: true, profile }
+// with the server's copy of the account ({ user_id, username, display_name,
+// email, login_type }), or { ok: false, status, field, error, suggestion }:
+// status 403 is a wrong current password, 409 a taken username or email,
+// 0 no connection.
+const profileCall = async (request) => {
+  try {
+    const { status, response } = await request();
+    return { ok: status === 200 || status === 204, profile: response || null };
+  } catch (error) {
+    const body = clientErrorBody(error);
+    if (body) {
+      return { ok: false, ...body };
+    }
+    log.warn('Profile change failed:', error);
+    return { ok: false, status: 0 };
+  }
+};
+
+// GET /users/me: the account as the server has it, for Edit profile to catch
+// up a session stored before sign-ins carried its id and sign-in kind.
+const fetchProfile = () => profileCall(() => makeAuthenticatedGetRequest(getBackendUrl('/users/me')));
+
+const updateProfile = (changes) => profileCall(
+  () => makeAuthenticatedPatchRequest(getBackendUrl('/users/me'), changes),
+);
+
+const changeEmail = (email, currentPassword) => profileCall(
+  () => makeAuthenticatedPutRequest(getBackendUrl('/users/me/email'), { email, current_password: currentPassword }),
+);
+
+const changePassword = (currentPassword, newPassword) => profileCall(
+  () => makeAuthenticatedPutRequest(getBackendUrl('/users/me/password'), {
+    current_password: currentPassword,
+    new_password: newPassword,
+  }),
+);
+
+export {
+  googleSignUpLogin, appleSignUpLogin, emailLogin, emailSignUp, checkUsername, logout, deleteAccount,
+  fetchProfile, updateProfile, changeEmail, changePassword,
+};

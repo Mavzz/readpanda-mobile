@@ -6,7 +6,6 @@ import {
   Pressable,
   FlatList,
   Alert,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useMemo, useState } from 'react';
@@ -18,7 +17,7 @@ import { DS } from '../styles/global';
 import BookCoverGradient from '../components/BookCoverGradient';
 import CoverFan from '../components/CoverFan';
 import GradientPill from '../components/GradientPill';
-import { showToast } from '../components/Toaster';
+import RenameBucketSheet from '../components/RenameBucketSheet';
 import useBucketsStore from '../stores/bucketsStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import bucketProgress from '../utils/bucketProgress';
@@ -149,7 +148,6 @@ const MyBucketScreen = () => {
   const fetchBucketBooks = useBucketsStore((s) => s.fetchBucketBooks);
   const removeBookFromBucket = useBucketsStore((s) => s.removeBookFromBucket);
   const reorderBucket = useBucketsStore((s) => s.reorderBucket);
-  const renameBucket = useBucketsStore((s) => s.renameBucket);
   const deleteBucket = useBucketsStore((s) => s.deleteBucket);
   const shelf = useReadingProgressStore((s) => s.shelf);
   const loadShelf = useReadingProgressStore((s) => s.loadShelf);
@@ -245,19 +243,8 @@ const MyBucketScreen = () => {
     reorderBucket(bucketId, next.map((b) => b.book_id));
   };
 
-  // Rename has no sheet of its own yet; iOS's text prompt stands in.
-  const rename = () => {
-    if (Platform.OS !== 'ios') {
-      showToast('Renaming is coming soon', 'info');
-      return;
-    }
-    Alert.prompt('Rename bucket', undefined, (value) => {
-      const next = (value || '').trim();
-      if (next && next !== name) {
-        renameBucket(bucketId, next.slice(0, 40));
-      }
-    }, 'plain-text', name);
-  };
+  const [renaming, setRenaming] = useState(false);
+  const rename = () => setRenaming(true);
 
   const confirmDelete = () => {
     Alert.alert(
@@ -317,9 +304,8 @@ const MyBucketScreen = () => {
           ) : (
             <View style={styles.primary} />
           )}
-          {/* The add-books picker (search + Discover) isn't built yet. */}
           <PressableScale
-            onPress={() => showToast('Adding books from here is coming soon', 'info')}
+            onPress={() => navigation.navigate('CreateBucketScreen', { bucketId })}
             style={styles.addButton}
             accessibilityLabel="Add books"
             accessibilityRole="button"
@@ -410,6 +396,10 @@ const MyBucketScreen = () => {
           <View style={styles.listSide}>{renderList(null)}</View>
         </View>
       ) : renderList(header)}
+      <RenameBucketSheet
+        bucket={renaming ? { id: bucketId, name } : null}
+        onClose={() => setRenaming(false)}
+      />
     </View>
   );
 };
