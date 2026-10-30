@@ -23,9 +23,9 @@ const useSubscriptionStore = create((set, get) => ({
 
   // Called once the account is known (loadUser / signIn). Renewals, refunds
   // and purchases made on another device arrive through the listener.
-  start: async (username) => {
+  start: async (userId) => {
     try {
-      const customerInfo = await identify(username);
+      const customerInfo = await identify(userId);
       set({ isPlus: hasPlus(customerInfo) });
       if (!unsubscribe && isPurchasesConfigured()) {
         unsubscribe = onCustomerInfoUpdate((info) => set({ isPlus: hasPlus(info) }));

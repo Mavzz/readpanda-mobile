@@ -58,6 +58,10 @@ import useLayout from '../hooks/useLayout';
 // pulses instead. Reduce Motion drops the flight and the scaling for fades.
 // On iPad (15h) the grid takes 5 or 6 columns and search sits beside the
 // source chips; every control and the 11c fly-in are unchanged.
+//
+// With a `bucketId` it adds to that bucket instead (My bucket's +,
+// specs/coming-soon R4): "Add to <bucket>", the name fixed, the books already
+// in it marked and not pickable, and Add puts the picks after them.
 const GUTTER = 24;
 const GAP = 12;
 const GAP_LARGE = 20;
@@ -87,7 +91,7 @@ const measure = (ref) => new Promise((resolve) => {
 });
 
 /* ── One cover in the grid ───────────────────────────────────────────────── */
-const PickCell = ({ book, order, width, reduceMotion, onToggle }) => {
+const PickCell = ({ book, order, width, reduceMotion, onToggle, inBucket = false }) => {
   const height = width * 1.5;
   const coverRef = useRef(null);
   const press = useSharedValue(0);
@@ -133,12 +137,22 @@ const PickCell = ({ book, order, width, reduceMotion, onToggle }) => {
         press.value = withSpring(0, { duration: 220, dampingRatio: 0.8 });
       }}
       onPress={() => onToggle(book, coverRef)}
-      style={{ width }}
+      disabled={inBucket}
+      style={[{ width }, inBucket && styles.inBucket]}
       accessibilityRole="button"
-      accessibilityState={{ selected: isSelected }}
-      accessibilityLabel={isSelected ? `${book.title}, number ${order} in this bucket` : book.title}
+      accessibilityState={{ selected: isSelected, disabled: inBucket }}
+      accessibilityLabel={inBucket
+        ? `${book.title}, already in this bucket`
+        : isSelected ? `${book.title}, number ${order} in this bucket` : book.title}
     >
       <View style={{ width, height }}>
+        {inBucket ? (
+          // Adding to a bucket (specs/coming-soon R4.1): what's in it already
+          // shows, but can't be picked twice.
+          <View pointerEvents="none" style={[styles.badge, styles.inBucketBadge, { left: width - 18 }]}>
+            <Icon name="checkmark" size={13} color={DS.colors.onSurface} />
+          </View>
+        ) : null}
         <Animated.View
           pointerEvents="none"
           style={[
@@ -242,7 +256,9 @@ const Flight = ({ flight, onLand }) => {
 };
 
 /* ── Screen ──────────────────────────────────────────────────────────────── */
-const CreateBucketScreen = ({ navigation }) => {
+const CreateBucketScreen = ({ navigation, route }) => {
+  const bucketId = route?.params?.bucketId ?? null;
+  const adding = bucketId !== null;
   const { width } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   // From the provider, not a SafeAreaView: inside this full-screen modal a
@@ -272,6 +288,15 @@ const CreateBucketScreen = ({ navigation }) => {
   const shelf = useReadingProgressStore((s) => s.shelf);
   const loadShelf = useReadingProgressStore((s) => s.loadShelf);
   const saveBucket = useBucketsStore((s) => s.saveBucket);
+  const addBooksToBucket = useBucketsStore((s) => s.addBooksToBucket);
+  const fetchBucketBooks = useBucketsStore((s) => s.fetchBucketBooks);
+  const bucket = useBucketsStore((s) => (adding ? s.customBuckets.find((b) => b.id === bucketId) : null));
+  const bucketPage = useBucketsStore((s) => (adding ? s.bucketBooks[bucketId] : null));
+  const bucketName = bucket?.name || bucketPage?.name || '';
+  const inBucketIds = useMemo(
+    () => new Set((bucketPage?.books || []).map((b) => String(b.book_id))),
+    [bucketPage],
+  );
 
   const rootRef = useRef(null);
   const headerRef = useRef(null);
@@ -294,6 +319,12 @@ const CreateBucketScreen = ({ navigation }) => {
       }
     });
   }, [fetchBooks, loadShelf]);
+
+  useEffect(() => {
+    if (adding) {
+      fetchBucketBooks(bucketId);
+    }
+  }, [adding, bucketId, fetchBucketBooks]);
 
   useEffect(() => {
     if (source !== 'discover' || discoverBooks) {
@@ -347,8 +378,8 @@ const CreateBucketScreen = ({ navigation }) => {
     }
     e.preventDefault();
     Alert.alert(
-      'Discard bucket?',
-      `Your ${booksLabel(picks.length)} won't be saved.`,
+      adding ? 'Discard picks?' : 'Discard bucket?',
+      `Your ${booksLabel(picks.length)} won't be ${adding ? 'added' : 'saved'}.`,
       [
         { text: 'Keep editing', style: 'cancel' },
         {
@@ -361,7 +392,7 @@ const CreateBucketScreen = ({ navigation }) => {
         },
       ],
     );
-  }), [navigation, picks.length]);
+  }), [navigation, picks.length, adding]);
 
   // Native-stack can't hold a swipe-dismiss in beforeRemove, so with picks
   // the gesture is off and leaving goes through the confirm above.
@@ -436,6 +467,24 @@ const CreateBucketScreen = ({ navigation }) => {
     }
   };
 
+  const add = async () => {
+    if (picks.length === 0 || saving) {
+      return;
+    }
+    setSaving(true);
+    const ok = await addBooksToBucket(bucketId, picks.map((b) => b.book_id));
+    setSaving(false);
+    if (ok) {
+      haptics.success();
+      showToast(`Added ${booksLabel(picks.length)} to "${bucketName}"`, 'success');
+      leaving.current = true;
+      navigation.goBack();
+    } else {
+      // The picks stay, so trying again is one tap (R4.4).
+      showToast('Couldn\'t add the books. Try again.', 'error');
+    }
+  };
+
   const create = async () => {
     const trimmed = name.trim();
     if (!trimmed || saving) {
@@ -455,7 +504,7 @@ const CreateBucketScreen = ({ navigation }) => {
   };
 
   const stackBooks = picks.filter((b) => landed.has(String(b.book_id)));
-  const canCreate = name.trim().length > 0 && !saving;
+  const canCreate = adding ? picks.length > 0 && !saving : name.trim().length > 0 && !saving;
   const chipPulse = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const sourceChip = (label, value) => {
@@ -504,15 +553,17 @@ const CreateBucketScreen = ({ navigation }) => {
           >
             <Icon name="close" size={20} color={DS.colors.onSurfaceVariant} />
           </PressableScale>
-          <Text style={styles.headerTitle}>New bucket</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {adding ? `Add to ${bucketName}` : 'New bucket'}
+          </Text>
           <Pressable
-            onPress={create}
+            onPress={adding ? add : create}
             disabled={!canCreate}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityState={{ disabled: !canCreate }}
           >
-            <Text style={[styles.create, canCreate && styles.createReady]}>Create</Text>
+            <Text style={[styles.create, canCreate && styles.createReady]}>{adding ? 'Add' : 'Create'}</Text>
           </Pressable>
         </View>
       </View>
@@ -526,18 +577,24 @@ const CreateBucketScreen = ({ navigation }) => {
       >
         {/* Identity row */}
         <View style={[styles.identity, pad]}>
-          <PickStack books={stackBooks} name={name} reduceMotion={reduceMotion} stackRef={stackRef} />
+          <PickStack books={stackBooks} name={adding ? bucketName : name} reduceMotion={reduceMotion} stackRef={stackRef} />
           <View style={styles.identityText}>
-            <TextInput
-              style={[styles.nameInput, isLarge && styles.nameInputLarge]}
-              value={name}
-              onChangeText={setName}
-              placeholder="Name your bucket"
-              placeholderTextColor={DS.colors.placeholder}
-              maxLength={40}
-              autoFocus
-              returnKeyType="done"
-            />
+            {adding ? (
+              <Text style={[styles.nameInput, isLarge && styles.nameInputLarge]} numberOfLines={1}>
+                {bucketName}
+              </Text>
+            ) : (
+              <TextInput
+                style={[styles.nameInput, isLarge && styles.nameInputLarge]}
+                value={name}
+                onChangeText={setName}
+                placeholder="Name your bucket"
+                placeholderTextColor={DS.colors.placeholder}
+                maxLength={40}
+                autoFocus
+                returnKeyType="done"
+              />
+            )}
             {stackBooks.length === 0 ? (
               <Text style={[styles.countText, styles.countRow]}>No books yet</Text>
             ) : (
@@ -611,6 +668,7 @@ const CreateBucketScreen = ({ navigation }) => {
                 key={book.book_id}
                 book={book}
                 order={orderById[String(book.book_id)] || 0}
+                inBucket={inBucketIds.has(String(book.book_id))}
                 width={cellWidth}
                 reduceMotion={reduceMotion}
                 onToggle={toggle}
@@ -810,6 +868,13 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  inBucket: {
+    opacity: 0.5,
+  },
+  inBucketBadge: {
+    zIndex: 1,
+    backgroundColor: DS.colors.surfaceContainerHighest,
   },
   badgeText: {
     fontSize: 12,

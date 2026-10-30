@@ -107,6 +107,114 @@ export const ConfirmSheet = ({ visible, busy = false, onClose, ...body }) => (
   </Sheet>
 );
 
+// One to three text fields and Save: renaming a bucket, and each row of Edit
+// profile (specs/coming-soon R3, R5). The fields start from `fields[].value`
+// each time the sheet opens. `canSave(values)` decides whether Save takes a
+// tap; `onChange(values)` lets the caller check something as the reader types
+// (a username's availability) and show it in `hint`. While `busy` Save shows
+// a spinner and nothing takes a tap; `error` stays under the fields until the
+// next edit.
+export const FieldSheet = ({
+  visible, title, message, fields = [], saveLabel = 'Save', canSave = () => true, hint, hintError = false,
+  error, busy = false, onChange, onSave, onClose,
+}) => {
+  const [values, setValues] = useState({});
+  // Password fields the reader has chosen to see, by key.
+  const [shown, setShown] = useState({});
+  const [opened, setOpened] = useState(false);
+  // Fresh from the caller's values on every opening, not left over from the last.
+  if (visible && !opened) {
+    setOpened(true);
+    setValues(Object.fromEntries(fields.map((f) => [f.key, f.value || ''])));
+    setShown({});
+  } else if (!visible && opened) {
+    setOpened(false);
+  }
+  const ready = !busy && canSave(values);
+  const update = (key, text) => {
+    const next = { ...values, [key]: text };
+    setValues(next);
+    onChange?.(next);
+  };
+
+  return (
+    <Sheet visible={visible} onClose={busy ? () => {} : onClose} avoidKeyboard>
+      <View style={styles.form}>
+        <Text style={styles.title}>{title}</Text>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
+        {fields.map((field, i) => {
+          const hidden = !!field.secure && !shown[field.key];
+          const input = (
+            <TextInput
+              key={field.key}
+              value={values[field.key] ?? ''}
+              onChangeText={(text) => update(field.key, text)}
+              placeholder={field.placeholder}
+              placeholderTextColor={DS.colors.onSurfaceVariant}
+              secureTextEntry={hidden}
+              maxLength={field.maxLength}
+              autoCapitalize={field.autoCapitalize ?? 'sentences'}
+              autoCorrect={false}
+              keyboardType={field.keyboardType}
+              textContentType={field.textContentType}
+              autoFocus={i === 0}
+              selectTextOnFocus={i === 0 && !field.secure}
+              editable={!busy}
+              style={field.secure ? styles.secureInput : [styles.field, styles.lineField]}
+              accessibilityLabel={field.label || field.placeholder}
+            />
+          );
+          if (!field.secure) {
+            return input;
+          }
+          // The eye, as on Sign up's password field.
+          return (
+            <View key={field.key} style={[styles.field, styles.lineField, styles.secureField]}>
+              {input}
+              <Pressable
+                onPress={() => setShown((prev) => ({ ...prev, [field.key]: !prev[field.key] }))}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`${hidden ? 'Show' : 'Hide'} ${(field.label || field.placeholder).toLowerCase()}`}
+              >
+                <Icon name={hidden ? 'eye-outline' : 'eye-off-outline'} size={19} color={DS.colors.onSurfaceVariant} />
+              </Pressable>
+            </View>
+          );
+        })}
+        {hint ? (
+          <Text style={[styles.hint, hintError && styles.hintError]} accessibilityLiveRegion="polite">{hint}</Text>
+        ) : null}
+        {error ? (
+          <Text style={styles.sendError} accessibilityLiveRegion="polite">{error}</Text>
+        ) : null}
+        <PressableScale
+          onPress={() => onSave(values)}
+          disabled={!ready}
+          style={[styles.button, styles.confirmButton]}
+          accessibilityRole="button"
+          accessibilityLabel={saveLabel}
+          accessibilityState={{ disabled: !ready, busy }}
+        >
+          {busy ? (
+            <ActivityIndicator color={DS.colors.onSurface} />
+          ) : (
+            <Text style={[styles.buttonText, !ready && styles.buttonTextDisabled]}>{saveLabel}</Text>
+          )}
+        </PressableScale>
+        <PressableScale
+          onPress={onClose}
+          disabled={busy}
+          style={[styles.button, busy && styles.buttonInactive]}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.buttonText, styles.cancelText]}>Cancel</Text>
+        </PressableScale>
+      </View>
+    </Sheet>
+  );
+};
+
 const MAX_REPORT_LENGTH = 2000;
 // Loose on purpose: it catches typos like a missing @ or domain, and the
 // address is only ever used by a person replying.
@@ -429,6 +537,22 @@ const styles = StyleSheet.create({
   emailField: {
     minHeight: DS.size.minHit + 4,
     marginTop: DS.spacing[12],
+  },
+  lineField: {
+    minHeight: DS.size.minHit + 4,
+    marginTop: DS.spacing[12],
+  },
+  // A password field: the sunken field holds the input and its eye.
+  secureField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing[8],
+  },
+  secureInput: {
+    ...DS.type.body,
+    flex: 1,
+    alignSelf: 'stretch',
+    color: DS.colors.onSurface,
   },
   hint: {
     ...DS.type.meta,

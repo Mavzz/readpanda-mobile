@@ -15,7 +15,7 @@ import { DS } from '../styles/global';
 import BucketTile, { NewBucketTile } from '../components/BucketTile';
 import GenreChips from '../components/GenreChips';
 import SeeAllHeader from '../components/SeeAllHeader';
-import { showToast } from '../components/Toaster';
+import RenameBucketSheet from '../components/RenameBucketSheet';
 import useBucketsStore from '../stores/bucketsStore';
 import { curatedMeta } from '../utils/readingTime';
 import { Bone, useSkeletonDelay } from '../components/Skeleton';
@@ -76,7 +76,6 @@ const BucketGridScreen = () => {
 
   const customBuckets = useBucketsStore((s) => s.customBuckets);
   const fetchCustomBuckets = useBucketsStore((s) => s.fetchCustomBuckets);
-  const renameBucket = useBucketsStore((s) => s.renameBucket);
   const deleteBucket = useBucketsStore((s) => s.deleteBucket);
   const [sort, setSort] = useState('updated');
 
@@ -102,18 +101,8 @@ const BucketGridScreen = () => {
   const showSkeleton = useSkeletonDelay(!loaded && !failed);
 
   // ── Mine: long-press menu ─────────────────────────────────────────────
-  const rename = (bucket) => {
-    if (Platform.OS !== 'ios') {
-      showToast('Renaming is coming soon', 'info');
-      return;
-    }
-    Alert.prompt('Rename bucket', undefined, (value) => {
-      const next = (value || '').trim();
-      if (next && next !== bucket.name) {
-        renameBucket(bucket.id, next);
-      }
-    }, 'plain-text', bucket.name);
-  };
+  const [renaming, setRenaming] = useState(null);
+  const rename = (bucket) => setRenaming(bucket);
 
   const confirmDelete = (bucket) => {
     Alert.alert(
@@ -244,6 +233,7 @@ const BucketGridScreen = () => {
         contentContainerStyle={[styles.content, { paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       />
+      <RenameBucketSheet bucket={renaming} onClose={() => setRenaming(null)} />
     </View>
   );
 };

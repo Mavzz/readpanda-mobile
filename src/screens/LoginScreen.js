@@ -24,6 +24,7 @@ import { showToast } from '../components/Toaster';
 import OneTapButtons from './signUp/OneTapButtons';
 import TermsLine from './signUp/TermsLine';
 import readpandaLogo from '../assets/readpandaLogo_New.png';
+import { accountFrom } from '../utils/account';
 
 const Login = ({ navigation }) => {
   const signIn = useAuthStore((s) => s.signIn);
@@ -45,6 +46,7 @@ const Login = ({ navigation }) => {
       userDetails: {
         username: signInResponse.username,
         email: signInResponse.email,
+        ...accountFrom(signInResponse),
         profilePicture: signInResponse.picture || null,
         isNewUser: signInStatus === 201,
         ...(signInStatus === 201 ? { createdAt: Date.now() } : {}),

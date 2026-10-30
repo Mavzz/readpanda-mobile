@@ -5,7 +5,6 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import BookCoverGradient from '../../components/BookCoverGradient';
-import { showToast } from '../../components/Toaster';
 import useAuthStore from '../../stores/authStore';
 import { useScreenTracking } from '../../utils/screenTracking';
 import getInitials from '../../utils/getInitials';
@@ -140,7 +139,8 @@ const ProfileScreen = () => {
   useScreenTracking('ProfileScreen');
 
   const handle = user?.username || '';
-  const name = user?.name || handle || 'Reader';
+  // The display name the reader chose on Edit profile, if any (coming-soon R5.2).
+  const name = user?.displayName || user?.name || handle || 'Reader';
   const createdAt = validDate(user?.createdAt ?? user?.created_at);
   // Each section leaves its new-reader (7c) form on its own; the meta line
   // turns over with the first book opened.
@@ -223,7 +223,7 @@ const ProfileScreen = () => {
         </Text>
         <PressableScale
           // The edit form is its own piece of work (out of scope for 7a).
-          onPress={() => showToast('Editing your profile is coming soon', 'info')}
+          onPress={() => navigation.navigate('EditProfile')}
           style={styles.editPill}
           accessibilityRole="button"
         >

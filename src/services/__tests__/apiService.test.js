@@ -10,6 +10,11 @@ jest.mock('../../utils/enhancedStorage', () => ({
 }));
 
 jest.mock('../../components/Toaster', () => ({ showOfflineToast: jest.fn() }));
+const mockAdoptAccount = jest.fn();
+jest.mock('../../stores/authStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ adoptAccount: mockAdoptAccount }) },
+}));
 
 import { Alert } from 'react-native';
 import { showOfflineToast } from '../../components/Toaster';
@@ -80,10 +85,14 @@ describe('apiService', () => {
   it('refreshes an expired token, stores the rotated pair, and retries', async () => {
     fetchMock
       .mockResolvedValueOnce(json(401, {}))
-      .mockResolvedValueOnce(json(200, { accessToken: 'new-access', refreshToken: 'new-refresh' }))
+      .mockResolvedValueOnce(json(200, {
+        accessToken: 'new-access', refreshToken: 'new-refresh', user_id: 'u-1', display_name: null, login_type: 'email',
+      }))
       .mockResolvedValueOnce(json(200, { ok: 1 }));
 
     await expect(apiService.get('https://api/x', { Authorization: 'Bearer old-access' })).resolves.toMatchObject({ status: 200 });
+    // A session stored before the app kept the account id gets it here (coming-soon R6.2).
+    expect(mockAdoptAccount).toHaveBeenCalledWith({ userId: 'u-1', displayName: null, loginType: 'email' });
 
     expect(fetchMock.mock.calls[1][0]).toMatch(/\/token\/refresh$/);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ refreshToken: 'old-refresh' });

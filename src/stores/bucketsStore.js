@@ -204,6 +204,29 @@ const useBucketsStore = create((set, get) => ({
     return false;
   },
 
+  // My bucket's + (specs/coming-soon R4): several books at once, after the
+  // ones already in it. Not optimistic: the picker waits for the answer and
+  // keeps the picks on a failure. The bucket's tile and page are re-read so
+  // the count, previews and list are the server's.
+  addBooksToBucket: async (bucketId, bookIds) => {
+    try {
+      const { status } = await makeAuthenticatedPostRequest(
+        getBackendUrl(`/users/me/buckets/${bucketId}/books`),
+        { book_ids: bookIds },
+      );
+      if (status === 200 || status === 201 || status === 204) {
+        // The tile's count and covers. The bucket's own page re-reads itself
+        // when the picker closes back onto it.
+        await get().fetchCustomBuckets();
+        return true;
+      }
+      log.error('Failed to add books to bucket:', status);
+    } catch (error) {
+      log.error('Error adding books to bucket:', error);
+    }
+    return false;
+  },
+
   // A bucket's whole page for 9a: every book in its manual order, each with
   // the reader's own progress. Returns { status, response: { id, name, books } }.
   //

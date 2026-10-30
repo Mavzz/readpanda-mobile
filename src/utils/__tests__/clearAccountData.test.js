@@ -49,3 +49,30 @@ describe('clearAccountData', () => {
     expect(mockStore.size).toBe(6);
   });
 });
+
+// coming-soon R5.4: a username change takes the account's data with it.
+describe('renameAccountData', () => {
+  beforeEach(() => {
+    mockStore.clear();
+    mockStore.set('last_read_position::ishmael', '{"a":1}');
+    mockStore.set('reading_days::ishmael', '[1]');
+    mockStore.set('last_read_position::ishmael2', '{"b":2}');
+    mockStore.set('user_profile', '{}');
+  });
+
+  it('moves every key to the new name and leaves the rest', () => {
+    enhancedStorage.renameAccountData('ishmael', 'call.me');
+    expect(Object.fromEntries(mockStore)).toEqual({
+      'last_read_position::call.me': '{"a":1}',
+      'reading_days::call.me': '[1]',
+      'last_read_position::ishmael2': '{"b":2}',
+      user_profile: '{}',
+    });
+  });
+
+  it('does nothing for the same name or a missing one', () => {
+    enhancedStorage.renameAccountData('ishmael', 'ishmael');
+    enhancedStorage.renameAccountData(undefined, 'x');
+    expect(mockStore.size).toBe(4);
+  });
+});

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import log from '../utils/logger';
 import enhancedStorage from '../utils/enhancedStorage';
+import { accountFrom } from '../utils/account';
+import { fetchProfile } from '../services/auth';
 import useReadingProgressStore, { hydrateMemberProgress } from './readingProgressStore';
 import useCommentsStore, { hydrateComments } from './commentsStore';
 import useRoomStore, { hydrateRooms } from './roomStore';
@@ -40,7 +42,12 @@ const useAuthStore = create((set, get) => ({
 
       if (authData && authData.token && authData.userProfile) {
         hydrateCaches();
-        useSubscriptionStore.getState().start(authData.userProfile.username);
+        // RevenueCat knows the account by its permanent id, so a username
+        // change keeps ReadPanda+ (coming-soon R6). A session stored before
+        // the app kept the id waits for the next token refresh (R6.2).
+        if (authData.userProfile.userId) {
+          useSubscriptionStore.getState().start(authData.userProfile.userId);
+        }
         set({
           user: authData.userProfile,
           token: authData.token,
@@ -68,7 +75,9 @@ const useAuthStore = create((set, get) => ({
       });
       enhancedStorage.storeAuthData(userData);
       hydrateCaches();
-      useSubscriptionStore.getState().start(userData.userDetails?.username);
+      if (userData.userDetails?.userId) {
+        useSubscriptionStore.getState().start(userData.userDetails.userId);
+      }
     } catch (e) {
       log.error('Failed to save user data', e);
     }
@@ -96,6 +105,46 @@ const useAuthStore = create((set, get) => ({
     } catch (e) {
       log.error('Failed to clear user data', e);
     }
+  },
+
+  // A token refresh's account fields. A session stored before the app kept
+  // them takes them here, and only then starts ReadPanda+ (coming-soon R6.2).
+  adoptAccount: (account) => {
+    const { user } = get();
+    if (!user || !account?.userId || user.userId) {
+      return;
+    }
+    get().updateUser(account);
+    useSubscriptionStore.getState().start(account.userId);
+  },
+
+  // Catch up with the account as the server has it: a username, display name
+  // or email changed on another device, or the id and sign-in kind a session
+  // from before this build never stored (coming-soon R5.4, R6.2). A new
+  // username moves this device's data to it first, as Edit profile's save
+  // does, so books and positions follow. Offline it waits for the next time.
+  syncAccount: async () => {
+    if (!get().user) {
+      return;
+    }
+    const { ok, profile } = await fetchProfile();
+    const user = get().user;
+    if (!ok || !profile || !user) {
+      return;
+    }
+    const account = accountFrom(profile);
+    get().adoptAccount(account);
+    const username = profile.username || user.username;
+    if (username !== user.username) {
+      enhancedStorage.renameAccountData(user.username, username);
+      log.info('Username changed on another device', { username });
+    }
+    get().updateUser({
+      username,
+      displayName: account.displayName,
+      ...(account.loginType ? { loginType: account.loginType } : {}),
+      ...(profile.email ? { email: profile.email } : {}),
+    });
   },
 
   updateUser: async (updates) => {
