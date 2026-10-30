@@ -6,7 +6,6 @@ import {
   Pressable,
   FlatList,
   Alert,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useMemo, useState } from 'react';
@@ -18,7 +17,7 @@ import { DS } from '../styles/global';
 import BookCoverGradient from '../components/BookCoverGradient';
 import CoverFan from '../components/CoverFan';
 import GradientPill from '../components/GradientPill';
-import { showToast } from '../components/Toaster';
+import RenameBucketSheet from '../components/RenameBucketSheet';
 import useBucketsStore from '../stores/bucketsStore';
 import useReadingProgressStore from '../stores/readingProgressStore';
 import bucketProgress from '../utils/bucketProgress';
@@ -29,6 +28,8 @@ import log from '../utils/logger';
 import PressableScale from '../components/PressableScale';
 import ProgressFill from '../components/ProgressFill';
 import useLayout from '../hooks/useLayout';
+import useOnReconnect, { OFFLINE_MESSAGE } from '../hooks/useOnReconnect';
+import useConnectivityStore from '../stores/connectivityStore';
 
 // § 9a — one of your buckets, pushed from My Books (tab bar stays). A list,
 // not a grid: each row says where you are in that book, sorted so what you're
@@ -147,7 +148,6 @@ const MyBucketScreen = () => {
   const fetchBucketBooks = useBucketsStore((s) => s.fetchBucketBooks);
   const removeBookFromBucket = useBucketsStore((s) => s.removeBookFromBucket);
   const reorderBucket = useBucketsStore((s) => s.reorderBucket);
-  const renameBucket = useBucketsStore((s) => s.renameBucket);
   const deleteBucket = useBucketsStore((s) => s.deleteBucket);
   const shelf = useReadingProgressStore((s) => s.shelf);
   const loadShelf = useReadingProgressStore((s) => s.loadShelf);
@@ -160,16 +160,24 @@ const MyBucketScreen = () => {
   const { isLarge, pagePad } = useLayout();
   const name = bucket?.name || route.params?.name || '';
 
-  useFocusEffect(
-    useCallback(() => {
-      loadShelf();
-      fetchBucketBooks(bucketId).then(({ status, response }) => {
-        if (status === 200) {
-          setBooks(response.books);
-        }
-      });
-    }, [bucketId, fetchBucketBooks, loadShelf]),
-  );
+  // Offline, the copy from last time comes back instead (R5.2); with none,
+  // `failed` shows the offline line in place of the list.
+  const [failed, setFailed] = useState(false);
+  const load = useCallback(() => {
+    loadShelf();
+    fetchBucketBooks(bucketId).then(({ status, response }) => {
+      if (status === 200) {
+        setBooks(response.books);
+        setFailed(false);
+      } else {
+        setFailed(true);
+      }
+    });
+  }, [bucketId, fetchBucketBooks, loadShelf]);
+
+  useFocusEffect(load);
+  useOnReconnect(load);
+  const online = useConnectivityStore((s) => s.online);
 
   const progressById = useMemo(() => {
     const byId = Object.fromEntries(shelf.map((b) => [b.id, b]));
@@ -235,19 +243,8 @@ const MyBucketScreen = () => {
     reorderBucket(bucketId, next.map((b) => b.book_id));
   };
 
-  // Rename has no sheet of its own yet; iOS's text prompt stands in.
-  const rename = () => {
-    if (Platform.OS !== 'ios') {
-      showToast('Renaming is coming soon', 'info');
-      return;
-    }
-    Alert.prompt('Rename bucket', undefined, (value) => {
-      const next = (value || '').trim();
-      if (next && next !== name) {
-        renameBucket(bucketId, next.slice(0, 40));
-      }
-    }, 'plain-text', name);
-  };
+  const [renaming, setRenaming] = useState(false);
+  const rename = () => setRenaming(true);
 
   const confirmDelete = () => {
     Alert.alert(
@@ -307,9 +304,8 @@ const MyBucketScreen = () => {
           ) : (
             <View style={styles.primary} />
           )}
-          {/* The add-books picker (search + Discover) isn't built yet. */}
           <PressableScale
-            onPress={() => showToast('Adding books from here is coming soon', 'info')}
+            onPress={() => navigation.navigate('CreateBucketScreen', { bucketId })}
             style={styles.addButton}
             accessibilityLabel="Add books"
             accessibilityRole="button"
@@ -329,9 +325,12 @@ const MyBucketScreen = () => {
     onRemove: removeBook,
   });
 
-  const empty = books && books.length === 0 ? (
-    <Text style={styles.empty}>Nothing in this bucket yet.</Text>
-  ) : null;
+  let empty = null;
+  if (books && books.length === 0) {
+    empty = <Text style={styles.empty}>Nothing in this bucket yet.</Text>;
+  } else if (!books && failed) {
+    empty = <Text style={styles.empty}>{online ? 'Couldn\'t load this bucket.' : OFFLINE_MESSAGE}</Text>;
+  }
 
   // The same list either way; on the phone the header scrolls with it.
   const renderList = (listHeader) => (editing ? (
@@ -397,6 +396,10 @@ const MyBucketScreen = () => {
           <View style={styles.listSide}>{renderList(null)}</View>
         </View>
       ) : renderList(header)}
+      <RenameBucketSheet
+        bucket={renaming ? { id: bucketId, name } : null}
+        onClose={() => setRenaming(false)}
+      />
     </View>
   );
 };

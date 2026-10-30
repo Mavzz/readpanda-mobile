@@ -73,12 +73,12 @@ describe('the questions', () => {
     await fireEvent.press(question(join));
     await fireEvent.press(question(progress));
     expect(screen.getByText(/enter the room's invite code/)).toBeTruthy();
-    expect(screen.getByText(/choose Only me/)).toBeTruthy();
+    expect(screen.getByText(/the point of reading together/)).toBeTruthy();
     expect(question(join).props.accessibilityState).toEqual({ expanded: true });
 
     await fireEvent.press(question(join));
     expect(screen.queryByText(/enter the room's invite code/)).toBeNull();
-    expect(screen.getByText(/choose Only me/)).toBeTruthy();
+    expect(screen.getByText(/the point of reading together/)).toBeTruthy();
     expect(question(join).props.accessibilityState).toEqual({ expanded: false });
   });
 });

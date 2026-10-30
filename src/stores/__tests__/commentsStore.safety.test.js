@@ -19,6 +19,7 @@ import {
   makeAuthenticatedDeleteRequest,
 } from '../../services/authenticatedRequests';
 import useCommentsStore from '../commentsStore';
+import useOutboxStore from '../outboxStore';
 
 const store = () => useCommentsStore.getState();
 const clientError = (status, body) => new Error(`Client error ${status}: ${JSON.stringify(body)}`);
@@ -49,6 +50,7 @@ const threads = () => store().byBook.bk_1.threads;
 beforeEach(async () => {
   jest.clearAllMocks();
   useCommentsStore.setState({ byBook: {} });
+  useOutboxStore.setState({ items: [], idMap: {} });
   await load();
 });
 
@@ -68,7 +70,7 @@ describe('deleteComment', () => {
     expect(placeholder.replies.map((r) => r.id)).toEqual(['r1']);
     expect(await done).toEqual({ ok: true });
     expect(makeAuthenticatedDeleteRequest.mock.calls[0][0]).toMatch(/\/comments\/c1$/);
-    expect(makeAuthenticatedDeleteRequest.mock.calls[0][1]).toEqual({ maxRetries: 0 });
+    expect(makeAuthenticatedDeleteRequest.mock.calls[0][1]).toEqual({ maxRetries: 0, quiet: true });
   });
 
   it('removes a comment without replies, and a reply, outright', async () => {
@@ -84,9 +86,14 @@ describe('deleteComment', () => {
     expect(await store().deleteComment('bk_1', 'c3')).toEqual({ ok: false });
     expect(threads().map((t) => t.anchorKey)).toEqual(['k1', 'k2', 'k3']);
 
+  });
+
+  // specs/offline-first R3.1: with no connection it stays deleted and waits.
+  it('keeps a delete that can\'t be sent', async () => {
     makeAuthenticatedDeleteRequest.mockRejectedValue(new TypeError('Network request failed'));
-    expect(await store().deleteComment('bk_1', 'c1')).toEqual({ ok: false });
-    expect(threads()[0].comments[0].deleted).toBeNull();
+    expect(await store().deleteComment('bk_1', 'c1')).toEqual({ ok: true });
+    expect(threads()[0].comments[0].deleted).toBe('author');
+    expect(useOutboxStore.getState().items).toMatchObject([{ kind: 'comment.delete', ref: 'c1', roomId: 'rm_1' }]);
   });
 });
 
@@ -119,8 +126,9 @@ it('marks a comment refused for its words, so the app offers Edit not Retry (R8.
   store().discardFailed('bk_1', failed.clientId);
   expect(threads().flatMap((t) => t.comments).some((c) => c.body === 'rude')).toBe(false);
 
-  // Any other failure is still a plain one, with Retry.
-  makeAuthenticatedPostRequest.mockRejectedValue(new TypeError('Network request failed'));
+  // Any other failure is still a plain one, with Retry. (No connection is
+  // different: that's kept and sent later, specs/offline-first R3.1.)
+  makeAuthenticatedPostRequest.mockRejectedValue(new Error('Server error 500 after 3 attempts: down'));
   await expect(store().addComment({ roomId: 'rm_1', bookId: 'bk_1', page: 4, body: 'fine', anchorText: 'y' })).rejects.toThrow();
   expect(threads().flatMap((t) => t.comments).find((c) => c.body === 'fine').failed).toBe(true);
 });

@@ -9,6 +9,9 @@ jest.mock('../../utils/enhancedStorage', () => {
     default: {
       __reset: () => { state = { lastBookId: null, books: {} }; profile = { username: 'me' }; },
       getUserProfile: () => profile,
+      // The outbox keeps its queue here.
+      readCache: () => null,
+      writeCache: () => {},
       getReadingPositions: () => state,
       getReadingPosition: (id) => state.books[id] || null,
       getCurrentReadingPosition: () => state.books[state.lastBookId] || null,
@@ -35,7 +38,15 @@ jest.mock('../../services/progressService', () => ({
   fetchMyProgress: jest.fn(),
 }));
 
+jest.mock('../commentsStore', () => {
+  const state = { loadComments: jest.fn() };
+  return { __esModule: true, default: { getState: () => state } };
+});
+
 import enhancedStorage from '../../utils/enhancedStorage';
+import useCommentsStore from '../commentsStore';
+import useConnectivityStore from '../connectivityStore';
+import useOutboxStore from '../outboxStore';
 import { putReadingProgress, fetchRoomProgress, fetchMyProgress } from '../../services/progressService';
 import useReadingProgressStore from '../readingProgressStore';
 
@@ -46,6 +57,8 @@ const initial = useReadingProgressStore.getState();
 beforeEach(() => {
   enhancedStorage.__reset();
   useReadingProgressStore.setState(initial, true);
+  useConnectivityStore.setState({ online: true });
+  useOutboxStore.setState({ items: [], idMap: {}, syncing: false, catchingUp: false });
 });
 
 describe('readingProgressStore', () => {
@@ -60,7 +73,58 @@ describe('readingProgressStore', () => {
 
     expect(store().activeBook).toMatchObject({ id: 'bk_dune', chapter: 40, totalChapters: 200, progressPct: 20, started: true });
     expect(store().shelf).toHaveLength(1);
-    expect(putReadingProgress).toHaveBeenCalledWith('bk_dune', expect.objectContaining({ currentPage: 39, totalPages: 200 }));
+    expect(putReadingProgress).toHaveBeenCalledWith(
+      'bk_dune',
+      expect.objectContaining({ currentPage: 39, totalPages: 200 }),
+      { readAt: expect.any(Number), quiet: true },
+    );
+  });
+
+  // specs/offline-first R3.1, R9.1
+  it('offline, keeps the latest position with when it was read, and sends it once back', async () => {
+    useConnectivityStore.setState({ online: false });
+    jest.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(1000);
+    store().saveProgress('bk_dune', { currentPage: 5, totalPages: 100 }, dune);
+    const firstReadAt = useOutboxStore.getState().items[0].payload.readAt;
+    store().saveProgress('bk_dune', { currentPage: 9, totalPages: 100 }, dune);
+    jest.restoreAllMocks();
+
+    const queued = useOutboxStore.getState().items;
+    expect(queued).toHaveLength(1);
+    expect(queued[0].payload).toMatchObject({ currentPage: 9, totalPages: 100 });
+    expect(queued[0].payload.readAt).toBeGreaterThanOrEqual(firstReadAt);
+    expect(putReadingProgress).not.toHaveBeenCalled();
+
+    useConnectivityStore.setState({ online: true });
+    await useOutboxStore.getState().flush();
+    expect(putReadingProgress).toHaveBeenCalledWith(
+      'bk_dune',
+      expect.objectContaining({ currentPage: 9 }),
+      { readAt: queued[0].payload.readAt, quiet: true },
+    );
+    expect(useOutboxStore.getState().items).toEqual([]);
+  });
+
+  // specs/offline-first R4.4
+  describe('once a queued position is accepted', () => {
+    // A book read with a room keeps the room on its stored position.
+    beforeEach(() => {
+      enhancedStorage.saveReadingProgress('bk_dune', { currentPage: 30, totalPages: 100 }, { ...dune, room_id: 'rm_1' });
+    });
+
+    it('reloads the comments it unlocked', async () => {
+      putReadingProgress.mockResolvedValueOnce({ status: 200, response: { newly_unlocked: 2 } });
+      store().saveProgress('bk_dune', { currentPage: 40, totalPages: 100 });
+      await useOutboxStore.getState().flush();
+      expect(useCommentsStore.getState().loadComments).toHaveBeenCalledWith('rm_1', 'bk_dune');
+    });
+
+    it('leaves them alone when it unlocked none', async () => {
+      putReadingProgress.mockResolvedValueOnce({ status: 200, response: { newly_unlocked: 0 } });
+      store().saveProgress('bk_dune', { currentPage: 40, totalPages: 100 });
+      await useOutboxStore.getState().flush();
+      expect(useCommentsStore.getState().loadComments).not.toHaveBeenCalled();
+    });
   });
 
   // Must match progressPct in api-go/internal/handlers/progress.go, or a

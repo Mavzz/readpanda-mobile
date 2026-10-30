@@ -38,12 +38,13 @@ export const isPurchasesConfigured = () => configured;
 
 export const hasPlus = (customerInfo) => !!customerInfo?.entitlements?.active?.[PLUS_ENTITLEMENT];
 
-// The username is the account key everywhere else on the device
-// (enhancedStorage keys per username), so it is the RevenueCat app user id
-// too: a subscription follows the account across devices and reinstalls.
-export const identify = async (username) => {
-  if (!configurePurchases(username) || !username) return null;
-  const { customerInfo } = await Purchases.logIn(username);
+// The account's permanent id is the RevenueCat app user id, so a
+// subscription follows the account across devices, reinstalls and a change
+// of username (specs/coming-soon R6). Without one there's nobody to identify,
+// and nothing is configured anonymously.
+export const identify = async (userId) => {
+  if (!userId || !configurePurchases(userId)) return null;
+  const { customerInfo } = await Purchases.logIn(userId);
   return customerInfo;
 };
 

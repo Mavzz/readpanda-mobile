@@ -31,7 +31,9 @@ const fetchBookComments = async (roomId, bookId) => {
 // A reply carries only its parentId and body — the server takes the page,
 // anchor and room from the root, so a reply can't be re-anchored somewhere its
 // thread isn't.
-const createComment = async (roomId, bookId, comment) => {
+// `options.quiet`: the store queues a comment that can't be sent rather than
+// reporting it (specs/offline-first R3.1).
+const createComment = async (roomId, bookId, comment, options = {}) => {
   const { status, response } = await makeAuthenticatedPostRequest(
     getBackendUrl(`/room/${encodeURIComponent(roomId)}/book/${encodeURIComponent(bookId)}/comments`),
     {
@@ -43,6 +45,7 @@ const createComment = async (roomId, bookId, comment) => {
       client_id: comment?.clientId || '',
       file_hash: comment?.fileHash || '',
     },
+    options,
   );
 
   return { status, response };
@@ -51,29 +54,33 @@ const createComment = async (roomId, bookId, comment) => {
 // POST /room/{roomId}/book/{bookId}/comments/read — opening a thread marks the
 // comments in it read, which is what clears the gutter dot, the scrubber tick
 // and both counters on the reader.
-const markCommentsRead = async (roomId, bookId, commentIds) => {
+const markCommentsRead = async (roomId, bookId, commentIds, options = {}) => {
   const { status, response } = await makeAuthenticatedPostRequest(
     getBackendUrl(`/room/${encodeURIComponent(roomId)}/book/${encodeURIComponent(bookId)}/comments/read`),
     { comment_ids: commentIds || [] },
+    options,
   );
 
   return { status, response };
 };
 
 // POST|DELETE /comments/{id}/like — both halves of the heart. Idempotent on
-// each side, so a double tap can't double-count.
-const likeComment = async (commentId) => {
+// each side, so a double tap can't double-count. `options.quiet` for the
+// outbox, which sends both (specs/offline-first R3.1).
+const likeComment = async (commentId, options = {}) => {
   const { status, response } = await makeAuthenticatedPostRequest(
     getBackendUrl(`/comments/${encodeURIComponent(commentId)}/like`),
     {},
+    options,
   );
 
   return { status, response };
 };
 
-const unlikeComment = async (commentId) => {
+const unlikeComment = async (commentId, options = {}) => {
   const { status, response } = await makeAuthenticatedDeleteRequest(
     getBackendUrl(`/comments/${encodeURIComponent(commentId)}/like`),
+    options,
   );
 
   return { status, response };

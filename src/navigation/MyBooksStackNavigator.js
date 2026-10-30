@@ -4,6 +4,7 @@ import ReadingScreen from '../screens/ReadingScreen';
 import SoloBookScreen from '../screens/SoloBookScreen';
 import MyBucketScreen from '../screens/MyBucketScreen';
 import BucketGridScreen from '../screens/BucketGridScreen';
+import BookGridScreen from '../screens/BookGridScreen';
 import { DS } from '../styles/global';
 
 const Stack = createNativeStackNavigator();
@@ -26,6 +27,7 @@ const MyBooksStackNavigator = () => {
       <Stack.Screen name="SoloBookScreen" component={SoloBookScreen} />
       <Stack.Screen name="MyBucket" component={MyBucketScreen} />
       <Stack.Screen name="BucketGrid" component={BucketGridScreen} />
+      <Stack.Screen name="BookGrid" component={BookGridScreen} />
     </Stack.Navigator>
   );
 };

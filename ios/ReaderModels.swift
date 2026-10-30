@@ -74,6 +74,9 @@ struct ReaderComment {
     /// Milliseconds since epoch, as JS counts them.
     let createdAt: Double
     let pending: Bool
+    /// Written offline and waiting in the outbox (specs/offline-first R3.9):
+    /// still unsaved, but not spinning, and it can be deleted.
+    let queued: Bool
     let failed: Bool
     /// Refused for its words (report-block R8.3): Edit, not Retry.
     let refused: Bool
@@ -100,6 +103,7 @@ struct ReaderComment {
         read = (dict["read"] as? NSNumber)?.boolValue ?? true
         createdAt = (dict["createdAt"] as? NSNumber)?.doubleValue ?? 0
         pending = (dict["pending"] as? NSNumber)?.boolValue ?? false
+        queued = (dict["queued"] as? NSNumber)?.boolValue ?? false
         // `failed` is true, or the reason the comment was refused.
         let failure = dict["failed"]
         refused = (failure as? String) == "blocked_words"

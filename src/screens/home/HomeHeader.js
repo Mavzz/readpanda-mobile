@@ -8,6 +8,7 @@ import useNotificationStore from '../../stores/notificationStore';
 import { Bone, useSkeletonDelay } from '../../components/Skeleton';
 import useLayout from '../../hooks/useLayout';
 import { dayAndPart, firstName } from './homeCopy';
+import useOnReconnect from '../../hooks/useOnReconnect';
 
 // "Thursday evening · Hi, Maya" (16a), the notification bell (and its inbox
 // sheet), and the avatar into Profile. The notification store is read only here, so a badge change
@@ -25,6 +26,14 @@ const HomeHeader = ({ username, showBell, onOpenProfile }) => {
     setNotifModalVisible(true);
     fetchNotifications();
   };
+
+  // The inbox opened offline shows last time's list (R5.3); it refreshes
+  // once the connection is back (R5.6).
+  useOnReconnect(() => {
+    if (notifModalVisible) {
+      fetchNotifications();
+    }
+  });
 
   return (
     <>

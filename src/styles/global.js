@@ -60,6 +60,12 @@ export const DS = {
     scrim: 'rgba(6, 13, 32, 0.7)',
     imageScrim: 'rgba(0, 0, 0, 0.5)',
 
+    // The reader's page, one per Settings → Page theme (specs/page-theme).
+    // Page colours, not app surfaces: the chrome around the page stays navy.
+    readerPaper: '#ffffff',
+    readerSepia: '#f4ecd8',
+    readerNight: '#000000',
+
     // Error / notification
     error: '#ffb4ab',
   },

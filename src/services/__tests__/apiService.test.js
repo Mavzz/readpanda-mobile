@@ -9,7 +9,18 @@ jest.mock('../../utils/enhancedStorage', () => ({
   },
 }));
 
+jest.mock('../../components/Toaster', () => ({ showOfflineToast: jest.fn() }));
+const mockAdoptAccount = jest.fn();
+jest.mock('../../stores/authStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ adoptAccount: mockAdoptAccount }) },
+}));
+
 import { Alert } from 'react-native';
+import { showOfflineToast } from '../../components/Toaster';
+import NetInfo from '@react-native-community/netinfo';
+import useConnectivityStore, { resetRecheck, takeProbe } from '../../stores/connectivityStore';
+import { isNetworkError } from '../../utils/apiError';
 import enhancedStorage from '../../utils/enhancedStorage';
 import apiService, { AuthError, AUTH_ERRORS, SUSPENDED_MESSAGE } from '../apiService';
 
@@ -29,6 +40,9 @@ beforeEach(() => {
   apiService.failedQueue = [];
   apiService.setAuthFailureCallback(null);
   apiService.suspendedShown = false;
+  apiService.timeout = 15000;
+  useConnectivityStore.setState({ online: true });
+  resetRecheck();
   enhancedStorage.getAuthToken.mockReturnValue('old-access');
   enhancedStorage.getRefreshToken.mockReturnValue('old-refresh');
 });
@@ -71,10 +85,14 @@ describe('apiService', () => {
   it('refreshes an expired token, stores the rotated pair, and retries', async () => {
     fetchMock
       .mockResolvedValueOnce(json(401, {}))
-      .mockResolvedValueOnce(json(200, { accessToken: 'new-access', refreshToken: 'new-refresh' }))
+      .mockResolvedValueOnce(json(200, {
+        accessToken: 'new-access', refreshToken: 'new-refresh', user_id: 'u-1', display_name: null, login_type: 'email',
+      }))
       .mockResolvedValueOnce(json(200, { ok: 1 }));
 
     await expect(apiService.get('https://api/x', { Authorization: 'Bearer old-access' })).resolves.toMatchObject({ status: 200 });
+    // A session stored before the app kept the account id gets it here (coming-soon R6.2).
+    expect(mockAdoptAccount).toHaveBeenCalledWith({ userId: 'u-1', displayName: null, loginType: 'email' });
 
     expect(fetchMock.mock.calls[1][0]).toMatch(/\/token\/refresh$/);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ refreshToken: 'old-refresh' });
@@ -174,5 +192,134 @@ describe('apiService', () => {
       expect(signOut).not.toHaveBeenCalled();
       expect(alert).not.toHaveBeenCalled();
     });
+  });
+  // specs/offline-first R1.2–R1.5
+  describe('offline', () => {
+    beforeEach(() => {
+      useConnectivityStore.setState({ online: false });
+      resetRecheck();
+      // NetInfo still says offline when asked again.
+      NetInfo.refresh.mockReturnValue(new Promise(() => {}));
+      // A probe just went out, so the next few seconds are refused outright.
+      takeProbe();
+    });
+
+    it('fails a read at once, without a request or a toast', async () => {
+      const err = await apiService.get('https://api/x').catch((e) => e);
+      // ...and asks again, in case "offline" is a missed reconnect.
+      expect(NetInfo.refresh).toHaveBeenCalledTimes(1);
+      expect(err.offline).toBe(true);
+      expect(isNetworkError(err)).toBe(true);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(showOfflineToast).not.toHaveBeenCalled();
+    });
+
+    it('tells the reader when a write fails offline', async () => {
+      await expect(apiService.post('https://api/room', {})).rejects.toMatchObject({ offline: true });
+      expect(showOfflineToast).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps quiet for a write the caller handles itself', async () => {
+      await expect(apiService.put('https://api/progress/b', {}, {}, { quiet: true })).rejects.toMatchObject({ offline: true });
+      expect(showOfflineToast).not.toHaveBeenCalled();
+    });
+
+    it('lets a read through as a probe every few seconds; an answer means online', async () => {
+      resetRecheck();
+      fetchMock.mockResolvedValue(json(200, { ok: 1 }));
+      await expect(apiService.get('https://api/x')).resolves.toEqual({ status: 200, response: { ok: 1 } });
+      expect(useConnectivityStore.getState().online).toBe(true);
+    });
+
+    it('a probe that gets no answer leaves it offline, and the next read is refused', async () => {
+      resetRecheck();
+      fetchMock.mockRejectedValue(new TypeError('Network request failed'));
+      const err = await apiService.get('https://api/x').catch((e) => e);
+      expect(isNetworkError(err)).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(useConnectivityStore.getState().online).toBe(false);
+    });
+
+    it('probes with a write too, so signing in can find the connection', async () => {
+      resetRecheck();
+      fetchMock.mockResolvedValue(json(200, { token: 't' }));
+      await expect(apiService.post('https://api/auth/google', {})).resolves.toEqual({ status: 200, response: { token: 't' } });
+      expect(useConnectivityStore.getState().online).toBe(true);
+    });
+
+    it('a write probe with no network ends as offline, with the toast', async () => {
+      resetRecheck();
+      fetchMock.mockRejectedValue(new TypeError('Network request failed'));
+      await expect(apiService.post('https://api/room', {})).rejects.toMatchObject({ offline: true });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(showOfflineToast).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops retrying once the connection is lost', async () => {
+      useConnectivityStore.setState({ online: true });
+      fetchMock.mockImplementation(async () => {
+        useConnectivityStore.setState({ online: false });
+        throw new TypeError('Network request failed');
+      });
+      const err = await apiService.get('https://api/x').catch((e) => e);
+      expect(err.offline).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('gives up on a request that hangs, as a network error', async () => {
+    apiService.timeout = 5;
+    fetchMock.mockImplementation((url, init) => new Promise((resolve, reject) => {
+      init.signal.addEventListener('abort', () => {
+        const abort = new Error('Aborted');
+        abort.name = 'AbortError';
+        reject(abort);
+      });
+    }));
+    const err = await apiService.get('https://api/x').catch((e) => e);
+    expect(err.timeout).toBe(true);
+    expect(err.message).toBe('Timed out after 0.005s: GET https://api/x');
+    expect(isNetworkError(err)).toBe(true);
+    // Not retried: it already waited (R1.3).
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // R1.6: a network that's up but goes nowhere (100% loss, a captive portal).
+  describe('requests getting no answer', () => {
+    const dropped = () => apiService.get('https://api/x', {}, { maxRetries: 0 }).catch((e) => e);
+
+    it('two in a row count as offline', async () => {
+      fetchMock.mockRejectedValue(new TypeError('Network request failed'));
+      await dropped();
+      expect(useConnectivityStore.getState().online).toBe(true);
+      await dropped();
+      expect(useConnectivityStore.getState().online).toBe(false);
+    });
+
+    it('an answer in between starts the count again', async () => {
+      fetchMock
+        .mockRejectedValueOnce(new TypeError('Network request failed'))
+        .mockResolvedValueOnce(json(200, {}))
+        .mockRejectedValueOnce(new TypeError('Network request failed'));
+      await dropped();
+      await dropped();
+      await dropped();
+      expect(useConnectivityStore.getState().online).toBe(true);
+    });
+
+    it('a server that answers with an error is still an answer', async () => {
+      fetchMock.mockResolvedValue(json(500, {}));
+      await dropped();
+      await dropped();
+      expect(useConnectivityStore.getState().online).toBe(true);
+    });
+  });
+
+  it('still retries a dropped request while online', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce(json(200, { ok: 1 }));
+    await expect(apiService.get('https://api/x')).resolves.toEqual({ status: 200, response: { ok: 1 } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

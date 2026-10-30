@@ -45,24 +45,23 @@ const toSettingsBody = (patch) => Object.fromEntries(
 );
 
 export const NotificationService = {
+  // null when it couldn't be fetched, so the store keeps the list it has
+  // rather than emptying it offline (specs/offline-first R5.4).
   async getNotifications() {
     try {
       const { response } = await makeAuthenticatedGetRequest(getBackendUrl('/notifications'));
       return (response || []).map(toNotification);
     } catch (error) {
       log.error('Error fetching notifications:', error);
-      return [];
+      return null;
     }
   },
 
-  async markAsRead(notificationId) {
-    try {
-      await makeAuthenticatedPutRequest(getBackendUrl(`/notifications/${notificationId}/read`), {});
-      return true;
-    } catch (error) {
-      log.error('Error marking notification as read:', error);
-      return false;
-    }
+  // Throws, so the outbox can tell no connection (keep it) from a refusal
+  // (put the dot back). `options.quiet` for the outbox.
+  async markAsRead(notificationId, options = {}) {
+    await makeAuthenticatedPutRequest(getBackendUrl(`/notifications/${notificationId}/read`), {}, options);
+    return true;
   },
 
   // POST /users/me/devices — where the server sends this user's pushes. The

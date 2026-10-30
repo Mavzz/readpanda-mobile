@@ -3,6 +3,7 @@ import SplashScreen from 'react-native-splash-screen';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import useAuthStore from './src/stores/authStore';
 import { initSecureStorage } from './src/services/secureStorage';
 import log from './src/utils/logger';
@@ -70,7 +71,14 @@ const App = () => {
   // above every screen.
   return (
     <GestureHandlerRootView style={styles.container}>
-      {storage === 'ready' && <AppNavigator />}
+      {/* Insets for everything, not just what's inside a navigator: the
+          Offline pill draws beside the NavigationContainer. React Navigation
+          uses this one rather than adding its own. */}
+      {storage === 'ready' && (
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <AppNavigator />
+        </SafeAreaProvider>
+      )}
       {storage === 'failed' && (
         <View style={styles.failed}>
           <Text style={styles.failedText}>ReadPanda couldn&apos;t open its secure storage.</Text>

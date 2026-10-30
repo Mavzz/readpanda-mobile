@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect } from 'react';
 import { requireNativeComponent, Platform } from 'react-native';
 import log from '../utils/logger';
+import { raiseOfflinePill } from './OfflinePill';
 
 // The reader is native (ios/RNPdfViewer.swift): the page, the chrome around
 // it, the passage highlights, the gutter, the scrubber and the thread sheet
@@ -18,6 +19,7 @@ const PdfViewer = ({
   bookTitle,
   initialPage,
   pageMode,
+  pageTheme,
   largeLayout,
   threads,
   highlights,
@@ -58,7 +60,13 @@ const PdfViewer = ({
   }, [bookTitle, onLoadComplete]);
 
   const handleError = useCallback((e) => {
-    const { message } = e.nativeEvent;
+    const { message, offline } = e.nativeEvent;
+    // Not downloaded and no connection is a state the reader shows and
+    // recovers from on its own (specs/offline-first R7), not an error.
+    if (offline) {
+      log.info(`PDF waiting for a connection: ${bookTitle}`);
+      return;
+    }
     log.error(`PDF error for ${bookTitle}: ${message}`);
     onError?.(message);
   }, [bookTitle, onError]);
@@ -82,6 +90,14 @@ const PdfViewer = ({
   const handleRetryComment = useCallback((e) => {
     onRetryComment?.(e.nativeEvent.clientId);
   }, [onRetryComment]);
+
+  // The comment sheet and its composer fill the bottom, where the Offline
+  // pill sits: while it's open the pill moves up under the reader's header
+  // (specs/offline-first R2.1). Back down when the reader goes.
+  const handleCommentSheetChange = useCallback((e) => {
+    raiseOfflinePill(!!e.nativeEvent.open);
+  }, []);
+  useEffect(() => () => raiseOfflinePill(false), []);
 
   // { action: 'delete' | 'report' | 'block' | 'discard', commentId, clientId,
   // userId, username } from a comment's ⋯ menu or a refused comment's Edit.
@@ -117,6 +133,7 @@ const PdfViewer = ({
       bookTitle={bookTitle || ''}
       initialPage={initialPage || 0}
       pageMode={pageMode || 'scroll'}
+      pageTheme={pageTheme || 'paper'}
       largeLayout={!!largeLayout}
       threads={threads || []}
       highlights={highlights || []}
@@ -136,6 +153,7 @@ const PdfViewer = ({
       onSubmitComment={handleSubmitComment}
       onLikeComment={handleLikeComment}
       onRetryComment={handleRetryComment}
+      onCommentSheetChange={handleCommentSheetChange}
       onManageComment={handleManageComment}
       onRoomPickerRequested={handleRoomPickerRequested}
       onCreateHighlight={handleCreateHighlight}

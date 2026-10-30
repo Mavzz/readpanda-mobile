@@ -23,6 +23,8 @@ import Animated from 'react-native-reanimated';
 import useFilterEntrance from '../hooks/useFilterEntrance';
 import useDiscoverPages from '../hooks/useDiscoverPages';
 import useLayout from '../hooks/useLayout';
+import useOnReconnect, { OFFLINE_MESSAGE } from '../hooks/useOnReconnect';
+import useConnectivityStore from '../stores/connectivityStore';
 
 // § 10c — "See all" for books you're browsing: a 3-column grid of 2:3 covers.
 //
@@ -31,6 +33,9 @@ import useLayout from '../hooks/useLayout';
 //                           a sort: Most read / Newest / Shortest.
 //   source 'curatedForYou'  Home › Curated for you: every book in those
 //                           buckets (`bucketIds`, in Home's order). Not ranked.
+//   source 'finished'       My Books / Reading › Finished: every book on this
+//                           device's shelf read to the end, the most recently
+//                           read first. No network (specs/coming-soon R2).
 //
 // Rank badges appear only on a ranked list in its ranked order. Each cover
 // reads the reader's own state for the book: a progress bar and the page if
@@ -59,6 +64,14 @@ const sortBooks = (books, sort) => {
   }
   return books;
 };
+
+// A finished shelf row in the shape the grid and Book detail take.
+const finishedBook = (entry) => ({
+  book_id: entry.id,
+  title: entry.title,
+  cover_image_url: entry.coverUrl || null,
+  manuscript_url: entry.manuscriptUrl || null,
+});
 
 const BookGridScreen = () => {
   const navigation = useNavigation();
@@ -111,6 +124,10 @@ const BookGridScreen = () => {
     }
   }, [source, loadCurated]);
 
+  // Back online, load what couldn't load offline (specs/offline-first R5.6).
+  useOnReconnect(ranked ? discover.reload : loadCurated);
+  const online = useConnectivityStore((s) => s.online);
+
   // Covers follow the reader: coming back from a book has to update them.
   useFocusEffect(
     useCallback(() => {
@@ -119,7 +136,16 @@ const BookGridScreen = () => {
   );
 
   const shelfById = useMemo(() => Object.fromEntries(shelf.map((b) => [b.id, b])), [shelf]);
-  const loadedBooks = ranked ? discover.page?.popular : curated;
+  // The same rule as Profile's finished count.
+  const finished = useMemo(() => (
+    source === 'finished'
+      ? shelf
+        .filter((b) => b.started && b.progressPct >= 100)
+        .sort((a, b) => (b.lastReadAt || 0) - (a.lastReadAt || 0))
+        .map(finishedBook)
+      : undefined
+  ), [source, shelf]);
+  const loadedBooks = ranked ? discover.page?.popular : (source === 'finished' ? finished : curated);
   const failed = ranked ? discover.failed : curatedFailed;
   const { genres, genreLabel } = discover;
   const books = useMemo(() => sortBooks(loadedBooks || [], sort), [loadedBooks, sort]);
@@ -130,7 +156,9 @@ const BookGridScreen = () => {
 
   const title = source === 'popular'
     ? (genre ? `Popular in ${genreLabel}` : 'Popular this week')
-    : route.params?.title || 'Curated for you';
+    : source === 'finished'
+      ? 'Finished'
+      : route.params?.title || 'Curated for you';
   const subtitle = source === 'popular'
     ? 'Most read in the last 7 days'
     : (books.length ? booksLabel(books.length) : null);
@@ -204,7 +232,7 @@ const BookGridScreen = () => {
       return (
         <View style={styles.message}>
           <Icon name="cloud-offline-outline" size={30} color={DS.colors.onSurfaceVariant} />
-          <Text style={styles.messageText}>Couldn&apos;t load books.</Text>
+          <Text style={styles.messageText}>{online ? 'Couldn\'t load books.' : OFFLINE_MESSAGE}</Text>
         </View>
       );
     }

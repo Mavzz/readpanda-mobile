@@ -12,6 +12,7 @@ import useCommentsStore from '../stores/commentsStore';
 import useRoomStore from '../stores/roomStore';
 import useHighlightsStore from '../stores/highlightsStore';
 import { putReadingProgress } from '../services/progressService';
+import { isOnline } from '../stores/connectivityStore';
 import enhancedStorage from '../utils/enhancedStorage';
 import { getReaderSetting } from '../utils/readerSettings';
 import useLayout from '../hooks/useLayout';
@@ -75,6 +76,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
   const initialPage = savedProgress?.currentPage || 0;
   log.info(`ManuscriptScreen initial page for ${book.title}: ${initialPage}`);
   const [pageMode] = useState(() => getReaderSetting('pageMode'));
+  const [pageTheme] = useState(() => getReaderSetting('pageTheme'));
   // iPad layouts scroll with pages fit to the window (14f). Spread was tried
   // and dropped: two fixed PDF pages side by side made the text too small.
   const { isLarge } = useLayout();
@@ -209,11 +211,16 @@ const ManuscriptScreen = ({ route, navigation }) => {
     if (!entry?.lockedCount || page <= (entry.furthestPage || 0)) {
       return;
     }
+    // Offline the outbox carries this page, and reloads the comments it
+    // unlocks once it's sent (specs/offline-first R4.4).
+    if (!isOnline()) {
+      return;
+    }
     try {
       const { status, response } = await putReadingProgress(book.book_id, {
         currentPage: page,
         totalPages: totalPagesRef.current,
-      });
+      }, { quiet: true });
       if (status !== 200) {
         log.error('Failed to publish progress past the spoiler line:', status);
         return;
@@ -416,6 +423,7 @@ const ManuscriptScreen = ({ route, navigation }) => {
         bookTitle={book.title}
         initialPage={initialPage}
         pageMode={pageMode}
+        pageTheme={pageTheme}
         largeLayout={isLarge}
         threads={nativeThreads}
         highlights={nativeHighlights}

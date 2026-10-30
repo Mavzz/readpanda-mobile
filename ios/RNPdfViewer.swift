@@ -14,6 +14,7 @@
 //
 
 import CryptoKit
+import Network
 import PDFKit
 import React
 import UIKit
@@ -74,7 +75,15 @@ class CommentablePDFView: PDFView {
         super.buildMenu(with: builder)
         // The main menu (iPad keyboard/Catalyst) isn't where passage actions
         // belong; the selection's edit menu is.
-        guard builder.system != .main, hasSelectedText else {
+        guard builder.system != .main else {
+            return
+        }
+        // Nothing selected means a tap on a comment or highlight, which opens
+        // the thread sheet or the highlight menu. PDFKit's own menu for the
+        // mark (Highlight, Remove, Add Note) came up over them, offering to
+        // edit marks the reader draws.
+        guard hasSelectedText else {
+            builder.replaceChildren(ofMenu: .root) { _ in [] }
             return
         }
         var actions: [UIMenuElement] = [
@@ -145,6 +154,8 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     @objc var onSubmitComment: RCTDirectEventBlock?
     @objc var onLikeComment: RCTDirectEventBlock?
     @objc var onRetryComment: RCTDirectEventBlock?
+    /// { open } whenever the comment sheet appears or goes.
+    @objc var onCommentSheetChange: RCTDirectEventBlock?
     @objc var onManageComment: RCTDirectEventBlock?
     @objc var onRoomPickerRequested: RCTDirectEventBlock?
     @objc var onCreateHighlight: RCTDirectEventBlock?
@@ -158,27 +169,60 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// The highlight a tap menu is currently about.
     private var menuHighlightKey: String?
     private var highlightMenu: UIInteraction?
+    private var markTap: UITapGestureRecognizer?
+    /// Whether the touch markTap is following started on a marked passage.
+    private var touchIsOnMark = false
+    /// When that touch came down, on the touch clock (system uptime).
+    private var touchBegan: TimeInterval = 0
+    /// Held longer than this, a touch is a press to select text, not a tap:
+    /// above a tap's length, below the system's 0.5s press. Lifting the
+    /// finger after one mustn't also open the thread under it.
+    private static let longestTap: TimeInterval = 0.35
     private var documentHash: String = ""
     private var currentPageIndex: Int = 0
     private var addedHighlights: [(PDFPage, PDFAnnotation)] = []
+    /// One passage fill, as drawn. Overlays are worked out again
+    /// on every scroll, zoom and layout, but the marks only change when the
+    /// threads, the highlights, the theme or the document do. Taking them off
+    /// and putting them back each time made them flicker while PDFKit redrew.
+    private struct Mark: Equatable {
+        let page: Int
+        let rect: CGRect
+        let color: UIColor
+    }
+    private var wantedMarks: [(page: PDFPage, mark: Mark)] = []
+    private var drawnMarks: (document: PDFDocument, theme: PageTheme, marks: [Mark])?
     /// Each dot with the page and page-space rect it is pinned to, so scrolling
     /// only has to move frames rather than rebuild the overlay.
     private var gutterDots: [(button: UIButton, page: PDFPage, rect: CGRect)] = []
     private var scrollObserver: NSKeyValueObservation?
+    /// Every scroll view in the PDF view, for `paintBlankPages()`. Page
+    /// turning swipes in the page view controller's own scroll view, not the
+    /// one `scrollObserver` follows, so a page sliding in on iPad (where it
+    /// takes longest to draw) kept PDFKit's white.
+    private var paintObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
     private var overlayWork: DispatchWorkItem?
     private var lastLoadedURL: URL?
+    /// Waits for a connection while the offline state shows, then downloads
+    /// without waiting for Retry (specs/offline-first R7.2).
+    private var reconnectMonitor: NWPathMonitor?
     /// Page mode (Settings → Page turning) as last applied to the PDFView.
     private var isPaged = false
     /// Settings → Page turning, as set; `isPaged` is what's applied.
     private var pagedSetting = false
+    /// Settings → Page theme. Set before the document loads, as `pageMode` is.
+    private var theme = PageTheme.paper
     /// The iPad layout (window ≥ 700pt), from JS.
     private var isLarge = false
     /// iPad scrolling (14f): pages fit to the window with one even gap round
     /// them. Page turning ("page") keeps the phone's paged reader on iPad too.
     private var usesLargeScroll: Bool { isLarge && !pagedSetting }
-    /// How far past the page container a dot may sit: into the outer margin
-    /// on iPad, not at all on the phone (where it stays on the card's edge).
-    private var dotOverhang: CGFloat { usesLargeScroll ? RNPdfView.pageGap / 2 : -2 }
+    /// How far in from the card's right edge a dot sits. Never past it: a
+    /// landscape iPad page fills the card, and letting the dot into the outer
+    /// margin put it half off. Further in on iPad, where 6pt on a page that
+    /// wide reads as touching the edge. Wherever the page leaves a margin
+    /// (iPad portrait, 14f), the dot still sits just beside the page.
+    private var dotInset: CGFloat { isLarge ? 16 : 6 }
     /// iPad scrolling: the one gap between a page and anything next to it —
     /// the window edge, the header, the scrubber or the next page — in both
     /// orientations, kept as tight as the phone's 12pt card inset. Half is the
@@ -188,6 +232,18 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private var needsFit = false
     /// Whether the iPad scroll layout is what's on screen.
     private var appliedLargeScroll = false
+    /// The book's trim (specs/reader-fit), as fractions of a page's crop box;
+    /// nil while the book is shown whole.
+    private var trim: CGRect?
+    /// Stops the background search for a trim that's no longer wanted: a
+    /// new book, a reload, the reader going away (R2.3).
+    private final class Cancellation {
+        var isCancelled = false
+    }
+    private var trimSearch: Cancellation?
+    /// The text's distance from the page card's edge when trimmed, the same
+    /// in every mode and orientation (R3.1).
+    private var textGap: CGFloat { isLarge ? 40 : 20 }
 
     /// PDFKit's own page gaps, for going back to the phone layout.
     private var defaultPageBreakMargins = UIEdgeInsets.zero
@@ -203,10 +259,10 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     // Comments are blue and personal highlights yellow: a pair that stays
     // distinct for the common colour-vision deficiencies. Commented passages
-    // are also underlined and carry a gutter dot, so colour is never the only
-    // cue. All three blues are measured against the white page:
+    // also carry a gutter dot, so colour is never the only cue. All three
+    // blues are measured against the white page:
     //  - fill under black text: ≥15:1 at either opacity
-    //  - underline, unread dot (and its white count): 4.7:1
+    //  - unread dot (and its white count): 4.7:1
     //  - read dot: 3.2:1 (WCAG non-text minimum is 3:1)
     private let commentFill = UIColor(rgb: 0x8ec5ff)
     private let commentInk = UIColor(rgb: 0x2f6fde)
@@ -247,8 +303,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
         pdfView.autoScales = true
         // PDFKit's default is a mid gray that reads as a bug against the app's
-        // dark chrome; the paper should meet the card edge cleanly.
-        pdfView.backgroundColor = .white
+        // dark chrome; the paper should meet the card edge cleanly. In the
+        // page theme's colour, so Night never shows white round the page.
+        pdfView.backgroundColor = theme.paperColor
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         defaultPageBreakMargins = pdfView.pageBreakMargins
@@ -270,6 +327,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         addSubview(scrubber)
 
         sheet.delegate = self
+        sheet.onVisibilityChange = { [weak self] open in
+            self?.onCommentSheetChange?(["open": open])
+        }
         addSubview(sheet)
 
         registerLegacyMenuItems()
@@ -281,6 +341,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         tap.delegate = self
         tap.cancelsTouchesInView = false
         pdfView.addGestureRecognizer(tap)
+        markTap = tap
 
         if #available(iOS 16.0, *) {
             let interaction = UIEditMenuInteraction(delegate: self)
@@ -306,6 +367,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             name: .PDFViewVisiblePagesChanged,
             object: pdfView
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVisiblePagesChanged),
+            name: .PDFViewVisiblePagesChanged,
+            object: pdfView
+        )
     }
 
     /// iOS 15 only. On 16+ the actions come from `buildMenu(with:)`, and
@@ -326,8 +393,10 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     }
 
     deinit {
+        trimSearch?.isCancelled = true
         NotificationCenter.default.removeObserver(self)
         scrollObserver?.invalidate()
+        reconnectMonitor?.cancel()
     }
 
     override func safeAreaInsetsDidChange() {
@@ -383,11 +452,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             height: max(0, insetBottom - insetTop)
         )
         let resized = pageContainer.bounds.size != previousContainerSize
-        pdfView.frame = pageContainer.bounds
+        let side = trimInset(across: pageContainer.bounds.width)
+        pdfView.frame = pageContainer.bounds.insetBy(dx: side, dy: 0)
         if isPaged {
             // The page view controller doesn't refit on resize the way the
-            // continuous view does.
-            pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+            // continuous view does. The floor goes first: set after, a fit
+            // smaller than the last one (portrait to landscape) was held up at
+            // the old floor and the page stayed zoomed in.
+            let fit = pdfView.scaleFactorForSizeToFit
+            if fit > 0 {
+                pdfView.minScaleFactor = fit
+                pdfView.maxScaleFactor = fit * 3
+                pdfView.scaleFactor = fit
+            }
         }
         if usesLargeScroll, needsFit || resized {
             needsFit = false
@@ -397,6 +474,19 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
                 pdfView.minScaleFactor = fit
                 pdfView.maxScaleFactor = fit * 3
                 pdfView.scaleFactor = fit
+            }
+        } else if !usesLargeScroll, !isPaged {
+            // PDFKit's own floor lets a page shrink to a speck in the middle
+            // of the card. No zooming out past the fit, as on iPad; a resize
+            // (rotation) goes back to the fit, which the old floor would
+            // otherwise hold it above.
+            let fit = pdfView.scaleFactorForSizeToFit
+            if fit > 0 {
+                pdfView.minScaleFactor = fit
+                pdfView.maxScaleFactor = fit * 3
+                if resized {
+                    pdfView.scaleFactor = fit
+                }
             }
         }
         hideScrollIndicators(in: pdfView)
@@ -520,6 +610,23 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         }
     }
 
+    /// "paper" (the default), "sepia" or "night", from Settings → Page theme
+    /// (specs/page-theme). Read once when the book opens.
+    @objc var pageTheme: NSString? {
+        didSet {
+            theme = PageTheme(pageTheme as String?)
+            applySheet()
+            // Normally set before the book loads. If it ever comes after, the
+            // pages already drawn have to be drawn again.
+            if let document = pdfView.document as? ThemedPdfDocument, document.theme != theme {
+                document.theme = theme
+                pdfView.accessibilityIgnoresInvertColors = theme == .night
+                pdfView.layoutDocumentView()
+                refreshOverlays()
+            }
+        }
+    }
+
     /// The iPad layout (window ≥ 700pt, from JS's useLayout). Switches as the
     /// window crosses it — rotation, Split View — keeping the spot being read.
     @objc var largeLayout: NSNumber? {
@@ -560,22 +667,27 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         // follow that one, not the old.
         resetScrollObserver()
         guard usesLargeScroll else {
-            pdfView.backgroundColor = .white
-            pdfView.pageBreakMargins = defaultPageBreakMargins
+            var margins = defaultPageBreakMargins
+            if trim != nil {
+                // The gap beside the text is the PDF view's inset, in screen
+                // points; a page margin would add to it at every zoom.
+                margins.left = 0
+                margins.right = 0
+            }
+            pdfView.pageBreakMargins = margins
             pdfView.minScaleFactor = defaultScaleRange.min
             pdfView.maxScaleFactor = defaultScaleRange.max
             applyPageMode(pagedSetting)
+            applySheet()
             return
         }
         isPaged = false
         pdfView.usePageViewController(false, withViewOptions: nil)
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
-        // The pages sit on the app's own ground, not on PDFKit's white.
-        pdfView.backgroundColor = DS.Colors.background
         pdfView.displaysPageBreaks = true
-        pdfView.pageShadowsEnabled = false
         pdfView.autoScales = true
+        applySheet()
         // Fit and gaps are worked out on the next layout, even at an
         // unchanged size.
         needsFit = true
@@ -592,11 +704,41 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         var fit = pdfView.scaleFactorForSizeToFit
         for _ in 0..<4 where fit > 0 {
             let margin = half / fit
-            pdfView.pageBreakMargins = UIEdgeInsets(top: margin, left: margin, bottom: margin, right: margin)
+            let side = trim == nil ? margin : 0
+            pdfView.pageBreakMargins = UIEdgeInsets(top: margin, left: side, bottom: margin, right: side)
             pdfView.layoutDocumentView()
             fit = pdfView.scaleFactorForSizeToFit
         }
         return fit
+    }
+
+    /// The page's surroundings. Untrimmed, as before trims: the phone's pages
+    /// sit on their paper colour with a shadow when scrolling, the iPad's on
+    /// the app's navy. Trimmed, the card is one sheet of the theme's paper,
+    /// with no page edges or shadows in it (R4.1).
+    private func applySheet() {
+        let sheet = trim != nil
+        pageContainer.backgroundColor = sheet ? theme.paperColor : .clear
+        // The pages sit on the app's own ground on iPad, not on PDFKit's white.
+        pdfView.backgroundColor = sheet || !appliedLargeScroll ? theme.paperColor : DS.Colors.background
+        pdfView.pageShadowsEnabled = !sheet && !isPaged && !appliedLargeScroll
+    }
+
+    /// How far in from each side of the card the PDF view sits when trimmed,
+    /// so a page fitted to the view's width puts its text `textGap` from the
+    /// card's edge (R3.1). The shown page is the text plus `PageTrim.padding`
+    /// on each side, which is in page points and so scales with the fit.
+    private func trimInset(across width: CGFloat) -> CGFloat {
+        guard trim != nil, let page = pdfView.currentPage ?? pdfView.document?.page(at: 0) else {
+            return 0
+        }
+        let shown = page.bounds(for: .artBox).width
+        let text = shown - PageTrim.padding * 2
+        guard text > 0, width > textGap * 2 else {
+            return 0
+        }
+        let scale = (width - textGap * 2) / text
+        return max(0, (width - shown * scale) / 2)
     }
 
     /// A rect on a page in the gutter layer's space, which sits over the page
@@ -614,7 +756,6 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         // A page at a time should be the whole card, not a sheet floating on
         // it with a shadow and a break margin around it.
         pdfView.displaysPageBreaks = !paged
-        pdfView.pageShadowsEnabled = !paged
         pdfView.autoScales = true
         setNeedsLayout()
     }
@@ -654,8 +795,106 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     // MARK: - Page events
 
+    @objc private func handleVisiblePagesChanged() {
+        observeScrollingForPaint(in: pdfView)
+        paintBlankPages()
+    }
+
     @objc private func handlePageChanged() {
         reportPage(force: false)
+        paintBlankPages()
+    }
+
+    /// PDFKit backs each piece of a page with a white layer until the piece
+    /// is drawn, so a fast scroll in Sepia or Night showed white pages before
+    /// the theme came in (worse once trimmed pages were drawn larger,
+    /// specs/reader-fit). Those layers are painted the paper colour as pages
+    /// come into view. Nothing public sets that colour: this only reads and
+    /// sets layer colours, and if PDFKit's layers change shape it finds
+    /// nothing and the pieces are white as before.
+    ///
+    /// Page turning shows something else first: a small picture of the page
+    /// that PDFKit draws without the theme (black on white) while the sharp
+    /// page is drawn, about a second on iPad. That picture is re-tinted the
+    /// same way the page is, so it shows in the theme, only blurred.
+    private func paintBlankPages() {
+        guard theme != .paper else {
+            return
+        }
+        paint(whiteIn: pdfView.layer, depth: 0)
+    }
+
+    private func paint(whiteIn layer: CALayer, depth: Int) {
+        guard depth < 14 else {
+            return
+        }
+        for sublayer in layer.sublayers ?? [] {
+            if let color = sublayer.backgroundColor, Self.isPureWhite(color) {
+                sublayer.backgroundColor = theme.paperColor.cgColor
+            }
+            if sublayer.name == Self.previewLayerName {
+                tintPreview(in: sublayer)
+            }
+            paint(whiteIn: sublayer, depth: depth + 1)
+        }
+    }
+
+    /// What PDFKit calls the layer holding a page's quick preview.
+    private static let previewLayerName = "backgroundLayer"
+    /// Set on a preview layer to the image this reader tinted, so it's only
+    /// done again when PDFKit puts in a new one.
+    private static let tintedKey = "readpandaTintedPreview"
+
+    private func tintPreview(in layer: CALayer) {
+        guard let contents = layer.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID else {
+            return
+        }
+        let image = contents as! CGImage
+        if let tinted = layer.value(forKey: Self.tintedKey), tinted as AnyObject === image {
+            return
+        }
+        guard let themed = Self.tint(image, theme) else {
+            return
+        }
+        layer.contents = themed
+        layer.setValue(themed, forKey: Self.tintedKey)
+    }
+
+    /// The page theme over a whole preview, pictures included: it's on
+    /// screen for a moment, blurred, until the page itself is drawn.
+    private static func tint(_ image: CGImage, _ theme: PageTheme) -> CGImage? {
+        guard let context = CGContext(
+            data: nil,
+            width: image.width,
+            height: image.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        let area = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        context.draw(image, in: area)
+        switch theme {
+        case .sepia:
+            context.setBlendMode(.multiply)
+            context.setFillColor(DS.Colors.readerSepia.cgColor)
+        case .night:
+            // As on the page: the difference from white inverts.
+            context.setBlendMode(.difference)
+            context.setFillColor(UIColor.white.cgColor)
+        case .paper:
+            return nil
+        }
+        context.fill(area)
+        return context.makeImage()
+    }
+
+    private static func isPureWhite(_ color: CGColor) -> Bool {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(cgColor: color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return red > 0.99 && green > 0.99 && blue > 0.99 && alpha > 0.99
     }
 
     private func reportPage(force: Bool) {
@@ -913,6 +1152,20 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     private func resetScrollObserver() {
         scrollObserver?.invalidate()
         scrollObserver = nil
+        paintObservers.values.forEach { $0.invalidate() }
+        paintObservers.removeAll()
+    }
+
+    /// Follows any scroll view not followed yet; page turning makes new ones.
+    private func observeScrollingForPaint(in view: UIView) {
+        for subview in view.subviews {
+            if let scrollView = subview as? UIScrollView, paintObservers[ObjectIdentifier(scrollView)] == nil {
+                paintObservers[ObjectIdentifier(scrollView)] = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
+                    self?.paintBlankPages()
+                }
+            }
+            observeScrollingForPaint(in: subview)
+        }
     }
 
     /// The page scrolls continuously, so the dots have to follow it. PDFKit
@@ -920,6 +1173,7 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// frame would be wasteful — so scrolling only moves the frames that are
     /// already there, and a rebuild happens when the threads themselves change.
     private func observeScrolling() {
+        observeScrollingForPaint(in: pdfView)
         guard scrollObserver == nil, let scrollView = findScrollView(in: pdfView) else {
             return
         }
@@ -959,10 +1213,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         let field = pageContainer.bounds
         for dot in gutterDots {
             let lineInView = gutterRect(dot.rect, on: dot.page)
-            let pageInView = gutterRect(dot.page.bounds(for: .cropBox), on: dot.page)
             let size = dot.button.frame.width
             dot.button.frame = CGRect(
-                x: min(field.width + dotOverhang - size - 4, pageInView.maxX + 6),
+                x: dotX(size: size, on: dot.page, in: field),
                 y: lineInView.midY - size / 2,
                 width: size,
                 height: size
@@ -977,15 +1230,17 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     }
 
     private func refreshOverlays() {
-        clearHighlights()
+        wantedMarks.removeAll()
         gutterLayer.subviews.forEach { $0.removeFromSuperview() }
         gutterDots.removeAll()
         tapTargets.removeAll()
         observeScrolling()
 
         guard let document = pdfView.document else {
+            clearHighlights()
             return
         }
+        defer { applyMarks(in: document) }
 
         // The reader's own marks go down first, so a passage that is both
         // highlighted and commented shows the conversation tint on top.
@@ -1026,7 +1281,6 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             }
 
             drawHighlights(rects, on: page, color: commentFill.withAlphaComponent(thread.unreadCount > 0 ? 0.55 : 0.35))
-            drawUnderlines(rects, on: page)
             drawGutterDot(for: thread, firstLine: rects[0], on: page)
             tapTargets.append((target: .thread(thread.anchorKey), page: page, rects: rects))
         }
@@ -1077,26 +1331,34 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// Runtime only. These annotations are never written back — the manuscript
     /// on disk is the author's file, not a scratch pad.
     private func drawHighlights(_ rects: [CGRect], on page: PDFPage, color: UIColor) {
+        let index = pdfView.document?.index(for: page) ?? -1
         for rect in rects {
-            let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
-            annotation.color = color
-            annotation.shouldDisplay = true
-            annotation.shouldPrint = false
-            page.addAnnotation(annotation)
-            addedHighlights.append((page, annotation))
+            wantedMarks.append((page, Mark(page: index, rect: rect, color: color)))
         }
     }
 
-    /// The non-colour cue for a commented passage.
-    private func drawUnderlines(_ rects: [CGRect], on page: PDFPage) {
-        for rect in rects {
-            let annotation = PDFAnnotation(bounds: rect, forType: .underline, withProperties: nil)
-            annotation.color = commentInk
+    /// Puts the marks this pass asked for on the page, unless they're the ones
+    /// already there.
+    private func applyMarks(in document: PDFDocument) {
+        let marks = wantedMarks.map { $0.mark }
+        if let drawn = drawnMarks, drawn.document === document, drawn.theme == theme, drawn.marks == marks {
+            return
+        }
+        clearHighlights()
+        for (page, mark) in wantedMarks {
+            // Each theme's paper needs its own strength of fill, and Night its
+            // own kind (specs/page-theme R6).
+            let fill = theme.fillColor(mark.color)
+            let annotation = theme == .night
+                ? ThemedMark(bounds: mark.rect, color: fill)
+                : PDFAnnotation(bounds: mark.rect, forType: .highlight, withProperties: nil)
+            annotation.color = fill
             annotation.shouldDisplay = true
             annotation.shouldPrint = false
             page.addAnnotation(annotation)
             addedHighlights.append((page, annotation))
         }
+        drawnMarks = (document, theme, marks)
     }
 
     private func clearHighlights() {
@@ -1104,18 +1366,31 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             page.removeAnnotation(annotation)
         }
         addedHighlights.removeAll()
+        drawnMarks = nil
+    }
+
+    /// Where a dot of `size` goes across. Whole pages: beside the page, never
+    /// past the card's edge. Trimmed: just past the text, in the gap (R5.3);
+    /// the 22pt unread dot is wider than the phone's 20pt gap and reaches a
+    /// few points past the card rather than over the words.
+    private func dotX(size: CGFloat, on page: PDFPage, in field: CGRect) -> CGFloat {
+        let pageInView = gutterRect(page.bounds(for: pdfView.displayBox), on: page)
+        guard trim != nil else {
+            return min(field.width - dotInset - size, pageInView.maxX + 6)
+        }
+        let textRight = pageInView.maxX - PageTrim.padding * pdfView.scaleFactor
+        return textRight + 4
     }
 
     private func drawGutterDot(for thread: ReaderThread, firstLine: CGRect, on page: PDFPage) {
         let unread = thread.unreadCount
         let field = pageContainer.bounds
         let lineInView = gutterRect(firstLine, on: page)
-        let pageInView = gutterRect(page.bounds(for: .cropBox), on: page)
 
         let size: CGFloat = unread > 0 ? 22 : 12
         let dot = UIButton(type: .custom)
         dot.frame = CGRect(
-            x: min(field.width + dotOverhang - size - 4, pageInView.maxX + 6),
+            x: dotX(size: size, on: page, in: field),
             y: lineInView.midY - size / 2,
             width: size,
             height: size
@@ -1172,17 +1447,59 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
         return true
     }
 
-    @objc private func handlePageTap(_ recognizer: UITapGestureRecognizer) {
-        let point = recognizer.location(in: pdfView)
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if gestureRecognizer === markTap {
+            touchIsOnMark = !marks(at: touch.location(in: pdfView)).isEmpty
+            touchBegan = touch.timestamp
+        }
+        return true
+    }
+
+    /// Ours is only ever a quick tap on a marked passage. Anywhere else, or
+    /// held long enough to select a word, it fails at once, so PDFKit's taps
+    /// waiting on it (below) go ahead: clearing a selection is one of them.
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer === markTap else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+        return touchIsOnMark
+            && ProcessInfo.processInfo.systemUptime - touchBegan < RNPdfView.longestTap
+    }
+
+    /// On a marked passage PDFKit's own taps wait for ours, which wins there.
+    /// Left alongside, PDFKit took the tap as one on its highlight annotation
+    /// and put up its Highlight / Remove / Add Note menu over the thread
+    /// sheet or our highlight menu. Scrolling, zooming and press-to-select
+    /// never wait, and nowhere else does anything.
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        guard gestureRecognizer === markTap, touchIsOnMark,
+            otherGestureRecognizer.view?.isDescendant(of: pdfView) == true
+        else {
+            return false
+        }
+        return !(otherGestureRecognizer is UIPanGestureRecognizer
+            || otherGestureRecognizer is UIPinchGestureRecognizer
+            || otherGestureRecognizer is UILongPressGestureRecognizer)
+    }
+
+    /// The marked passages under a point in the PDF view.
+    private func marks(at point: CGPoint) -> [(target: TapTarget, page: PDFPage, rects: [CGRect])] {
         guard let page = pdfView.page(for: point, nearest: false) else {
-            return
+            return []
         }
         let pagePoint = pdfView.convert(point, to: page)
         // Lines are tight; a couple of points of slack makes a tap on the
         // edge of a word still count.
-        let hits = tapTargets.filter { target in
+        return tapTargets.filter { target in
             target.page == page && target.rects.contains { $0.insetBy(dx: -2, dy: -2).contains(pagePoint) }
         }
+    }
+
+    @objc private func handlePageTap(_ recognizer: UITapGestureRecognizer) {
+        let hits = marks(at: recognizer.location(in: pdfView))
         // The reader's own highlight wins: its menu can still reach the
         // conversation through "Comment".
         if let hit = hits.first(where: { if case .highlight = $0.target { return true } else { return false } }),
@@ -1272,6 +1589,9 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
     /// on page 1. Page reports stay held until the jump, so page 1 never
     /// reaches JS as progress.
     private func showDocument(_ document: PDFDocument) {
+        (document as? ThemedPdfDocument)?.theme = theme
+        // Night is already inverted: Smart Invert on top would turn it back.
+        pdfView.accessibilityIgnoresInvertColors = theme == .night
         isRepositioning = true
         needsInitialJump = true
         pdfView.document = document
@@ -1310,10 +1630,12 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
 
     private func loadPdf(from url: URL) {
         lastLoadedURL = url
+        stopWaitingForConnection()
         status.show(.loading)
 
         if url.isFileURL {
-            if let data = try? Data(contentsOf: url), let document = PDFDocument(data: data) {
+            if let data = try? Data(contentsOf: url), let document = ThemedPdfDocument(data: data) {
+                prepareTrim(for: document, data: data)
                 showDocument(document)
                 notifyLoadComplete(document: document, data: data)
             } else {
@@ -1322,48 +1644,181 @@ class RNPdfView: UIView, ReaderHeaderDelegate, ReaderScrubberDelegate, CommentSh
             return
         }
 
+        // A book read before opens from disk: no download, and it works
+        // offline. Data(contentsOf:) skips URLCache entirely, so without this
+        // every open fetched the whole file again.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                // A book read before opens from disk: no download, and it
-                // works offline. Data(contentsOf:) skips URLCache entirely,
-                // so without this every open fetched the whole file again.
-                let cached = ManuscriptCache.read(url)
-                let data = try cached ?? Data(contentsOf: url)
-                guard let document = PDFDocument(data: data) else {
-                    if cached != nil {
-                        ManuscriptCache.remove(url)
-                    }
-                    DispatchQueue.main.async { self?.fail("Failed to parse PDF data.") }
+            if let cached = ManuscriptCache.read(url) {
+                if let document = ThemedPdfDocument(data: cached) {
+                    DispatchQueue.main.async { self?.open(document, data: cached) }
                     return
                 }
-                if cached == nil {
+                ManuscriptCache.remove(url)
+            }
+            DispatchQueue.main.async { self?.download(url) }
+        }
+    }
+
+    /// Fetches a book that isn't on the device. Through URLSession rather
+    /// than Data(contentsOf:), so a failure arrives as a URLError and "no
+    /// connection" can be told apart from everything else (R7.1, R7.3).
+    private func download(_ url: URL) {
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 200
+            let document = data.flatMap { ThemedPdfDocument(data: $0) }
+            DispatchQueue.main.async {
+                guard let self = self, url == self.lastLoadedURL else {
+                    return
+                }
+                if let error = error as? URLError, ManuscriptCache.isOffline(error) {
+                    self.failOffline("Failed to download PDF: \(error.localizedDescription)")
+                } else if let error = error {
+                    self.fail("Failed to download PDF: \(error.localizedDescription)")
+                } else if !(200..<300).contains(code) {
+                    self.fail("Failed to download PDF: HTTP \(code)")
+                } else if let data = data, let document = document {
                     ManuscriptCache.write(data, for: url)
+                    self.open(document, data: data)
+                } else {
+                    self.fail("Failed to parse PDF data.")
                 }
-                DispatchQueue.main.async {
-                    guard let self = self else {
-                        return
-                    }
-                    self.showDocument(document)
-                    self.notifyLoadComplete(document: document, data: data)
+            }
+        }.resume()
+    }
+
+    private func open(_ document: PDFDocument, data: Data) {
+        prepareTrim(for: document, data: data)
+        showDocument(document)
+        notifyLoadComplete(document: document, data: data)
+    }
+
+    // MARK: - Trimming the margins (specs/reader-fit)
+
+    /// Before a book goes on screen: the trim remembered for this file, so the
+    /// first frame is already trimmed (R2.2), or the book whole while a trim
+    /// is looked for in the background (R2.1).
+    private func prepareTrim(for document: PDFDocument, data: Data) {
+        trimSearch?.isCancelled = true
+        trimSearch = nil
+        documentHash = Self.hash(of: data)
+        switch PageTrim.remembered(for: documentHash) {
+        case .trim(let box)?:
+            setTrim(box, on: document)
+        case .untrimmed?:
+            setTrim(nil, on: document)
+        case nil:
+            setTrim(nil, on: document)
+            searchForTrim(in: data, for: document)
+        }
+    }
+
+    /// Shows `box` (nil: the whole page) on the document's pages and lays the
+    /// reader out for it.
+    private func setTrim(_ box: CGRect?, on document: PDFDocument) {
+        trim = box
+        PageTrim.apply(box, to: document)
+        pdfView.displayBox = box == nil ? .cropBox : .artBox
+        applyLayout()
+        if pdfView.document === document {
+            pdfView.layoutDocumentView()
+        }
+    }
+
+    /// Looks for the trim off the main thread, at a priority below the
+    /// reader's own work (R2.4), and switches to it if the same book is still
+    /// open (R2.3). Found or not, the answer is remembered for next time.
+    private func searchForTrim(in data: Data, for document: PDFDocument) {
+        let search = Cancellation()
+        trimSearch = search
+        let hash = documentHash
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            // Its own copy: a PDFDocument isn't safe to share across threads,
+            // and the one on screen belongs to the main thread.
+            guard let copy = PDFDocument(data: data) else {
+                return
+            }
+            let box = PageTrim.find(in: copy) { search.isCancelled }
+            guard !search.isCancelled else {
+                return
+            }
+            PageTrim.remember(box, for: hash)
+            DispatchQueue.main.async {
+                guard let self = self, !search.isCancelled, self.pdfView.document === document else {
+                    return
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    self?.fail("Failed to download PDF: \(error.localizedDescription)")
-                }
+                self.trimSearch = nil
+                self.switchTrim(to: box, on: document)
             }
         }
     }
 
+    /// The switch from whole pages to trimmed ones, with the passage being
+    /// read still on screen (R6.2) — the same way a rotation keeps its place.
+    private func switchTrim(to box: CGRect?, on document: PDFDocument) {
+        guard let box = box else {
+            return
+        }
+        // Before the jump to the saved page, the jump itself lands right.
+        let anchor = needsInitialJump ? nil : pdfView.currentDestination
+        if anchor != nil {
+            isRepositioning = true
+        }
+        setTrim(box, on: document)
+        setNeedsLayout()
+        layoutIfNeeded()
+        if let anchor = anchor {
+            restore(anchor)
+        }
+        scheduleOverlayRefresh()
+    }
+
+    private static func hash(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Whatever went wrong, the reader sees "Couldn't open this book"; the
+    /// detail goes to JS for the log, not the screen (R7.3).
     private func fail(_ message: String) {
-        status.show(.failed(message))
+        status.show(.failed)
         onError?(["message": message])
+    }
+
+    /// Not on the device, and no connection to fetch it (R7.1). Tries again
+    /// by itself as soon as there is one (R7.2).
+    private func failOffline(_ message: String) {
+        status.show(.offline)
+        onError?(["message": message, "offline": true])
+        waitForConnection()
+    }
+
+    private func waitForConnection() {
+        stopWaitingForConnection()
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else {
+                return
+            }
+            DispatchQueue.main.async {
+                guard let self = self, self.reconnectMonitor === monitor else {
+                    return
+                }
+                self.reload()
+            }
+        }
+        reconnectMonitor = monitor
+        monitor.start(queue: DispatchQueue.global(qos: .utility))
+    }
+
+    private func stopWaitingForConnection() {
+        reconnectMonitor?.cancel()
+        reconnectMonitor = nil
     }
 
     /// The fingerprint of the file actually opened. Comment anchors are stored
     /// against it, so a different edition under the same book id can be told
     /// apart and left undrawn.
     private func notifyLoadComplete(document: PDFDocument, data: Data) {
-        documentHash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        documentHash = Self.hash(of: data)
         anchorRectCache.removeAll()
         status.show(.ready)
         scrubber.totalPages = document.pageCount
@@ -1432,7 +1887,9 @@ private class ReaderStatusView: UIView {
     enum State {
         case loading
         case ready
-        case failed(String)
+        case failed
+        /// Not downloaded yet and no connection (specs/offline-first R7.1).
+        case offline
         case empty
     }
 
@@ -1522,16 +1979,30 @@ private class ReaderStatusView: UIView {
         case .ready:
             isHidden = true
             spinner.stopAnimating()
-        case .failed(let message):
+        case .failed:
+            // No system error or file name: that's for the log (R7.3).
             isHidden = false
             backgroundColor = DS.Colors.background
             spinner.stopAnimating()
             spinner.isHidden = true
-            icon.isHidden = true
-            title.isHidden = true
+            icon.isHidden = false
+            icon.image = readerIcon("exclamationmark.triangle", size: 44, weight: .regular)
+            title.isHidden = false
+            title.text = "Couldn't open this book"
+            subtitle.isHidden = true
+            retry.isHidden = false
+        case .offline:
+            isHidden = false
+            backgroundColor = DS.Colors.background
+            spinner.stopAnimating()
+            spinner.isHidden = true
+            icon.isHidden = false
+            icon.image = readerIcon("icloud.slash", size: 44, weight: .regular)
+            title.isHidden = false
+            title.text = "This book isn't downloaded yet"
             subtitle.isHidden = false
-            subtitle.text = message
-            subtitle.textColor = DS.Colors.error
+            subtitle.text = "Connect to the internet to open it. After that it stays on this phone."
+            subtitle.textColor = DS.Colors.onSurfaceVariant
             retry.isHidden = false
         case .empty:
             isHidden = false
@@ -1551,6 +2022,61 @@ private class ReaderStatusView: UIView {
 
     @objc private func tapRetry() {
         onRetry?()
+    }
+}
+
+
+// MARK: - Shelf prefetch
+
+/// The manuscript cache as JS sees it: the Reading shelf's books are fetched
+/// on Wi-Fi so they open offline (specs/offline-first R6). The JS side
+/// (useShelfPrefetch) decides which books and when; this only knows whether
+/// one is already here and how to fetch one.
+@objc(ManuscriptStore)
+class ManuscriptStore: NSObject {
+
+    @objc static func requiresMainQueueSetup() -> Bool {
+        return false
+    }
+
+    @objc(isCached:resolve:reject:)
+    func isCached(_ urlString: String, resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        guard let url = URL(string: urlString) else {
+            resolve(false)
+            return
+        }
+        resolve(ManuscriptCache.contains(url))
+    }
+
+    /// Resolves true once it's on the device, false if it wasn't fetched.
+    /// NetInfo can't see Low Data Mode, so the request itself refuses
+    /// constrained and expensive (cellular) networks: iOS turns it down
+    /// rather than spend the reader's data on a book they haven't opened
+    /// (R6.2).
+    @objc(prefetch:resolve:reject:)
+    func prefetch(_ urlString: String, resolve: @escaping RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        guard let url = URL(string: urlString), !url.isFileURL else {
+            resolve(false)
+            return
+        }
+        if ManuscriptCache.contains(url) {
+            resolve(true)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.allowsConstrainedNetworkAccess = false
+        request.allowsExpensiveNetworkAccess = false
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            // Only a real PDF goes in the cache: an expired link's error page
+            // would otherwise be served as the book.
+            guard error == nil, (200..<300).contains(code), let data = data, PDFDocument(data: data) != nil else {
+                resolve(false)
+                return
+            }
+            ManuscriptCache.write(data, for: url)
+            resolve(true)
+        }.resume()
     }
 }
 
@@ -1577,6 +2103,25 @@ private enum ManuscriptCache {
         let key = "\(url.host ?? "")\(url.path)"
         let name = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
         return directory?.appendingPathComponent(name).appendingPathExtension("pdf")
+    }
+
+    /// The failures that mean "no connection", as opposed to a bad URL or
+    /// server: these get the offline state and a retry on reconnect.
+    static func isOffline(_ error: URLError) -> Bool {
+        switch error.code {
+        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
+             .cannotFindHost, .cannotConnectToHost, .timedOut, .internationalRoamingOff:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func contains(_ url: URL) -> Bool {
+        guard let file = file(for: url) else {
+            return false
+        }
+        return FileManager.default.fileExists(atPath: file.path)
     }
 
     static func read(_ url: URL) -> Data? {

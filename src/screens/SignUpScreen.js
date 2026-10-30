@@ -12,6 +12,7 @@ import useSignUpForm from './signUp/useSignUpForm';
 import SignUpForm from './signUp/SignUpForm';
 import OneTapButtons from './signUp/OneTapButtons';
 import { SignUpPhone, SignUpCard, SignUpSplit } from './signUp/SignUpLayouts';
+import { accountFrom } from '../utils/account';
 
 // Sign up (turn 17): Apple and Google first, then a three-field email form
 // with every problem shown under its own field — never an Alert. The phone
@@ -30,6 +31,7 @@ const SignUp = ({ navigation }) => {
     const userDetails = {
       username: response.username,
       email: response.email || email || null,
+      ...accountFrom(response),
       profilePicture: response.picture || null,
       isNewUser: status === 201,
       // The API doesn't return one yet; Profile's "Joined …" (7c) and

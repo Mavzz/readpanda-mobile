@@ -20,7 +20,10 @@ const fetchBookHighlights = async (bookId) => {
 
 // POST /books/{bookId}/highlights — idempotent on clientId, like comments: the
 // API client retries failed POSTs, and a retry gets the first row back.
-const createHighlight = async (bookId, highlight) => {
+//
+// `options.quiet`: the store keeps an offline highlight in the outbox rather
+// than reporting it (specs/offline-first R3.1).
+const createHighlight = async (bookId, highlight, options = {}) => {
   const { status, response } = await makeAuthenticatedPostRequest(
     getBackendUrl(`/books/${encodeURIComponent(bookId)}/highlights`),
     {
@@ -30,6 +33,7 @@ const createHighlight = async (bookId, highlight) => {
       file_hash: highlight?.fileHash || '',
       client_id: highlight?.clientId || '',
     },
+    options,
   );
 
   return { status, response };
@@ -37,9 +41,10 @@ const createHighlight = async (bookId, highlight) => {
 
 // DELETE /highlights/{id} — a 404 means it's already gone, which the store
 // treats as done.
-const deleteHighlight = async (highlightId) => {
+const deleteHighlight = async (highlightId, options = {}) => {
   const { status, response } = await makeAuthenticatedDeleteRequest(
     getBackendUrl(`/highlights/${encodeURIComponent(highlightId)}`),
+    options,
   );
 
   return { status, response };

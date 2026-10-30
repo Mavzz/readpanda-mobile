@@ -25,17 +25,22 @@ import profileStyles from './profileStyles';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
 import { BugReportSheet, ChoiceSheet, ConfirmSheet } from './SettingsSheets';
 import PressableScale from '../../components/PressableScale';
+import useOutboxStore from '../../stores/outboxStore';
 
 const CHOICE_TITLES = {
   pageMode: 'Page turning',
   pageTheme: 'Page theme',
-  progressVisibility: 'Who sees my progress',
 };
 
 // Interests come back as { category: [{ preference_value, ... }] }.
 const pickedGenreCount = (preferences) => Object.values(preferences || {})
   .flat()
   .filter((p) => p?.preference_value).length;
+
+// R3.8: "1 change hasn't synced yet", "3 changes haven't synced yet".
+export const signOutUnsentTitle = (n) => (
+  n === 1 ? '1 change hasn\'t synced yet' : `${n} changes haven't synced yet`
+);
 
 const SettingsScreen = () => {
   const { isLarge, pagePad } = useLayout();
@@ -58,12 +63,12 @@ const SettingsScreen = () => {
 
   const [pageMode, setPageMode] = useReaderSetting('pageMode');
   const [pageTheme, setPageTheme] = useReaderSetting('pageTheme');
-  const [progressVisibility, setProgressVisibility] = useReaderSetting('progressVisibility');
-  const [spoilerProtection, setSpoilerProtection] = useReaderSetting('spoilerProtection');
 
   // Which ChoiceSheet / ConfirmSheet is open, if any.
   const [choice, setChoice] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  // Offline changes not yet sent, which signing out would lose (R3.8).
+  const unsent = useOutboxStore((s) => s.items.length);
   const [deleting, setDeleting] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
 
@@ -72,7 +77,6 @@ const SettingsScreen = () => {
   const choiceState = {
     pageMode: [pageMode, setPageMode],
     pageTheme: [pageTheme, setPageTheme],
-    progressVisibility: [progressVisibility, setProgressVisibility],
   };
 
   const genres = pickedGenreCount(user?.preferences);
@@ -83,6 +87,10 @@ const SettingsScreen = () => {
     // Before logout: this needs the access token that signOut clears.
     await unregisterPushDevice();
     await logout(user?.username, enhancedStorage.getRefreshToken());
+    // What was done offline and never sent goes too: the reader was told
+    // (specs/offline-first R3.8). Cleared while still signed in, so the
+    // account's stored copy is emptied, not just the one in memory.
+    useOutboxStore.getState().clearOutbox();
     signOut();
     log.info('User signed out successfully');
   };
@@ -106,7 +114,9 @@ const SettingsScreen = () => {
     // The same local cleanup as Sign out — session, stores, cached data,
     // RevenueCat — which also returns to Login (R3.1). Not the server logout
     // or the push unregister: the account and its tokens are already gone.
+    // Unlike signing out, what the account stored on this device goes too.
     log.info('Account deleted; signing out locally');
+    enhancedStorage.clearAccountData(user?.username);
     signOut();
     showToast('Your account has been deleted.', 'success');
   };
@@ -147,6 +157,9 @@ const SettingsScreen = () => {
     </SettingsGroup>
   );
 
+  // No "Who sees my progress" or "Spoiler protection": seeing each other's
+  // progress is what a room is for, and the server always holds back comments
+  // you haven't reached, so neither had anything to switch off.
   const roomsGroup = (
     <SettingsGroup title="Rooms & privacy">
       <SettingsRow
@@ -156,22 +169,10 @@ const SettingsScreen = () => {
         onPress={() => navigation.navigate('NotificationSettings')}
       />
       <SettingsRow
-        icon="eye-outline"
-        label="Who sees my progress"
-        value={labelForSetting('progressVisibility', progressVisibility)}
-        onPress={() => setChoice('progressVisibility')}
-      />
-      <SettingsRow
         icon="hand-left-outline"
         label="Blocked readers"
         value={blockedCount === null ? undefined : blockedCount === 0 ? 'None' : String(blockedCount)}
         onPress={() => navigation.navigate('BlockedReaders')}
-      />
-      <SettingsRow
-        icon="shield-checkmark-outline"
-        label="Spoiler protection"
-        switchValue={spoilerProtection === 'on'}
-        onSwitchChange={(on) => setSpoilerProtection(on ? 'on' : 'off')}
       />
     </SettingsGroup>
   );
@@ -276,9 +277,12 @@ const SettingsScreen = () => {
 
       <ConfirmSheet
         visible={confirm === 'signOut'}
-        title="Sign out?"
-        message="Your reading positions stay on this device for when you're back."
+        title={unsent > 0 ? signOutUnsentTitle(unsent) : 'Sign out?'}
+        message={unsent > 0
+          ? 'Sign out anyway? What you did offline will be lost.'
+          : 'Your reading positions stay on this device for when you\'re back.'}
         confirmLabel="Sign out"
+        destructive={unsent > 0}
         onConfirm={handleSignOut}
         onClose={() => setConfirm(null)}
       />

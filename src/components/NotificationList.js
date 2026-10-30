@@ -11,6 +11,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { DS } from '../styles/global';
 import openNotification from '../utils/openNotification';
+import useConnectivityStore from '../stores/connectivityStore';
+import { OFFLINE_MESSAGE } from '../hooks/useOnReconnect';
 
 // One icon per kind, so the inbox can be scanned without reading every line.
 const TYPE_ICONS = {
@@ -58,12 +60,21 @@ const NotificationItem = ({ notification, onPress }) => {
   );
 };
 
-const EmptyNotifications = () => (
-  <View style={styles.emptyContainer}>
-    <Icon name="notifications-off-outline" size={48} color={DS.colors.onSurfaceVariant} />
-    <Text style={styles.emptyText}>No notifications yet</Text>
-  </View>
-);
+// Offline with nothing saved from last time, the empty list says why
+// (specs/offline-first R5.5).
+const EmptyNotifications = () => {
+  const online = useConnectivityStore((s) => s.online);
+  return (
+    <View style={styles.emptyContainer}>
+      <Icon
+        name={online ? 'notifications-off-outline' : 'cloud-offline-outline'}
+        size={48}
+        color={DS.colors.onSurfaceVariant}
+      />
+      <Text style={styles.emptyText}>{online ? 'No notifications yet' : OFFLINE_MESSAGE}</Text>
+    </View>
+  );
+};
 
 const NotificationList = ({ notifications, onClose }) => {
   const navigation = useNavigation();

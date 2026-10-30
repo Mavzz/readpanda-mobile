@@ -39,6 +39,13 @@ export const normalizeCuratedBucket = (bucket) => ({
 const useBucketsStore = create((set, get) => ({
   customBuckets: [],
   curatedBuckets: [],
+  // { [bucketId]: page } as fetchCuratedBucketBooks last returned it, so a
+  // curated bucket and its "See all" grid open offline (specs/offline-first
+  // R5.2).
+  curatedBooks: {},
+  // The same for the reader's own buckets, as fetchBucketBooks last returned
+  // them (R5.2).
+  bucketBooks: {},
   loadingCustomBuckets: false,
   loadingCuratedBuckets: false,
   refreshing: false,
@@ -197,21 +204,53 @@ const useBucketsStore = create((set, get) => ({
     return false;
   },
 
+  // My bucket's + (specs/coming-soon R4): several books at once, after the
+  // ones already in it. Not optimistic: the picker waits for the answer and
+  // keeps the picks on a failure. The bucket's tile and page are re-read so
+  // the count, previews and list are the server's.
+  addBooksToBucket: async (bucketId, bookIds) => {
+    try {
+      const { status } = await makeAuthenticatedPostRequest(
+        getBackendUrl(`/users/me/buckets/${bucketId}/books`),
+        { book_ids: bookIds },
+      );
+      if (status === 200 || status === 201 || status === 204) {
+        // The tile's count and covers. The bucket's own page re-reads itself
+        // when the picker closes back onto it.
+        await get().fetchCustomBuckets();
+        return true;
+      }
+      log.error('Failed to add books to bucket:', status);
+    } catch (error) {
+      log.error('Error adding books to bucket:', error);
+    }
+    return false;
+  },
+
   // A bucket's whole page for 9a: every book in its manual order, each with
   // the reader's own progress. Returns { status, response: { id, name, books } }.
+  //
+  // Like fetchCuratedBucketBooks, it answers with last time's copy, marked
+  // `cached`, when it can't be fetched (R5.2, R5.4).
   fetchBucketBooks: async (bucketId) => {
+    const fallback = (failure) => {
+      const cached = get().bucketBooks[bucketId];
+      return cached ? { status: 200, response: cached, cached: true } : failure;
+    };
     try {
       const { status, response } = await makeAuthenticatedGetRequest(
         getBackendUrl(`/users/me/buckets/${bucketId}/books`),
       );
       if (status === 200) {
-        return { status, response: { ...response, books: response.books || [] } };
+        const page = { ...response, books: response.books || [] };
+        set((state) => ({ bucketBooks: { ...state.bucketBooks, [bucketId]: page } }));
+        return { status, response: page };
       }
       log.error('Failed to fetch bucket books:', response);
-      return { status, response: null };
+      return fallback({ status, response: null });
     } catch (error) {
       log.error('Error fetching bucket books:', error);
-      return { status: null, response: null };
+      return fallback({ status: null, response: null });
     }
   },
 
@@ -308,32 +347,48 @@ const useBucketsStore = create((set, get) => ({
 
   // A curated bucket's whole page for 9b: its editorial line, tags, reading
   // time, saved state, and every book with the reader's progress.
+  //
+  // When it can't be fetched, the copy from last time comes back as a 200
+  // marked `cached`, so the screens show it rather than an error (R5.4).
   fetchCuratedBucketBooks: async (bucketId) => {
+    const fallback = (failure) => {
+      const cached = get().curatedBooks[bucketId];
+      return cached ? { status: 200, response: cached, cached: true } : failure;
+    };
     try {
       const { status, response } = await makeAuthenticatedGetRequest(
         getBackendUrl(`/home/our-picks/${bucketId}/books`),
       );
       if (status === 200) {
-        return { status, response: { ...response, books: response.books || [] } };
+        const page = { ...response, books: response.books || [] };
+        set((state) => ({ curatedBooks: { ...state.curatedBooks, [bucketId]: page } }));
+        return { status, response: page };
       }
       log.error('Failed to fetch curated bucket books:', response);
-      return { status, response: null };
+      return fallback({ status, response: null });
     } catch (error) {
       log.error('Error fetching curated bucket books:', error);
-      return { status: null, response: null };
+      return fallback({ status: null, response: null });
     }
   },
 
   clearBuckets: () => {
-    set({ customBuckets: [], curatedBuckets: [] });
+    set({ customBuckets: [], curatedBuckets: [], curatedBooks: {}, bucketBooks: {} });
   },
 }));
 
 export const hydrateBuckets = persistSlice(useBucketsStore, 'buckets', {
-  pick: (s) => ({ customBuckets: s.customBuckets, curatedBuckets: s.curatedBuckets }),
-  restore: ({ customBuckets, curatedBuckets }) => ({
+  pick: (s) => ({
+    customBuckets: s.customBuckets,
+    curatedBuckets: s.curatedBuckets,
+    curatedBooks: s.curatedBooks,
+    bucketBooks: s.bucketBooks,
+  }),
+  restore: ({ customBuckets, curatedBuckets, curatedBooks, bucketBooks }) => ({
     customBuckets: customBuckets || [],
     curatedBuckets: curatedBuckets || [],
+    curatedBooks: curatedBooks || {},
+    bucketBooks: bucketBooks || {},
   }),
 });
 

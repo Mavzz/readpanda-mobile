@@ -75,6 +75,40 @@ class EnhancedStorage {
     return username ? `${key}::${username}` : key;
   }
 
+  // Every key stored for one account on this device. Signing out keeps them,
+  // so a reader who comes back picks up where they were; a deleted account
+  // must not, or whoever next signs in with the same username inherits its
+  // books (account-deletion R3.1).
+  clearAccountData(username) {
+    if (!username) {
+      return;
+    }
+    const suffix = `::${username}`;
+    getStore().getAllKeys()
+      .filter((key) => key.endsWith(suffix))
+      .forEach((key) => getStore().delete(key));
+  }
+
+  // A username change: everything the account stored under its old name moves
+  // to the new one, so nothing is lost (specs/coming-soon R5.4). Run before the
+  // profile switches name, while both are known.
+  renameAccountData(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) {
+      return;
+    }
+    const suffix = `::${oldName}`;
+    const store = getStore();
+    store.getAllKeys()
+      .filter((key) => key.endsWith(suffix))
+      .forEach((key) => {
+        const value = store.getString(key);
+        if (value !== undefined) {
+          store.set(`${key.slice(0, -suffix.length)}::${newName}`, value);
+        }
+        store.delete(key);
+      });
+  }
+
   // App preferences (MMKV)
   storeUserPreference(key, value) {
     StorageService.setItem(this.scopedKey(`pref_${key}`), value);

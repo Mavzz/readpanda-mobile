@@ -26,7 +26,7 @@ export const helpTopics = (plusEnabled) => [
   {
     id: 'progress',
     question: 'Who can see how far I\'ve read?',
-    answer: 'Room members, by default. To hide it, go to Settings → Who sees my progress and choose Only me.',
+    answer: 'Everyone in the room. Seeing how far everyone else has read is the point of reading together.',
   },
   {
     id: 'reading',

@@ -4,6 +4,7 @@ import useAuthStore from '../../stores/authStore';
 import useRoomStore from '../../stores/roomStore';
 import useBooksStore from '../../stores/booksStore';
 import useBucketsStore from '../../stores/bucketsStore';
+import useOnReconnect from '../../hooks/useOnReconnect';
 
 // The room this lobby is about, and who is in it. Book, bucket and progress
 // state is read by BookSection itself, so a picker or progress change doesn't
@@ -32,6 +33,14 @@ const useRoomLobby = (routeRoom) => {
     fetchCuratedBuckets();
     // Store actions are stable, so this still runs once per room id.
   }, [routeRoom?.id, fetchRoomDetail, fetchBooks, fetchCustomBuckets, fetchCuratedBuckets]);
+
+  // Offline the room shows as last loaded, from the stored list; back
+  // online, it's fetched again (specs/offline-first R5.1, R5.6).
+  useOnReconnect(() => {
+    if (routeRoom?.id && !String(routeRoom.id).startsWith('fixture-')) {
+      fetchRoomDetail(routeRoom.id);
+    }
+  });
 
   const selfName = user?.username || 'You';
 
