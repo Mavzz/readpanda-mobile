@@ -189,6 +189,30 @@ base64 -i Certificates.p12 | pbcopy    # paste into CERT_P12_BASE64
 Delete the `.p12` afterwards. Certificates expire after a year; when you renew
 them, update the secret.
 
+### TestFlight
+
+```bash
+yarn testflight    # build for the App Store and upload to TestFlight
+```
+
+Same rules as `yarn release`: `master` only, clean and in sync with
+`origin/master`. It uses the same `fastlane/.env`, but only the App Store
+Connect key and `SENTRY_AUTH_TOKEN`; the Firebase settings can stay empty. It
+makes fresh App Store profiles for the app and the widget, builds with
+`yarn ipa --appstore` signed with them, and uploads. The build number is one
+past the latest in TestFlight (the Firebase builds never reach App Store
+Connect, so they don't count).
+
+It doesn't wait for Apple to process the build, which takes 10–30 minutes.
+Internal testers get it on their own once it's processed. For external
+testers, add the build to a group in App Store Connect → TestFlight; the first
+build for external testing goes through Beta App Review, and you fill in What
+to Test there.
+
+**From GitHub Actions:** **Actions → TestFlight - Release → Run workflow** on
+`master`. It uses the Firebase release's secrets above except
+`FIREBASE_SERVICE_ACCOUNT_JSON` and `FIREBASE_GROUPS`.
+
 ## Before you push
 
 ```bash

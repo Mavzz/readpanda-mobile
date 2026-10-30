@@ -1,0 +1,95 @@
+name: TestFlight - Release
+
+# Manual only: each run takes 20+ minutes and uses a build number. It runs
+# `yarn testflight` (the beta lane in fastlane/Fastfile) on master; setup is
+# in docs/RUN.md. The secrets are the Firebase release's, minus Firebase's own.
+on:
+  workflow_dispatch:
+
+# Two uploads at once would both read the same latest build number.
+concurrency:
+  group: testflight-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and upload
+    if: github.ref == 'refs/heads/master'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # The lane checks HEAD against origin/master.
+          fetch-depth: 0
+
+      # macos-latest can default to an older Xcode than the one on our Macs.
+      - name: Select the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | grep -iv beta | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install
+
+      # All of these are git-ignored, so the lane's clean-tree check still passes.
+      # GoogleService-Info.plist is still needed: the app uses Firebase for push.
+      - name: Write config and credentials
+        env:
+          ENV_PROD: ${{ secrets.ENV_PROD }}
+          GOOGLE_SERVICE_INFO: ${{ secrets.GOOGLE_SERVICE_INFO }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
+          CERT_P12_PASSWORD: ${{ secrets.CERT_P12_PASSWORD }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          printf '%s\n' "$ENV_PROD" > .env.prod
+          printf '%s\n' "$GOOGLE_SERVICE_INFO" > ios/GoogleService-Info.plist
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/certs.p12"
+          cat > fastlane/.env <<EOF
+          ASC_KEY_ID=$ASC_KEY_ID
+          ASC_ISSUER_ID=$ASC_ISSUER_ID
+          ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8
+          CERT_P12_PATH=$RUNNER_TEMP/certs.p12
+          CERT_P12_PASSWORD=$CERT_P12_PASSWORD
+          SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+          EOF
+
+      - name: Build and upload
+        run: yarn testflight
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/certs.p12" fastlane/.env

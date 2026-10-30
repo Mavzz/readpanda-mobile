@@ -19,6 +19,7 @@
     "pods": "cd ios && pod install && cd ..",
     "ipa": "sh scripts/build-ipa.sh",
     "release": "sh scripts/release.sh",
+    "testflight": "LANE=beta sh scripts/release.sh",
     "clean:all": "yarn clean && cd ios && rm -rf Pods && rm -rf build && cd ..",
     "reset:all": "yarn clean:all && yarn install && yarn pods",
     "android": "react-native run-android",
