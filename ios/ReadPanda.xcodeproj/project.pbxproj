@@ -558,7 +558,6 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ReadPanda/ReadPanda.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = ReadPanda/LaunchScreen.storyboard;
 				DEVELOPMENT_TEAM = 6F6H5A6JCC;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = ReadPanda/Info.plist;
@@ -597,7 +596,6 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ReadPanda/ReadPanda.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = ReadPanda/LaunchScreen.storyboard;
 				DEVELOPMENT_TEAM = 6F6H5A6JCC;
 				INFOPLIST_FILE = ReadPanda/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.books";
