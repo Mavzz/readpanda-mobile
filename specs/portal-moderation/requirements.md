@@ -1,6 +1,6 @@
 # Portal moderation: Requirements
 
-Status: Draft <!-- Draft → Approved -->
+Status: Approved <!-- Draft → Approved -->
 Design handoff: none. The new tabs reuse the portal's existing parts (the
 Reports table, `Chip`, `Tag`, `Card`, `Modal`, `Banner`, `EmptyState` in
 `packages/portal/src/components/ui.jsx`) and follow docs/DESIGN.md.
